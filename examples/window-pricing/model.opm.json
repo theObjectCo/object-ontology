@@ -1,0 +1,85 @@
+{
+  "$schema": "../../schema/opm-model.schema.json",
+  "name": "Window configuration and pricing",
+  "description": "A user configures a window, the generator freezes the configuration into a snapshot, and the pricing module prices the snapshot with data from the ERP and other departments.",
+  "objects": {
+    "user": { "essence": "physical" },
+    "ui": { "role": "module" },
+    "generator": { "role": "module" },
+    "snapshotStore": { "role": "module" },
+    "pricingModule": { "role": "module" },
+    "erp": { "role": "module", "affiliation": "environmental", "consistsOf": ["customer"] },
+    "customer": { "affiliation": "environmental" },
+    "departmentData": { "affiliation": "environmental", "description": "Stock, capacity, price lists and carrier tariffs, as versioned copies." },
+    "contextManifest": {},
+    "changeProposal": { "schema": "contracts.schema.json#/$defs/changeProposal" },
+    "decision": { "schema": "contracts.schema.json#/$defs/decision", "states": ["passed", "rejected", "applied"] },
+    "configuration": { "schema": "contracts.schema.json#/$defs/configuration" },
+    "snapshot": {
+      "schema": "contracts.schema.json#/$defs/snapshot",
+      "states": ["valid", "expired"],
+      "consistsOf": ["bom", "costDrivers"],
+      "exhibits": ["hash"]
+    },
+    "bom": {},
+    "costDrivers": {},
+    "hash": {},
+    "priceRequest": { "schema": "contracts.schema.json#/$defs/priceRequest" },
+    "priceResult": {
+      "schema": "contracts.schema.json#/$defs/priceResult",
+      "states": ["complete", "approximate", "partial", "rejected"],
+      "consistsOf": ["productPrice", "transportPrice", "leadTime"]
+    },
+    "productPrice": {},
+    "transportPrice": { "states": ["exact", "approximate", "missing"] },
+    "leadTime": {}
+  },
+  "processes": {
+    "configuring": {
+      "handledBy": ["user"],
+      "requires": ["ui"],
+      "zoomsInto": ["proposing", "validating", "applying"]
+    },
+    "proposing": { "requires": ["ui"], "yields": ["changeProposal"] },
+    "validating": {
+      "requires": ["generator", "changeProposal"],
+      "yields": ["decision"]
+    },
+    "applying": {
+      "requires": ["generator"],
+      "consumes": ["changeProposal"],
+      "affects": ["configuration"],
+      "changes": [{ "object": "decision", "from": "passed", "to": "applied" }],
+      "conditions": [{ "object": "decision", "state": "passed" }]
+    },
+    "contextUpdating": {
+      "requires": ["generator"],
+      "events": [{ "object": "departmentData" }],
+      "affects": ["contextManifest"]
+    },
+    "freezing": {
+      "requires": ["generator", "snapshotStore", "configuration", "contextManifest"],
+      "yields": ["snapshot"]
+    },
+    "expiring": {
+      "requires": ["snapshotStore"],
+      "changes": [{ "object": "snapshot", "from": "valid", "to": "expired" }]
+    },
+    "pricing": {
+      "requires": ["pricingModule", "snapshot", "customer", "departmentData"],
+      "consumes": ["priceRequest"],
+      "yields": ["priceResult"],
+      "conditions": [{ "object": "snapshot", "state": "valid" }],
+      "zoomsInto": ["productPricing", "transportPricing", "leadTimeEstimating"]
+    },
+    "productPricing": { "requires": ["snapshot", "customer"], "yields": ["productPrice"] },
+    "transportPricing": { "requires": ["departmentData"], "yields": ["transportPrice"] },
+    "leadTimeEstimating": { "requires": ["departmentData"], "yields": ["leadTime"] }
+  },
+  "views": {
+    "snapshotLifecycle": {
+      "title": "Snapshot lifecycle",
+      "things": ["freezing", "expiring", "pricing", "snapshot", "snapshotStore"]
+    }
+  }
+}

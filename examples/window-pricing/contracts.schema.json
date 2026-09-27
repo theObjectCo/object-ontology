@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Example data definitions for the window pricing model",
+  "$defs": {
+    "changeProposal": {
+      "type": "object",
+      "required": ["baseRevision", "changes"],
+      "properties": {
+        "baseRevision": { "type": "string" },
+        "changes": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["outcome"],
+      "properties": { "outcome": { "enum": ["passed", "rejected", "applied", "frozen"] } }
+    },
+    "configuration": {
+      "type": "object",
+      "required": ["id", "revision"],
+      "properties": { "id": { "type": "string" }, "revision": { "type": "string" } }
+    },
+    "snapshot": {
+      "type": "object",
+      "required": ["id", "hash", "bom"],
+      "properties": {
+        "id": { "type": "string" },
+        "hash": { "type": "string" },
+        "bom": { "type": "array" },
+        "validity": { "enum": ["valid", "expired"] }
+      }
+    },
+    "priceRequest": {
+      "type": "object",
+      "required": ["snapshot", "customer", "quantity"],
+      "properties": { "snapshot": { "type": "string" }, "customer": { "type": "string" }, "quantity": { "type": "integer" } }
+    },
+    "priceResult": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["complete", "approximate", "partial", "rejected"] },
+        "parts": {
+          "type": "array",
+          "items": { "properties": { "accuracy": { "$ref": "#/$defs/accuracy" } } }
+        }
+      }
+    },
+    "accuracy": { "enum": ["exact", "approximate", "missing"] }
+  }
+}

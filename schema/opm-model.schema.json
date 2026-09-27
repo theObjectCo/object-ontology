@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:object:ontology:opm-model/0.1.0",
+  "title": "OPM model, format 0.1",
+  "description": "A project model built from OPM concepts: objects, processes, states and links. Objects and processes are keyed by an identifier in camelCase. Every reference to another thing uses that identifier. The format follows the OPM link types of ISO 19450; a module is an object with role module, described only by the processes it takes part in.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": { "type": "string", "minLength": 1, "description": "Model name, used as the document title." },
+    "description": { "type": "string" },
+    "objects": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/id" },
+      "additionalProperties": { "$ref": "#/$defs/object" }
+    },
+    "processes": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/id" },
+      "additionalProperties": { "$ref": "#/$defs/process" }
+    },
+    "views": {
+      "description": "Additional diagrams. The system view and a view for every in-zoomed process are generated without being listed here.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/id" },
+      "additionalProperties": { "$ref": "#/$defs/view" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "description": "Identifier in camelCase, for example priceResult. The default label is derived from it: Price Result.",
+      "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$"
+    },
+    "ids": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "object": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "description": "Display name. Default: derived from the identifier." },
+        "description": { "type": "string" },
+        "role": { "enum": ["module"], "description": "module: a part of the system that processes require. Only what it takes part in describes it." },
+        "essence": { "enum": ["informatical", "physical"], "default": "informatical" },
+        "affiliation": { "enum": ["systemic", "environmental"], "default": "systemic", "description": "environmental: outside the system being modeled." },
+        "states": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" } },
+        "schema": {
+          "type": "string", "pattern": "^[^#]+#/.*$",
+          "description": "JSON Schema definition of the object's data: a file path relative to this model and a JSON pointer, for example contracts.schema.json#/$defs/priceResult. The validator checks that the definition exists and that the states occur in its enums."
+        },
+        "consistsOf": { "$ref": "#/$defs/ids", "description": "Aggregation: the parts of this object." },
+        "exhibits": { "$ref": "#/$defs/ids", "description": "Exhibition: the attributes of this object." },
+        "isA": { "$ref": "#/$defs/id", "description": "Generalization: the more general object." }
+      }
+    },
+    "process": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "handledBy": { "$ref": "#/$defs/ids", "description": "Agent links: the humans who perform the process." },
+        "requires": { "$ref": "#/$defs/ids", "description": "Instrument links: objects the process needs but does not change, including modules." },
+        "consumes": { "$ref": "#/$defs/ids", "description": "Consumption links: objects the process uses up." },
+        "yields": { "$ref": "#/$defs/ids", "description": "Result links: objects the process creates." },
+        "affects": { "$ref": "#/$defs/ids", "description": "Effect links: objects the process changes without naming states." },
+        "changes": {
+          "description": "State-specified effect links: the process changes an object from one state to another.",
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["object", "to"],
+            "properties": { "object": { "$ref": "#/$defs/id" }, "from": { "type": "string" }, "to": { "type": "string" } }
+          }
+        },
+        "conditions": { "$ref": "#/$defs/stateRefs", "description": "Condition links: the process occurs only if the object exists, or is in the given state; otherwise it is skipped." },
+        "events": { "$ref": "#/$defs/stateRefs", "description": "Event links: the object, or the object entering the given state, starts the process." },
+        "zoomsInto": { "$ref": "#/$defs/ids", "description": "In-zooming: the subprocesses, in order of execution." },
+        "invokes": { "$ref": "#/$defs/ids", "description": "Invocation links: processes this process starts." }
+      }
+    },
+    "stateRefs": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["object"],
+        "properties": { "object": { "$ref": "#/$defs/id" }, "state": { "type": "string" } }
+      }
+    },
+    "view": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "process": { "$ref": "#/$defs/id", "description": "Show this process, its links and its subprocesses." },
+        "things": { "$ref": "#/$defs/ids", "description": "Show these objects and processes and the links between them." }
+      },
+      "oneOf": [{ "required": ["process"] }, { "required": ["things"] }]
+    }
+  }
+}

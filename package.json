@@ -1,0 +1,62 @@
+{
+  "name": "object-ontology",
+  "displayName": "Object Ontology: OPM models",
+  "description": "OPM models in JSON: validation, OPL text and Mermaid diagrams, in VS Code and on the command line.",
+  "version": "0.1.0",
+  "publisher": "object",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=20"
+  },
+  "categories": ["Visualization", "Linters"],
+  "main": "./dist/extension.js",
+  "bin": {
+    "opm": "./dist/cli.js"
+  },
+  "activationEvents": [
+    "workspaceContains:**/*.opm.json",
+    "onLanguage:json"
+  ],
+  "contributes": {
+    "jsonValidation": [
+      { "fileMatch": "*.opm.json", "url": "./schema/opm-model.schema.json" }
+    ],
+    "commands": [
+      { "command": "opm.preview", "title": "OPM: Open Preview", "icon": "$(open-preview)" },
+      { "command": "opm.exportMarkdown", "title": "OPM: Export Markdown" }
+    ],
+    "menus": {
+      "editor/title": [
+        { "command": "opm.preview", "when": "resourceFilename =~ /\\.opm\\.json$/", "group": "navigation" }
+      ],
+      "explorer/context": [
+        { "command": "opm.preview", "when": "resourceFilename =~ /\\.opm\\.json$/" },
+        { "command": "opm.exportMarkdown", "when": "resourceFilename =~ /\\.opm\\.json$/" }
+      ],
+      "commandPalette": [
+        { "command": "opm.preview", "when": "resourceFilename =~ /\\.opm\\.json$/" },
+        { "command": "opm.exportMarkdown", "when": "resourceFilename =~ /\\.opm\\.json$/" }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc",
+    "test": "npm run build && node --test \"dist/test/*.test.js\"",
+    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --skip-license --no-rewrite-relative-links -o dist/object-ontology.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/vscode": "~1.90.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "jsonc-parser": "^3.3.1",
+    "mermaid": "^11.17.2"
+  }
+}
