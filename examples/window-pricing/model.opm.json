@@ -40,10 +40,11 @@
       "requires": ["ui"],
       "zoomsInto": ["proposing", "validating", "applying"]
     },
-    "proposing": { "requires": ["ui"], "yields": ["changeProposal"] },
+    "proposing": { "requires": ["ui"], "yields": ["changeProposal"], "zoomsInto": [] },
     "validating": {
       "requires": ["generator", "changeProposal"],
-      "yields": ["decision"]
+      "yields": ["decision"],
+      "zoomsInto": []
     },
     "applying": {
       "requires": ["generator"],
@@ -55,15 +56,18 @@
     "contextUpdating": {
       "requires": ["generator"],
       "events": [{ "object": "departmentData" }],
-      "affects": ["contextManifest"]
+      "affects": ["contextManifest"],
+      "zoomsInto": []
     },
     "freezing": {
       "requires": ["generator", "snapshotStore", "configuration", "contextManifest"],
-      "yields": ["snapshot"]
+      "yields": ["snapshot"],
+      "zoomsInto": []
     },
     "expiring": {
       "requires": ["snapshotStore"],
-      "changes": [{ "object": "snapshot", "from": "valid", "to": "expired" }]
+      "changes": [{ "object": "snapshot", "from": "valid", "to": "expired" }],
+      "zoomsInto": []
     },
     "pricing": {
       "requires": ["pricingModule", "snapshot", "customer", "departmentData"],
@@ -81,5 +85,10 @@
       "title": "Snapshot lifecycle",
       "things": ["freezing", "expiring", "pricing", "snapshot", "snapshotStore"]
     }
+  },
+  "layout": {
+    "system": { "user": [-26, 261], "ui": [-22, 136], "generator": [140, 416], "snapshotStore": [451, 410], "pricingModule": [711, 126], "customer": [861, 122], "departmentData": [709, 608], "contextManifest": [164, 649], "changeProposal": [414, 122], "decision": [147, 23], "configuration": [308, 412], "snapshot": [612, 386], "priceRequest": [847, 515], "priceResult": [993, 512], "productPrice": [1009, 125], "transportPrice": [1179, 237], "leadTime": [1317, 399], "configuring": [156, 252], "contextUpdating": [426, 673], "freezing": [433, 537], "expiring": [481, 267], "pricing": [805, 271] },
+    "expiring": { "expiring": [311, 30], "snapshotStore": [113, 90], "snapshot": [435, -114] },
+    "pricing": { "pricing": [311, 52], "pricingModule": [165, 79], "snapshot": [255, -86], "customer": [52, 315], "departmentData": [66, 439], "priceRequest": [74, 182], "priceResult": [699, 94], "productPrice": [731, 240], "transportPrice": [735, 464], "leadTime": [886, 239] }
   }
 }
