@@ -1,6 +1,7 @@
 import {
-  Link, Model, ProcessDef, affiliation, descendants, essence, label, linksOf, objects, parents, processes,
+  Link, Model, ProcessDef, affiliation, descendants, label, linksOf, objects, parents, processes, refObject,
 } from "./model";
+import { oplSentences, sentenceText } from "./opl";
 
 export interface View {
   id: string;
@@ -32,10 +33,10 @@ function processNode(model: Model, id: string, prefix = ""): string {
 function edge(model: Model, link: Link, processNodeId: string): string[] {
   const o = nodeId(model, link.target);
   switch (link.kind) {
-    case "consumes": return [`  ${o} --> ${processNodeId}`];
-    case "yields": return [`  ${processNodeId} --> ${o}`];
+    case "consumes": return [link.state ? `  ${o} -->|${quote(link.state)}| ${processNodeId}` : `  ${o} --> ${processNodeId}`];
+    case "yields": return [link.state ? `  ${processNodeId} -->|${quote(link.state)}| ${o}` : `  ${processNodeId} --> ${o}`];
     case "affects": return [`  ${o} <--> ${processNodeId}`];
-    case "requires": return [`  ${o} --o ${processNodeId}`];
+    case "requires": return [link.state ? `  ${o} --o|${quote(link.state)}| ${processNodeId}` : `  ${o} --o ${processNodeId}`];
     case "handledBy": return [`  ${o} --o|agent| ${processNodeId}`];
     case "changes": return [
       ...(link.from ? [`  ${o} -->|${quote(link.from)}| ${processNodeId}`] : []),
@@ -54,6 +55,12 @@ function structuralEdges(model: Model, include: Set<string>): string[] {
     for (const part of o.consistsOf ?? []) if (include.has(part)) out.push(`  o_${id} ---|consists of| o_${part}`);
     for (const attr of o.exhibits ?? []) if (include.has(attr)) out.push(`  o_${id} ---|exhibits| o_${attr}`);
     if (o.isA && include.has(o.isA)) out.push(`  o_${id} ---|is a| o_${o.isA}`);
+    for (const t of o.tagged ?? []) if (include.has(t.object)) out.push(`  o_${id} -->|${quote(t.tag)}| o_${t.object}`);
+  }
+  for (const [id, p] of Object.entries(processes(model))) {
+    if (!include.has(id)) continue;
+    for (const part of p.consistsOf ?? []) if (include.has(part)) out.push(`  p_${id} ---|consists of| p_${part}`);
+    if (p.isA && include.has(p.isA)) out.push(`  p_${id} ---|is a| p_${p.isA}`);
   }
   return out;
 }
@@ -77,8 +84,11 @@ function migratedLinks(model: Model, id: string): Link[] {
 }
 
 function finish(model: Model, lines: string[], shown: Set<string>): string {
-  const env = Object.keys(objects(model)).filter((id) => shown.has(id) && affiliation(objects(model)[id]) === "environmental");
-  if (env.length) lines.push(`  class ${env.map((id) => `o_${id}`).join(",")} environmental`);
+  const env = [
+    ...Object.keys(objects(model)).filter((id) => shown.has(id) && affiliation(objects(model)[id]) === "environmental").map((id) => `o_${id}`),
+    ...Object.keys(processes(model)).filter((id) => shown.has(id) && affiliation(processes(model)[id]) === "environmental").map((id) => `p_${id}`),
+  ];
+  if (env.length) lines.push(`  class ${env.join(",")} environmental`);
   return ["flowchart LR", ...STYLE, ...lines].join("\n");
 }
 
@@ -185,42 +195,9 @@ export function stateDiagrams(model: Model): View[] {
   return out;
 }
 
-const join = (items: string[]) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`);
-
-/** OPL sentences following the ISO 19450 patterns. */
+/** OPL sentences as plain text, the same as in the editor. */
 export function opl(model: Model): string[] {
-  const L = (id: string) => label(model, id);
-  const out: string[] = [];
-  const objs = Object.entries(objects(model));
-  const modules = objs.filter(([, o]) => o.role === "module").map(([id]) => L(id));
-  if (modules.length) out.push(`${join(modules)} ${modules.length > 1 ? "are modules" : "is a module"}.`);
-  for (const [id, o] of objs) {
-    const traits = [essence(o) === "physical" ? "physical" : "", affiliation(o) === "environmental" ? "environmental" : ""].filter(Boolean);
-    if (traits.length) out.push(`${L(id)} is ${join(traits)}.`);
-    if (o.states?.length) out.push(`${L(id)} can be ${o.states.slice(0, -1).join(", ")}${o.states.length > 1 ? " or " : ""}${o.states[o.states.length - 1]}.`);
-    if (o.consistsOf?.length) out.push(`${L(id)} consists of ${join(o.consistsOf.map(L))}.`);
-    if (o.exhibits?.length) out.push(`${L(id)} exhibits ${join(o.exhibits.map(L))}.`);
-    if (o.isA) out.push(`${L(id)} is a ${L(o.isA)}.`);
-  }
-  for (const [id, p] of Object.entries(processes(model))) out.push(...processSentences(model, id, p));
-  return out;
-}
-
-function processSentences(model: Model, id: string, p: ProcessDef): string[] {
-  const L = (x: string) => label(model, x);
-  const P = L(id);
-  const out: string[] = [];
-  if (p.handledBy?.length) out.push(`${join(p.handledBy.map(L))} ${p.handledBy.length > 1 ? "handle" : "handles"} ${P}.`);
-  if (p.requires?.length) out.push(`${P} requires ${join(p.requires.map(L))}.`);
-  if (p.consumes?.length) out.push(`${P} consumes ${join(p.consumes.map(L))}.`);
-  if (p.yields?.length) out.push(`${P} yields ${join(p.yields.map(L))}.`);
-  if (p.affects?.length) out.push(`${P} affects ${join(p.affects.map(L))}.`);
-  for (const c of p.changes ?? []) out.push(`${P} changes ${L(c.object)}${c.from ? ` from ${c.from}` : ""} to ${c.to}.`);
-  for (const c of p.conditions ?? []) out.push(`${P} occurs if ${L(c.object)} ${c.state ? `is ${c.state}` : "exists"}, otherwise ${P} is skipped.`);
-  for (const e of p.events ?? []) out.push(`${e.state ? `${L(e.object)} entering ${e.state}` : L(e.object)} initiates ${P}.`);
-  if (p.zoomsInto?.length) out.push(`${P} zooms into ${join(p.zoomsInto.map(L))}${p.zoomsInto.length > 1 ? ", in that sequence" : ""}.`);
-  if (p.invokes?.length) out.push(`${P} invokes ${join(p.invokes.map(L))}.`);
-  return out;
+  return oplSentences(model).map(sentenceText);
 }
 
 export interface ModuleSummary {
@@ -237,14 +214,14 @@ export function moduleSummaries(model: Model): ModuleSummary[] {
   const procs = processes(model);
   for (const [id, o] of Object.entries(objects(model))) {
     if (o.role !== "module") continue;
-    const performs = Object.keys(procs).filter((pid) => procs[pid].requires?.includes(id));
+    const performs = Object.keys(procs).filter((pid) => procs[pid].requires?.some((r) => refObject(r) === id));
     const collect = (pick: (p: ProcessDef) => string[]) =>
       [...new Set(performs.flatMap((pid) => pick(procs[pid])))].filter((x) => x !== id && objects(model)[x]?.role !== "module");
     out.push({
       module: id,
       performs,
-      takes: collect((p) => [...(p.consumes ?? []), ...(p.requires ?? [])]),
-      gives: collect((p) => p.yields ?? []),
+      takes: collect((p) => [...(p.consumes ?? []), ...(p.requires ?? [])].map(refObject)),
+      gives: collect((p) => (p.yields ?? []).map(refObject)),
       changes: collect((p) => [...(p.affects ?? []), ...(p.changes ?? []).map((c) => c.object)]),
     });
   }

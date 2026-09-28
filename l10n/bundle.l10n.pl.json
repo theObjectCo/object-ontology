@@ -1,0 +1,19 @@
+{
+  "Remove stale positions": "Usuń nieaktualne pozycje",
+  "Name of the new view": "Nazwa nowego widoku",
+  "New view": "Nowy widok",
+  "Exported {0}": "Wyeksportowano {0}",
+  "Objects": "Obiekty",
+  "Processes": "Procesy",
+  "System": "Systemowe",
+  "Zooms": "Rozbicia",
+  "Custom": "Własne",
+  "Open a *.opm.json model first.": "Najpierw otwórz model *.opm.json.",
+  "Object": "Obiekt",
+  "Process": "Proces",
+  "Find an object or process": "Znajdź obiekt albo proces",
+  "Select elements in an OPM diagram first.": "Najpierw zaznacz elementy na diagramie OPM.",
+  "The OPM model is not valid JSON.": "Model OPM nie jest poprawnym JSON.",
+  "The model has {0} error(s). Export anyway?": "Model ma błędy: {0}. Eksportować mimo to?",
+  "Export": "Eksportuj"
+}

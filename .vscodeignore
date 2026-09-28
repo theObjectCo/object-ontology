@@ -1,6 +1,12 @@
 **
 !package.json
+!package.nls.json
+!package.nls.pl.json
+!l10n/**
 !README.md
 !dist/extension.js
-!media/mermaid.min.js
+!dist/webview.js
+!dist/webview.css
+!media/elk-worker.min.js
+!resources/opm.svg
 !schema/opm-model.schema.json

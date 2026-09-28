@@ -1,0 +1,11 @@
+import { createRoot } from "react-dom/client";
+import { ReactFlowProvider } from "@xyflow/react";
+import "@xyflow/react/dist/base.css";
+import "./styles.css";
+import { App } from "./App";
+
+createRoot(document.getElementById("root")!).render(
+  <ReactFlowProvider>
+    <App />
+  </ReactFlowProvider>,
+);

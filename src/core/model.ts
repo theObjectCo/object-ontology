@@ -1,6 +1,14 @@
 export type Essence = "informatical" | "physical";
 export type Affiliation = "systemic" | "environmental";
 
+/** A link target: an identifier, or an identifier with a state of the target object. */
+export type Ref = string | { object: string; state?: string };
+
+export interface Tagged {
+  object: string;
+  tag: string;
+}
+
 export interface ObjectDef {
   label?: string;
   description?: string;
@@ -12,6 +20,7 @@ export interface ObjectDef {
   consistsOf?: string[];
   exhibits?: string[];
   isA?: string;
+  tagged?: Tagged[];
 }
 
 export interface StateChange {
@@ -28,16 +37,20 @@ export interface StateRef {
 export interface ProcessDef {
   label?: string;
   description?: string;
+  essence?: Essence;
+  affiliation?: Affiliation;
   handledBy?: string[];
-  requires?: string[];
-  consumes?: string[];
-  yields?: string[];
+  requires?: Ref[];
+  consumes?: Ref[];
+  yields?: Ref[];
   affects?: string[];
   changes?: StateChange[];
   conditions?: StateRef[];
   events?: StateRef[];
   zoomsInto?: string[];
   invokes?: string[];
+  consistsOf?: string[];
+  isA?: string;
 }
 
 export interface ViewDef {
@@ -47,6 +60,9 @@ export interface ViewDef {
   things?: string[];
 }
 
+/** View id -> thing id -> [x, y] of the top-left corner. */
+export type Layout = Record<string, Record<string, [number, number]>>;
+
 export interface Model {
   $schema?: string;
   name?: string;
@@ -54,6 +70,7 @@ export interface Model {
   objects?: Record<string, ObjectDef>;
   processes?: Record<string, ProcessDef>;
   views?: Record<string, ViewDef>;
+  layout?: Layout;
 }
 
 /** Procedural link kinds, in the order they are listed in OPL and drawn in diagrams. */
@@ -70,7 +87,7 @@ export interface Link {
   state?: string;
 }
 
-const ACRONYMS = new Set(["ui", "erp", "bom", "mes", "cam", "cad", "api", "id", "uuid", "json", "cnc", "wms", "tms"]);
+const ACRONYMS = new Set(["ui", "erp", "bom", "mes", "cam", "cad", "api", "id", "uuid", "json", "cnc", "wms", "tms", "opl", "opm"]);
 
 /** priceResult -> Price Result; ui -> UI. */
 export function humanize(id: string): string {
@@ -93,21 +110,30 @@ export function label(model: Model, id: string): string {
   return objects(model)[id]?.label ?? processes(model)[id]?.label ?? humanize(id);
 }
 
-export function essence(o: ObjectDef): Essence {
+export function essence(o: { essence?: Essence }): Essence {
   return o.essence ?? "informatical";
 }
 
-export function affiliation(o: ObjectDef): Affiliation {
+export function affiliation(o: { affiliation?: Affiliation }): Affiliation {
   return o.affiliation ?? "systemic";
+}
+
+export function refObject(r: Ref): string {
+  return typeof r === "string" ? r : r.object;
+}
+
+export function refState(r: Ref): string | undefined {
+  return typeof r === "string" ? undefined : r.state;
 }
 
 /** All procedural links declared directly on one process. */
 export function linksOf(id: string, p: ProcessDef): Link[] {
   const out: Link[] = [];
-  const simple: LinkKind[] = ["handledBy", "requires", "consumes", "yields", "affects"];
-  for (const kind of simple) {
-    for (const target of (p[kind as keyof ProcessDef] as string[] | undefined) ?? []) out.push({ kind, process: id, target });
+  for (const target of p.handledBy ?? []) out.push({ kind: "handledBy", process: id, target });
+  for (const kind of ["requires", "consumes", "yields"] as const) {
+    for (const r of p[kind] ?? []) out.push({ kind, process: id, target: refObject(r), state: refState(r) });
   }
+  for (const target of p.affects ?? []) out.push({ kind: "affects", process: id, target });
   for (const c of p.changes ?? []) out.push({ kind: "changes", process: id, target: c.object, from: c.from, to: c.to });
   for (const c of p.conditions ?? []) out.push({ kind: "conditions", process: id, target: c.object, state: c.state });
   for (const e of p.events ?? []) out.push({ kind: "events", process: id, target: e.object, state: e.state });

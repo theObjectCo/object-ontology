@@ -1,0 +1,17 @@
+{
+  "displayName": "Object Ontology: modele OPM",
+  "description": "Edytor wizualny modeli OPM zapisanych w JSON, z walidacją, tekstem OPL i eksportem do markdown.",
+  "editor.diagram": "Diagram OPM",
+  "container.opm": "OPM",
+  "view.model": "Model",
+  "view.views": "Widoki",
+  "command.openTextBeside": "Otwórz tekst obok",
+  "command.openDiagramBeside": "Otwórz diagram obok",
+  "command.findElement": "Znajdź element",
+  "command.saveSelectionAsView": "Zapisz zaznaczenie jako widok",
+  "command.removeStaleLayout": "Usuń nieaktualne pozycje",
+  "command.exportMarkdown": "Eksport markdown",
+  "command.revealElement": "Pokaż element",
+  "command.openView": "Otwórz widok",
+  "config.schemaGlob": "Wzorzec plików JSON Schema pokazywanych na liście schematów w edytorze diagramu, względem workspace."
+}

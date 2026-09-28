@@ -1,7 +1,7 @@
 {
   "name": "object-ontology",
-  "displayName": "Object Ontology: OPM models",
-  "description": "OPM models in JSON: validation, OPL text and Mermaid diagrams, in VS Code and on the command line.",
+  "displayName": "%displayName%",
+  "description": "%description%",
   "version": "0.1.0",
   "publisher": "object",
   "private": true,
@@ -10,53 +10,193 @@
     "vscode": "^1.90.0",
     "node": ">=20"
   },
-  "categories": ["Visualization", "Linters"],
+  "categories": [
+    "Visualization",
+    "Linters"
+  ],
   "main": "./dist/extension.js",
   "bin": {
     "opm": "./dist/cli.js"
   },
   "activationEvents": [
-    "workspaceContains:**/*.opm.json",
-    "onLanguage:json"
+    "workspaceContains:**/*.opm.json"
   ],
   "contributes": {
     "jsonValidation": [
-      { "fileMatch": "*.opm.json", "url": "./schema/opm-model.schema.json" }
+      {
+        "fileMatch": "*.opm.json",
+        "url": "./schema/opm-model.schema.json"
+      }
     ],
+    "customEditors": [
+      {
+        "viewType": "opm.diagram",
+        "displayName": "%editor.diagram%",
+        "selector": [
+          {
+            "filenamePattern": "*.opm.json"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "opm",
+          "title": "%container.opm%",
+          "icon": "resources/opm.svg"
+        }
+      ]
+    },
+    "views": {
+      "opm": [
+        {
+          "id": "opm.model",
+          "name": "%view.model%"
+        },
+        {
+          "id": "opm.views",
+          "name": "%view.views%"
+        }
+      ]
+    },
     "commands": [
-      { "command": "opm.preview", "title": "OPM: Open Preview", "icon": "$(open-preview)" },
-      { "command": "opm.exportMarkdown", "title": "OPM: Export Markdown" }
+      {
+        "command": "opm.openTextBeside",
+        "title": "%command.openTextBeside%",
+        "category": "OPM",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "opm.openDiagramBeside",
+        "title": "%command.openDiagramBeside%",
+        "category": "OPM",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "opm.findElement",
+        "title": "%command.findElement%",
+        "category": "OPM",
+        "icon": "$(search)"
+      },
+      {
+        "command": "opm.saveSelectionAsView",
+        "title": "%command.saveSelectionAsView%",
+        "category": "OPM",
+        "icon": "$(save-as)"
+      },
+      {
+        "command": "opm.removeStaleLayout",
+        "title": "%command.removeStaleLayout%",
+        "category": "OPM"
+      },
+      {
+        "command": "opm.exportMarkdown",
+        "title": "%command.exportMarkdown%",
+        "category": "OPM"
+      },
+      {
+        "command": "opm.revealElement",
+        "title": "%command.revealElement%",
+        "category": "OPM"
+      },
+      {
+        "command": "opm.openView",
+        "title": "%command.openView%",
+        "category": "OPM"
+      }
     ],
     "menus": {
       "editor/title": [
-        { "command": "opm.preview", "when": "resourceFilename =~ /\\.opm\\.json$/", "group": "navigation" }
+        {
+          "command": "opm.openTextBeside",
+          "when": "activeCustomEditorId == opm.diagram",
+          "group": "navigation"
+        },
+        {
+          "command": "opm.openDiagramBeside",
+          "when": "resourceFilename =~ /\\.opm\\.json$/ && !activeCustomEditorId",
+          "group": "navigation"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "opm.findElement",
+          "when": "view == opm.model",
+          "group": "navigation"
+        },
+        {
+          "command": "opm.saveSelectionAsView",
+          "when": "view == opm.views",
+          "group": "navigation"
+        }
       ],
       "explorer/context": [
-        { "command": "opm.preview", "when": "resourceFilename =~ /\\.opm\\.json$/" },
-        { "command": "opm.exportMarkdown", "when": "resourceFilename =~ /\\.opm\\.json$/" }
+        {
+          "command": "opm.openDiagramBeside",
+          "when": "resourceFilename =~ /\\.opm\\.json$/"
+        },
+        {
+          "command": "opm.exportMarkdown",
+          "when": "resourceFilename =~ /\\.opm\\.json$/"
+        }
       ],
       "commandPalette": [
-        { "command": "opm.preview", "when": "resourceFilename =~ /\\.opm\\.json$/" },
-        { "command": "opm.exportMarkdown", "when": "resourceFilename =~ /\\.opm\\.json$/" }
+        {
+          "command": "opm.revealElement",
+          "when": "false"
+        },
+        {
+          "command": "opm.openView",
+          "when": "false"
+        },
+        {
+          "command": "opm.openDiagramBeside",
+          "when": "resourceFilename =~ /\\.opm\\.json$/"
+        },
+        {
+          "command": "opm.openTextBeside",
+          "when": "activeCustomEditorId == opm.diagram"
+        }
       ]
+    },
+    "configuration": {
+      "title": "OPM",
+      "properties": {
+        "opm.schemaGlob": {
+          "type": "string",
+          "default": "**/*.schema.json",
+          "markdownDescription": "%config.schemaGlob%"
+        }
+      }
     }
   },
   "scripts": {
     "build": "node build.mjs",
-    "typecheck": "tsc",
+    "typecheck": "tsc && tsc -p tsconfig.webview.json",
     "test": "npm run build && node --test \"dist/test/*.test.js\"",
-    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --skip-license --no-rewrite-relative-links -o dist/object-ontology.vsix"
+    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --skip-license --no-rewrite-relative-links -o dist/object-ontology.vsix",
+    "shots": "node build.mjs --harness && node test/harness/shots.mjs examples/window-pricing/model.opm.json dist/shots"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@types/vscode": "~1.90.0",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
+    "puppeteer-core": "^24.43.1",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@xyflow/react": "^12.12.0",
     "ajv": "^8.20.0",
+    "elkjs": "^0.12.0",
+    "html-to-image": "^1.11.13",
     "jsonc-parser": "^3.3.1",
-    "mermaid": "^11.17.2"
-  }
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "l10n": "./l10n"
 }
