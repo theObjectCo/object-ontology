@@ -3,14 +3,16 @@
   "displayName": "%displayName%",
   "description": "%description%",
   "version": "0.1.0",
+  "preview": true,
   "publisher": "ObjectPL",
   "icon": "resources/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/theObjectCo/object-ontology.git"
   },
-  "private": true,
-  "license": "UNLICENSED",
+  "bugs": "https://github.com/theObjectCo/object-ontology/issues",
+  "homepage": "https://github.com/theObjectCo/object-ontology#readme",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.90.0",
     "node": ">=20"
@@ -18,6 +20,16 @@
   "categories": [
     "Visualization",
     "Linters"
+  ],
+  "keywords": [
+    "opm",
+    "object-process methodology",
+    "iso 19450",
+    "ontology",
+    "model",
+    "diagram",
+    "json schema",
+    "opl"
   ],
   "main": "./dist/extension.js",
   "bin": {
@@ -57,6 +69,10 @@
     "views": {
       "opm": [
         {
+          "id": "opm.models",
+          "name": "%view.models%"
+        },
+        {
           "id": "opm.model",
           "name": "%view.model%"
         },
@@ -67,6 +83,12 @@
       ]
     },
     "commands": [
+      {
+        "command": "opm.newModel",
+        "title": "%command.newModel%",
+        "category": "OPM",
+        "icon": "$(new-file)"
+      },
       {
         "command": "opm.openTextBeside",
         "title": "%command.openTextBeside%",
@@ -102,6 +124,11 @@
         "category": "OPM"
       },
       {
+        "command": "opm.createSchema",
+        "title": "%command.createSchema%",
+        "category": "OPM"
+      },
+      {
         "command": "opm.revealElement",
         "title": "%command.revealElement%",
         "category": "OPM"
@@ -109,6 +136,11 @@
       {
         "command": "opm.openView",
         "title": "%command.openView%",
+        "category": "OPM"
+      },
+      {
+        "command": "opm.openModel",
+        "title": "%command.openModel%",
         "category": "OPM"
       }
     ],
@@ -127,6 +159,11 @@
       ],
       "view/title": [
         {
+          "command": "opm.newModel",
+          "when": "view == opm.models",
+          "group": "navigation"
+        },
+        {
           "command": "opm.findElement",
           "when": "view == opm.model",
           "group": "navigation"
@@ -139,11 +176,20 @@
       ],
       "explorer/context": [
         {
+          "command": "opm.newModel",
+          "when": "explorerResourceIsFolder",
+          "group": "navigation@9"
+        },
+        {
           "command": "opm.openDiagramBeside",
           "when": "resourceFilename =~ /\\.opm\\.json$/"
         },
         {
           "command": "opm.exportMarkdown",
+          "when": "resourceFilename =~ /\\.opm\\.json$/"
+        },
+        {
+          "command": "opm.createSchema",
           "when": "resourceFilename =~ /\\.opm\\.json$/"
         }
       ],
@@ -163,6 +209,10 @@
         {
           "command": "opm.openTextBeside",
           "when": "activeCustomEditorId == opm.diagram"
+        },
+        {
+          "command": "opm.openModel",
+          "when": "false"
         }
       ]
     },
@@ -175,13 +225,23 @@
           "markdownDescription": "%config.schemaGlob%"
         }
       }
-    }
+    },
+    "viewsWelcome": [
+      {
+        "view": "opm.models",
+        "contents": "%welcome.models%"
+      },
+      {
+        "view": "opm.model",
+        "contents": "%welcome.model%"
+      }
+    ]
   },
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc && tsc -p tsconfig.webview.json",
     "test": "npm run build && node --test \"dist/test/*.test.js\"",
-    "package": "npm run build && vsce package --no-dependencies --skip-license -o dist/object-ontology.vsix",
+    "package": "npm run build && vsce package --no-dependencies -o dist/object-ontology.vsix",
     "shots": "node build.mjs --harness && node test/harness/shots.mjs examples/window-pricing/model.opm.json dist/shots"
   },
   "devDependencies": {

@@ -100,7 +100,7 @@ button {
 }
 
 .opm-toolbar.disabled > button:not(.opm-more),
-.opm-toolbar.disabled .opm-badge {
+.opm-toolbar.disabled .opm-layout {
   opacity: 0.45;
   pointer-events: none;
 }
@@ -125,20 +125,6 @@ button {
   background: var(--vscode-editorWidget-border, var(--vscode-editorLineNumber-foreground));
 }
 
-.opm-badge {
-  font-size: 11px;
-  padding: 1px 7px;
-  margin: 0 4px;
-  border-radius: 10px;
-  border: 1px solid var(--vscode-editorLineNumber-foreground);
-  color: var(--vscode-descriptionForeground);
-  white-space: nowrap;
-}
-
-.opm-badge.manual {
-  border-color: var(--vscode-focusBorder);
-  color: var(--vscode-editor-foreground);
-}
 
 .opm-menu {
   position: absolute;
@@ -410,8 +396,22 @@ button.link:hover {
   word-break: break-all;
 }
 
+/* a hairline between the sections of the drawer, a little stronger than the background */
+.opm-drawer {
+  --opm-divider: color-mix(in srgb, var(--vscode-foreground) 12%, transparent);
+}
+
 .opm-section {
   margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--opm-divider);
+}
+
+.opm-drawer > .opm-actions,
+.opm-note-head {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--opm-divider);
 }
 
 .opm-section-head {
@@ -530,6 +530,7 @@ button.link:hover {
 .opm-schema-list {
   max-height: 220px;
   overflow-y: auto;
+  overflow-x: hidden;
   margin-top: 6px;
   display: flex;
   flex-direction: column;
@@ -545,6 +546,8 @@ button.link:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: none;
+  max-width: 100%;
 }
 
 .opm-schema-list button:hover {
@@ -1030,6 +1033,19 @@ button.link:hover {
 }
 
 .opm-note-head {
-  margin: 10px 0 4px;
+  margin-bottom: 4px;
   color: var(--vscode-descriptionForeground);
+}
+
+/* ---------- layout algorithm menu ---------- */
+
+.opm-split {
+  position: relative;
+  display: inline-flex;
+}
+
+.opm-layout-menu {
+  left: 0;
+  right: auto;
+  min-width: 260px;
 }

@@ -17,5 +17,13 @@
   "The model has {0} error(s). Export anyway?": "Model ma błędy: {0}. Eksportować mimo to?",
   "Export": "Eksportuj",
   "Links of this kind are not opened: {0}": "Linki tego rodzaju nie są otwierane: {0}",
-  "File not found: {0}": "Nie znaleziono pliku: {0}"
+  "File not found: {0}": "Nie znaleziono pliku: {0}",
+  "{0} (shown below)": "{0} (pokazany niżej)",
+  "Name of the new model file": "Nazwa pliku nowego modelu",
+  "Enter a file name without a folder.": "Podaj nazwę pliku bez folderu.",
+  "OPM model": "Model OPM",
+  "New OPM model": "Nowy model OPM",
+  "{0} already exists.": "{0} już istnieje.",
+  "Every informatical object already has a schema.": "Każdy obiekt informacyjny ma już schemat.",
+  "{0}: {1} new definition(s), {2} object(s) linked.": "{0}: nowe definicje: {1}, powiązane obiekty: {2}."
 }

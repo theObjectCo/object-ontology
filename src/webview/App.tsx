@@ -14,7 +14,7 @@ import { LINK_WORDS, format, messages } from "../shared/i18n";
 import { ElementDiagnostic, HostMessage, SchemaFile, UiDefaults } from "../shared/protocol";
 import { EdgeData, edgeTypes } from "./edges";
 import { Rect } from "./geometry";
-import { Positions, Shapes, autoLayout, layoutKey, manualLayout, shapesOf, sizeOf, topLevel } from "./layout";
+import { LayoutAlgorithm, Positions, Shapes, autoLayout, layoutKey, manualLayout, shapesOf, sizeOf, topLevel } from "./layout";
 import { NodeData, ThingLabels, nodeTypes } from "./nodes";
 import { ContextItem, ContextMenu, Inspector, InspectorProps, LinkMenu, OplBar, Toast, Toolbar, ZoomControls } from "./panels";
 import { edit, post, saveTabState, settle, tabState } from "./vscode";
@@ -164,7 +164,6 @@ export function App() {
   const [layingOut, setLayingOut] = useState(false);
   /** The view whose positions are final (not the interim placement while ELK runs). */
   const [settledView, setSettledView] = useState<string | null>(null);
-  const [autoNonce, setAutoNonce] = useState(0);
   const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
   const [confirm, setConfirm] = useState<{ text: string; action: string; run: () => void } | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
@@ -188,6 +187,8 @@ export function App() {
   const autoCache = useRef(new Map<string, Positions>());
   const viewports = useRef<Record<string, Viewport>>(saved?.viewports ?? {});
   const needsFit = useRef(true);
+  /** Positions of an arrangement just written; the view is fitted when they are on screen. */
+  const fitAfterLayout = useRef<Positions | null>(null);
   const centerOn = useRef<string | null>(null);
   const pendingView = useRef<string | null>(null);
   const pendingEdge = useRef<{ kind: EditorLinkKind; from: string; to: string } | null>(null);
@@ -357,7 +358,7 @@ export function App() {
     return () => { cancelled = true; };
     // content and shapes are covered by the layout key
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, storedKey, autoNonce]);
+  }, [key, storedKey]);
 
   // an external change keeps the selection of the things that still exist
   useEffect(() => {
@@ -541,6 +542,13 @@ export function App() {
   /* ---------- fitting and centering ---------- */
 
   useEffect(() => {
+    const expected = fitAfterLayout.current;
+    if (!expected || !Object.entries(expected).every(([id, [x, y]]) => positions[id]?.[0] === x && positions[id]?.[1] === y)) return;
+    fitAfterLayout.current = null;
+    requestAnimationFrame(() => requestAnimationFrame(() => void flow.fitView({ padding: 0.15, maxZoom: 1, duration: 200 })));
+  }, [positions, flow]);
+
+  useEffect(() => {
     if (!nodes.length || layingOut || settledView !== viewId) return;
     if (needsFit.current) {
       needsFit.current = false;
@@ -615,14 +623,10 @@ export function App() {
     }
     if (!Object.keys(moved).length) return;
     setPositions((p) => ({ ...p, ...moved }));
-    if (manual) void run({ op: "moveElements", viewId, positions: moved });
-    else {
-      const all = Object.fromEntries(topLevel(content).filter((id) => positions[id]).map((id) => [id, positions[id]]));
-      void run({ op: "moveElements", viewId, positions: moved, all }).then((r) => {
-        if (r.ok) showToast(`${format(t.switchedToManual, { view: view?.code ?? viewId })} · ${t.undoHint}`);
-      });
-    }
-  }, [model, content, shapes, frozen, positions, manual, viewId, run, showToast, t, view]);
+    // a view without saved positions saves all of them with its first move
+    const all = manual ? undefined : Object.fromEntries(topLevel(content).filter((id) => positions[id]).map((id) => [id, positions[id]]));
+    void run({ op: "moveElements", viewId, positions: moved, all });
+  }, [model, content, shapes, frozen, positions, manual, viewId, run]);
 
   const onConnectStart = useCallback((_e: unknown, p: { nodeId: string | null; handleId: string | null }) => {
     if (!p.nodeId || frozen) return;
@@ -742,19 +746,16 @@ export function App() {
     await paste(text || copied.current || "", at);
   }, [paste]);
 
-  const autoLayoutNow = useCallback(async () => {
-    if (!content || !shapes) return;
-    if (!manual) {
-      autoCache.current.delete(key);
-      setAutoNonce((n) => n + 1);
-      return;
-    }
-    if (frozen) return;
+  const arrange = useCallback(async (algorithm: LayoutAlgorithm) => {
+    if (!content || !shapes || frozen) return;
     setLayingOut(true);
-    const p = await autoLayout(content, shapes);
+    const p = await autoLayout(content, shapes, algorithm);
     setLayingOut(false);
-    void run({ op: "setLayout", viewId, positions: p });
-  }, [content, shapes, manual, key, frozen, run, viewId]);
+    // the new arrangement can be larger or elsewhere: it is shown whole once its positions arrive
+    fitAfterLayout.current = p;
+    const r = await run({ op: "setLayout", viewId, positions: p });
+    if (!r.ok) fitAfterLayout.current = null;
+  }, [content, shapes, frozen, run, viewId]);
 
   const exportImage = useCallback(async (kind: "png" | "svg") => {
     const el = wrapper.current?.querySelector<HTMLElement>(".react-flow__viewport");
@@ -1055,13 +1056,12 @@ export function App() {
             onAddObject={() => void addElement("object")}
             onAddProcess={() => void addElement("process")}
             onAddState={selectedObject ? () => addState() : undefined}
-            manual={manual}
-            onAutoLayout={() => void autoLayoutNow()}
-            onResetLayout={() => void run({ op: "setLayout", viewId, positions: null })}
+            onArrange={(a) => void arrange(a)}
             menu={[
               { label: t.exportPng, action: () => void exportImage("png") },
               { label: t.exportSvg, action: () => void exportImage("svg") },
               { label: t.exportMarkdown, action: () => post({ type: "exportMarkdown" }) },
+              { label: t.createSchema, action: () => post({ type: "createSchema" }), disabled: frozen },
               { label: t.saveAsView, action: saveView, disabled: !selection.length },
               { label: t.linkLabels, action: () => setLabelsOn(!labelsOn), checked: labelsOn },
               { label: t.openTextBeside, action: () => post({ type: "openTextBeside" }) },

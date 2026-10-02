@@ -120,7 +120,6 @@ test("a link can change kind, states and direction", () => {
 test("the first move saves every position of the view on one line, later moves only the moved ones", () => {
   const first = applyOperation(EXAMPLE, { op: "moveElements", viewId: "system", positions: { user: [5, 5] }, all: { user: [0, 0], ui: [10.2, 20.7] } });
   assert.deepEqual(parse(first.text).layout!.system, { user: [5, 5], ui: [10, 21] });
-  assert.match(first.message!, /manual/);
   assert.match(first.text, /"system": \{ "user": \[5, 5\], "ui": \[10, 21\] \}/);
   const second = run(first.text, { op: "moveElements", viewId: "system", positions: { ui: [30, 40] } });
   assert.deepEqual(parse(second).layout!.system, { user: [5, 5], ui: [30, 40] });

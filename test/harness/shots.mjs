@@ -180,14 +180,14 @@ await page.keyboard.press("Escape");
   console.log("after link:", JSON.stringify(JSON.parse(await text()).processes.pricing.requires ?? JSON.parse(await text()).processes.pricing));
 }
 
-// the first move switches the view to manual layout
+// the first move saves the positions of the whole view
 {
   const g = await box('[data-thing="generator"]');
   await page.mouse.move(g.x + g.width / 2, g.y + 10);
   await page.mouse.down();
   await page.mouse.move(g.x + g.width / 2 + 60, g.y + 70, { steps: 10 });
   await page.mouse.up();
-  await shot("07-manual-toast");
+  await shot("07-first-move");
   const layout = JSON.parse(await text()).layout;
   console.log("layout views:", Object.keys(layout ?? {}), "entries:", Object.keys(layout?.system ?? {}).length);
 }
@@ -307,7 +307,7 @@ async function clickEdge(id, button = "left") {
   await page.click(".opm-drawer .opm-insp-head button");
 }
 
-// export, reset layout
+// export
 {
   await page.keyboard.press("Escape");
   await page.click(".opm-trail button.link");
@@ -317,11 +317,27 @@ async function clickEdge(id, button = "left") {
   await wait(1500);
   const exported = await page.evaluate(() => window.harness.messages.filter((m) => m.type === "export").map((m) => m.data.slice(0, 22)));
   check("export png", exported[0] === "data:image/png;base64,", exported[0]);
-  const reset = await page.evaluateHandle(() => [...document.querySelectorAll(".opm-toolbar button")].find((b) => b.textContent === "Reset layout"));
-  if (reset.asElement()) await reset.asElement().click();
-  await wait(400);
-  check("reset layout", !(await model()).layout, JSON.stringify(Object.keys((await model()).layout ?? {})));
-  await shot("14-after-reset");
+}
+
+// every layout algorithm writes positions for the view
+for (const [i, name] of ["Layers, left to right", "Layers, top to bottom", "Stress: distances follow the links", "Force-directed", "Tree", "Radial", "Compact block, links ignored"].entries()) {
+  await page.click(".opm-layout");
+  if (i === 0) await shot("15-layout-menu");
+  const item = await page.evaluateHandle((n) => [...document.querySelectorAll(".opm-layout-menu button")].find((b) => b.textContent === n), name);
+  await item.asElement().click();
+  await wait(1500);
+  const layout = (await model()).layout?.system ?? {};
+  const xs = Object.values(layout).map((p) => p[0]);
+  const distinct = new Set(Object.values(layout).map((p) => p.join(","))).size;
+  check(`layout ${name}`, distinct === Object.keys(layout).length && distinct > 10 && Math.min(...xs) >= 0, `${distinct} distinct positions`);
+  await shot(`15-layout-${i}`);
+}
+{
+  await page.click(".opm-more");
+  const item = await page.evaluateHandle(() => [...document.querySelectorAll(".opm-menu button")].find((b) => b.textContent === "Create JSON Schema"));
+  await item.asElement().click();
+  await wait(200);
+  check("create schema message", await page.evaluate(() => window.harness.messages.some((m) => m.type === "createSchema")));
 }
 
 // Polish UI, light theme, a parse error banner

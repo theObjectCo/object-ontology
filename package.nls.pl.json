@@ -13,5 +13,11 @@
   "command.exportMarkdown": "Eksport markdown",
   "command.revealElement": "Pokaż element",
   "command.openView": "Otwórz widok",
-  "config.schemaGlob": "Wzorzec plików JSON Schema pokazywanych na liście schematów w edytorze diagramu, względem workspace."
+  "config.schemaGlob": "Wzorzec plików JSON Schema pokazywanych na liście schematów w edytorze diagramu, względem workspace.",
+  "view.models": "Modele",
+  "command.newModel": "Nowy model",
+  "command.openModel": "Otwórz model",
+  "welcome.models": "W tym workspace nie ma pliku *.opm.json.\n[Nowy model](command:opm.newModel)",
+  "welcome.model": "Kliknij model na liście powyżej albo otwórz plik *.opm.json.\n[Nowy model](command:opm.newModel)",
+  "command.createSchema": "Utwórz JSON Schema"
 }

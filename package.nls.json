@@ -13,5 +13,11 @@
   "command.exportMarkdown": "Export Markdown",
   "command.revealElement": "Reveal Element",
   "command.openView": "Open View",
-  "config.schemaGlob": "Glob of the JSON Schema files offered in the diagram editor's schema list, relative to the workspace."
+  "config.schemaGlob": "Glob of the JSON Schema files offered in the diagram editor's schema list, relative to the workspace.",
+  "view.models": "Models",
+  "command.newModel": "New Model",
+  "command.openModel": "Open Model",
+  "welcome.models": "No *.opm.json file in this workspace.\n[New Model](command:opm.newModel)",
+  "welcome.model": "Click a model in the list above, or open a *.opm.json file.\n[New Model](command:opm.newModel)",
+  "command.createSchema": "Create JSON Schema"
 }

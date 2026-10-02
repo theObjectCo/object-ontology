@@ -158,6 +158,8 @@ export class OpmEditorProvider implements vscode.CustomTextEditorProvider {
         return void this.saveExport(doc, m.format, m.data, m.viewId);
       case "exportMarkdown":
         return void vscode.commands.executeCommand("opm.exportMarkdown", doc.uri);
+      case "createSchema":
+        return void vscode.commands.executeCommand("opm.createSchema", doc.uri);
       case "saveViewFromSelection": {
         if (!m.ids.length) return;
         const name = await vscode.window.showInputBox({ prompt: vscode.l10n.t("Name of the new view"), value: vscode.l10n.t("New view") });

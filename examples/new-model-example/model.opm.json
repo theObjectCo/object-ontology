@@ -1,0 +1,16 @@
+{
+  "name": "Model",
+  "description": "",
+  "objects": {
+    "user": { "essence": "physical" },
+    "request": {},
+    "result": { "states": ["draft", "approved"] }
+  },
+  "processes": {
+    "handling": {
+      "handledBy": ["user"],
+      "consumes": ["request"],
+      "yields": [{ "object": "result", "state": "draft" }]
+    }
+  }
+}

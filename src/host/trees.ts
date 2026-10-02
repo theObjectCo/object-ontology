@@ -148,3 +148,51 @@ export class ViewsTree implements vscode.TreeDataProvider<ViewItem> {
     return t;
   }
 }
+
+/** The folder of a model relative to its workspace folder, empty at the root. */
+export function modelFolder(uri: vscode.Uri): string {
+  const rel = vscode.workspace.asRelativePath(uri, vscode.workspace.workspaceFolders !== undefined && vscode.workspace.workspaceFolders.length > 1);
+  return rel.includes("/") ? rel.slice(0, rel.lastIndexOf("/")) : "";
+}
+
+const MODEL_GLOB = "**/*.opm.json";
+const EXCLUDE = "**/{node_modules,dist,out,.git}/**";
+
+/** Every model file of the workspace; the one the side bar shows is marked. */
+export class ModelsTree implements vscode.TreeDataProvider<vscode.Uri>, vscode.Disposable {
+  private emitter = new vscode.EventEmitter<void>();
+  readonly onDidChangeTreeData = this.emitter.event;
+  private files?: vscode.Uri[];
+  private subscriptions: vscode.Disposable[];
+
+  constructor(private current: CurrentModel) {
+    const watcher = vscode.workspace.createFileSystemWatcher(MODEL_GLOB, false, true, false);
+    const reload = () => { this.files = undefined; this.emitter.fire(); };
+    this.subscriptions = [
+      watcher, watcher.onDidCreate(reload), watcher.onDidDelete(reload),
+      vscode.workspace.onDidChangeWorkspaceFolders(reload),
+      current.onChange(() => this.emitter.fire()),
+    ];
+  }
+
+  async getChildren(): Promise<vscode.Uri[]> {
+    this.files ??= (await vscode.workspace.findFiles(MODEL_GLOB, EXCLUDE))
+      .sort((a, b) => vscode.workspace.asRelativePath(a).localeCompare(vscode.workspace.asRelativePath(b)));
+    return this.files;
+  }
+
+  getTreeItem(uri: vscode.Uri): vscode.TreeItem {
+    const shown = uri.toString() === this.current.uri?.toString();
+    const t = new vscode.TreeItem(uri.path.slice(uri.path.lastIndexOf("/") + 1), vscode.TreeItemCollapsibleState.None);
+    t.description = modelFolder(uri);
+    t.resourceUri = uri;
+    t.iconPath = new vscode.ThemeIcon(shown ? "eye" : "file", shown ? new vscode.ThemeColor("list.highlightForeground") : undefined);
+    t.tooltip = shown ? vscode.l10n.t("{0} (shown below)", vscode.workspace.asRelativePath(uri)) : vscode.workspace.asRelativePath(uri);
+    t.command = { command: "opm.openModel", title: "", arguments: [uri] };
+    return t;
+  }
+
+  dispose(): void {
+    this.subscriptions.forEach((s) => s.dispose());
+  }
+}

@@ -63,8 +63,66 @@ async function engine(): Promise<InstanceType<typeof ELK> | null> {
   return elk;
 }
 
+/** Layout algorithms of ELK offered in the toolbar; the first one lays out automatic views. */
+export const LAYOUTS = ["layered-right", "layered-down", "stress", "force", "mrtree", "radial", "rectpacking"] as const;
+export type LayoutAlgorithm = typeof LAYOUTS[number];
+
+const OPTIONS: Record<LayoutAlgorithm, Record<string, string>> = {
+  "layered-right": {
+    "elk.algorithm": "layered",
+    "elk.direction": "RIGHT",
+    "elk.layered.spacing.nodeNodeBetweenLayers": "110",
+    "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
+  },
+  "layered-down": {
+    "elk.algorithm": "layered",
+    "elk.direction": "DOWN",
+    "elk.layered.spacing.nodeNodeBetweenLayers": "90",
+    "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
+  },
+  // node distances follow the link lengths; good for dense views without a main direction
+  stress: { "elk.algorithm": "stress", "elk.stress.desiredEdgeLength": "220" },
+  force: { "elk.algorithm": "force", "elk.force.iterations": "500", "elk.spacing.nodeNode": "90" },
+  // mrtree and radial lay out a spanning tree of the links; the other links are drawn over it
+  mrtree: { "elk.algorithm": "mrtree", "elk.direction": "DOWN", "elk.mrtree.weighting": "CONSTRAINT" },
+  radial: { "elk.algorithm": "radial", "elk.radial.radius": "220" },
+  // ignores the links and packs the things into a compact block
+  rectpacking: { "elk.algorithm": "rectpacking", "elk.aspectRatio": "1.6" },
+};
+
+/** Algorithms that accept only a tree; they get a spanning tree of the links. */
+const TREE = new Set<LayoutAlgorithm>(["mrtree", "radial"]);
+
+/**
+ * A spanning forest of the links, grown breadth-first from the most connected thing of each component.
+ * With `single`, the roots of the smaller components hang from the first root: the radial layout takes
+ * one root for the whole graph and stacks everything it cannot reach on one point.
+ */
+function spanningTree(ids: string[], edges: (readonly [string, string])[], single = false): [string, string][] {
+  const near = new Map(ids.map((id) => [id, new Set<string>()]));
+  for (const [a, b] of edges) { near.get(a)?.add(b); near.get(b)?.add(a); }
+  const out: [string, string][] = [];
+  const seen = new Set<string>();
+  for (const root of [...ids].sort((a, b) => near.get(b)!.size - near.get(a)!.size)) {
+    if (seen.has(root)) continue;
+    if (single && seen.size) out.push([out[0]?.[0] ?? [...seen][0], root]);
+    seen.add(root);
+    const queue = [root];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      for (const next of near.get(cur)!) {
+        if (seen.has(next)) continue;
+        seen.add(next);
+        out.push([cur, next]);
+        queue.push(next);
+      }
+    }
+  }
+  return out;
+}
+
 /** Automatic positions of the top-level nodes (top-left corners). */
-export async function autoLayout(content: ViewContent, shapes: Shapes): Promise<Positions> {
+export async function autoLayout(content: ViewContent, shapes: Shapes, algorithm: LayoutAlgorithm = "layered-right"): Promise<Positions> {
   const ids = topLevel(content);
   const edges = content.edges
     .map((e) => [carrier(content, e.source), carrier(content, e.target)] as const)
@@ -74,21 +132,21 @@ export async function autoLayout(content: ViewContent, shapes: Shapes): Promise<
   const graph: ElkNode = {
     id: "root",
     layoutOptions: {
-      "elk.algorithm": "layered",
-      "elk.direction": "RIGHT",
       "elk.spacing.nodeNode": "60",
-      "elk.layered.spacing.nodeNodeBetweenLayers": "110",
-      "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
       "elk.separateConnectedComponents": "true",
       "elk.spacing.componentComponent": "80",
+      ...OPTIONS[algorithm],
     },
     children: ids.map((id) => ({ id, width: sizeOf(shapes, id).w, height: sizeOf(shapes, id).h })),
-    edges: edges.map(([s, t], i) => ({ id: `e${i}`, sources: [s], targets: [t] })),
+    edges: (TREE.has(algorithm) ? spanningTree(ids, edges, algorithm === "radial") : edges).map(([s, t], i) => ({ id: `e${i}`, sources: [s], targets: [t] })),
   };
   try {
     const result = await run.layout(graph);
     const out: Positions = {};
-    for (const c of result.children ?? []) out[c.id] = [Math.round((c.x ?? 0) + 40), Math.round((c.y ?? 0) + 40)];
+    // stress, force and radial may place nodes at negative coordinates
+    const minX = Math.min(...(result.children ?? []).map((c) => c.x ?? 0), 0);
+    const minY = Math.min(...(result.children ?? []).map((c) => c.y ?? 0), 0);
+    for (const c of result.children ?? []) out[c.id] = [Math.round((c.x ?? 0) - minX + 40), Math.round((c.y ?? 0) - minY + 40)];
     return out;
   } catch (e) {
     console.warn("ELK layout failed, using a grid", e);

@@ -4,6 +4,9 @@
 !package.nls.pl.json
 !l10n/**
 !README.md
+!LICENSE
+!CHANGELOG.md
+!docs/images/diagram-editor.png
 !dist/extension.js
 !dist/webview.js
 !dist/webview.css

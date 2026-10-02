@@ -53,6 +53,7 @@ export type WebviewMessage =
   | { type: "openLink"; href: string }
   | { type: "export"; format: "png" | "svg"; data: string; viewId: string }
   | { type: "exportMarkdown" }
+  | { type: "createSchema" }
   | { type: "saveViewFromSelection"; ids: string[]; positions?: Record<string, [number, number]> }
   | { type: "defaults"; defaults: UiDefaults }
   | { type: "notify"; message: string };

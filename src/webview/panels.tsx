@@ -5,6 +5,7 @@ import { Sentence } from "../core/opl";
 import { ViewInfo } from "../core/viewmodel";
 import { LINK_WORDS, Messages, format } from "../shared/i18n";
 import { SchemaFile } from "../shared/protocol";
+import { LAYOUTS, LayoutAlgorithm } from "./layout";
 import { Markdown } from "./markdown";
 
 /* ---------- toolbar ---------- */
@@ -16,19 +17,17 @@ export interface ToolbarProps {
   onAddObject: () => void;
   onAddProcess: () => void;
   onAddState?: () => void;
-  manual: boolean;
-  onAutoLayout: () => void;
-  onResetLayout: () => void;
+  onArrange: (algorithm: LayoutAlgorithm) => void;
   menu: { label: string; action: () => void; checked?: boolean; disabled?: boolean }[];
   disabled: boolean;
 }
 
 export function Toolbar(p: ToolbarProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<"more" | "layout" | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(null); };
     window.addEventListener("mousedown", close);
     return () => window.removeEventListener("mousedown", close);
   }, [open]);
@@ -47,14 +46,21 @@ export function Toolbar(p: ToolbarProps) {
       <button onClick={p.onAddProcess} title="P">◯ {p.t.process}</button>
       {p.onAddState && <button onClick={p.onAddState} title="S">▢ {p.t.state}</button>}
       <span className="opm-sep" />
-      <button onClick={p.onAutoLayout}>{p.t.autoLayout}</button>
-      <span className={`opm-badge${p.manual ? " manual" : ""}`}>{p.manual ? p.t.layoutManual : p.t.layoutAuto}</span>
-      {p.manual && <button onClick={p.onResetLayout}>{p.t.resetLayout}</button>}
-      <button className="opm-more" onClick={() => setOpen(!open)} aria-label="More">⋯</button>
-      {open && (
+      <span className="opm-split">
+        <button className="opm-layout" onClick={() => setOpen(open === "layout" ? null : "layout")}>{p.t.arrange} ▾</button>
+        {open === "layout" && (
+          <div className="opm-menu opm-layout-menu">
+            {LAYOUTS.map((a) => (
+              <button key={a} disabled={p.disabled} onClick={() => { setOpen(null); p.onArrange(a); }}>{p.t.layouts[a]}</button>
+            ))}
+          </div>
+        )}
+      </span>
+      <button className="opm-more" onClick={() => setOpen(open === "more" ? null : "more")} aria-label="More">⋯</button>
+      {open === "more" && (
         <div className="opm-menu">
           {p.menu.map((m) => (
-            <button key={m.label} disabled={m.disabled} onClick={() => { setOpen(false); m.action(); }}>
+            <button key={m.label} disabled={m.disabled} onClick={() => { setOpen(null); m.action(); }}>
               {m.checked !== undefined && <span className="opm-check">{m.checked ? "☑" : "☐"}</span>}{m.label}
             </button>
           ))}

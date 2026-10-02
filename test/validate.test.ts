@@ -4,6 +4,8 @@ import * as fs from "fs";
 import { check, locate, structureErrors } from "../src/core/load";
 import { Model } from "../src/core/model";
 import { collectEnumValues, validate } from "../src/core/validate";
+import { modelName, starterModel } from "../src/core/template";
+import { dataObjects, draftSchema, schemaFileFor } from "../src/core/schemagen";
 
 const EXAMPLE = "examples/window-pricing/model.opm.json";
 const codes = (model: Model, readSchema?: (f: string) => unknown) => validate(model, { readSchema }).map((d) => d.code);
@@ -96,4 +98,36 @@ test("an unknown target in object form is reported at its key", () => {
   const d = validate({ objects: { a: {} }, processes: { p: { yields: ["a"], invokes: [{ process: "missing", note: "n" }] } } });
   const unknown = d.find((x) => x.code === "unknown-process")!;
   assert.deepEqual(unknown.path, ["processes", "p", "invokes", 0, "process"]);
+});
+
+test("the starter model of the New Model command is valid and has no warnings", () => {
+  const text = starterModel(modelName("C:/x/order-flow.opm.json"));
+  assert.equal(JSON.parse(text).name, "Order flow");
+  const { errors } = check("new.opm.json", text);
+  assert.deepEqual(errors.filter((e) => e.severity !== "info"), []);
+});
+
+test("Create JSON Schema writes definitions the validator accepts and keeps existing ones", () => {
+  const model: Model = {
+    name: "M",
+    objects: {
+      user: { essence: "physical" }, ui: { role: "module" },
+      order: { states: ["open", "closed"], consistsOf: ["line"], description: "An order." },
+      line: {}, special: { isA: "order" },
+    },
+    processes: { p: { handledBy: ["user"], requires: ["ui"], consumes: ["line"], yields: ["order"] } },
+  };
+  assert.deepEqual(dataObjects(model), ["order", "line", "special"]);
+  assert.equal(schemaFileFor(model, "dir/m.opm.json"), "m.schema.json");
+  const draft = draftSchema(model, "m.schema.json");
+  const schema = JSON.parse(draft.text);
+  assert.deepEqual(schema.$defs.order.properties, { state: { enum: ["open", "closed"] }, line: { $ref: "#/$defs/line" } });
+  assert.deepEqual(schema.$defs.special.allOf, [{ $ref: "#/$defs/order" }]);
+  const linked: Model = { ...model, objects: Object.fromEntries(Object.entries(model.objects!).map(([id, o]) => [id, draft.links[id] ? { ...o, schema: draft.links[id] } : o])) };
+  assert.deepEqual(validate(linked, { readSchema: () => schema }).filter((d) => d.severity !== "info"), []);
+
+  const kept = draftSchema(model, "m.schema.json", '{\n  "$defs": {\n    "order": { "type": "string" }\n  }\n}\n');
+  assert.deepEqual(kept.added, ["line", "special"]);
+  assert.deepEqual(JSON.parse(kept.text).$defs.order, { type: "string" });
+  assert.equal(Object.keys(kept.links).length, 3);
 });

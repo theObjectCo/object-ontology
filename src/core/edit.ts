@@ -32,7 +32,9 @@ export type Operation =
   | { op: "openZoom"; process: string }
   | { op: "saveView"; name: string; ids: string[]; positions?: Positions }
   | { op: "paste"; fragment: Fragment; viewId: string; offset?: Position; parentId?: string }
-  | { op: "removeStaleLayout" };
+  | { op: "removeStaleLayout" }
+  /** Sets the "schema" field of several objects in one edit. */
+  | { op: "setSchemas"; schemas: Record<string, string> };
 
 export interface EditResult {
   text: string;
@@ -463,7 +465,7 @@ function run(doc: Doc, model: Model, op: Operation): Partial<EditResult> {
       const existing = model.layout?.[op.viewId];
       if (!existing) {
         doc.set(["layout", op.viewId], roundAll({ ...(op.all ?? {}), ...op.positions }));
-        return { message: `View ${op.viewId} switched to manual layout` };
+        return {};
       }
       for (const [id, p] of Object.entries(op.positions)) doc.set(["layout", op.viewId, id], round(p));
       return {};
@@ -499,6 +501,12 @@ function run(doc: Doc, model: Model, op: Operation): Partial<EditResult> {
       return paste(doc, model, op);
     case "removeStaleLayout":
       return removeStale(doc, model);
+    case "setSchemas":
+      for (const [id, schema] of Object.entries(op.schemas)) {
+        if (!objects(model)[id]) throw new EditError(`Unknown object "${id}".`);
+        doc.set(["objects", id, "schema"], schema);
+      }
+      return {};
   }
 }
 

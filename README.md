@@ -80,7 +80,7 @@ The optional `layout` section at the end of the file stores the positions that t
 }
 ```
 
-A view without an entry is laid out automatically every time it is opened, and opening or scrolling it never changes the file. The first move in a view writes the positions of all its things, so a view is either automatic or manual as a whole. The validator, the renderer and the markdown export ignore the layout, apart from information diagnostics about positions of things that no longer exist.
+A view without an entry is shown in layers from left to right, and opening or scrolling it never changes the file. The first move or the first **Arrange** in such a view writes the positions of all its things. The validator, the renderer and the markdown export ignore the layout, apart from information diagnostics about positions of things that no longer exist.
 
 Objects are rectangles with their states in italics, modules have a thicker border, and processes are rounded shapes. Mermaid has no ellipse and no OPM link symbols, so these shapes and arrows approximate the ISO 19450 notation.
 
@@ -158,9 +158,15 @@ A link that starts or ends in a state box keeps that state. An effect that start
 | Ctrl+A, Esc | select everything in the view, clear the selection |
 | Ctrl+0, Ctrl++, Ctrl+− | fit, zoom in, zoom out |
 
+**Arrange** in the toolbar lists the ELK algorithms: layers left to right or top to bottom, stress, force-directed, tree, radial, and a compact block that ignores the links. The chosen one arranges the view and writes the positions; Ctrl+Z restores the previous arrangement. Tree and radial arrange a spanning tree of the links, and the other links are drawn across that arrangement.
+
 The ⋯ menu exports the view as PNG (twice the screen resolution, on the theme background) or SVG, exports markdown, saves the selection as a custom view and switches word labels on the links.
 
-The activity bar has an OPM container with two trees: **Model** lists objects with their states and processes with their subprocesses, with error and warning icons, and **Views** lists the views. A click selects the element in the diagram and switches to a view that contains it. **OPM: Find Element** searches by label or identifier. The setting `opm.schemaGlob` (default `**/*.schema.json`) chooses the schema files offered in the drawer.
+The activity bar has an OPM container with three trees. **Models** lists every `*.opm.json` file of the workspace, outside `node_modules`, `dist`, `out` and `.git`; a click opens the file in the diagram editor, and an eye icon marks the model the two trees below show. **Model** lists objects with their states and processes with their subprocesses, with error and warning icons, and **Views** lists the views. Both follow the focused diagram or the active model text editor, and their titles carry the file name. A click selects the element in the diagram and switches to a view that contains it.
+
+**OPM: New Model**, the file icon above **Models**, or **New Model** in the context menu of a folder in the explorer creates a model file and opens it. The new file holds one agent, one process, an object the process consumes and an object it yields in a state, and it passes the validator without warnings. **OPM: Find Element** searches by label or identifier. The setting `opm.schemaGlob` (default `**/*.schema.json`) chooses the schema files offered in the drawer.
+
+**OPM: Create JSON Schema**, also in the ⋯ menu of the diagram, writes a definition for every informatical object that is not a module and has no `schema` yet, and links the objects to it in one edit of the model. States become an enum in a `state` property, parts and attributes become properties that refer to their definitions, and `isA` becomes an `allOf`. The definitions go to the schema file the objects already use, or to `<model>.schema.json` next to the model. Definitions already in the file stay as they are.
 
 **OPM: Export Markdown** writes the views, the module table, the state diagrams and the OPL text as `<model>.md` next to the model. The UI of the editor follows the VS Code display language (English or Polish); OPL is always English.
 
