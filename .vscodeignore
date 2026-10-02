@@ -9,4 +9,5 @@
 !dist/webview.css
 !media/elk-worker.min.js
 !resources/opm.svg
+!resources/icon.png
 !schema/opm-model.schema.json

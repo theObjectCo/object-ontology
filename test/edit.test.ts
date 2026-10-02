@@ -213,3 +213,49 @@ test("a manual zoom view needs no positions for its subprocesses", () => {
   const missing = validate(parse(moved)).filter((d) => d.code === "layout-missing").map((d) => d.element);
   assert.ok(!missing.includes("productPricing") && !missing.includes("transportPricing"), missing.join(", "));
 });
+
+test("notes on things and links: object form while a note is set, bare identifier again without it", () => {
+  const text = JSON.stringify({
+    objects: { a: {}, b: { states: ["x", "y"] } },
+    processes: { p: { requires: ["a"], yields: [{ object: "b", state: "x" }], invokes: ["q"] }, q: { affects: ["a"] } },
+  }, null, 2);
+  const linkTo = (t: string, kind: string, to: string) => editorLinks(parse(t)).find((l) => l.kind === kind && (l.to === to || l.from === to))!;
+
+  let t = run(text, { op: "updateElement", id: "a", patch: { note: "See [spec](docs/spec.md)\nline two" } });
+  assert.equal(parse(t).objects!.a.note, "See [spec](docs/spec.md)\nline two");
+
+  t = run(t, { op: "updateLink", id: linkTo(t, "instrument", "a").id, note: "why a" });
+  assert.deepEqual(parse(t).processes!.p.requires, [{ object: "a", note: "why a" }]);
+  assert.equal(linkTo(t, "instrument", "a").note, "why a");
+
+  t = run(t, { op: "updateLink", id: linkTo(t, "invocation", "q").id, note: "async" });
+  assert.deepEqual(parse(t).processes!.p.invokes, [{ process: "q", note: "async" }]);
+  t = run(t, { op: "updateLink", id: linkTo(t, "result", "b").id, note: "first" });
+  assert.deepEqual(parse(t).processes!.p.yields, [{ object: "b", state: "x", note: "first" }]);
+
+  // a change of kind or a cleared state keeps the note
+  t = run(t, { op: "updateLink", id: linkTo(t, "instrument", "a").id, kind: "consumption" });
+  assert.deepEqual(parse(t).processes!.p.consumes, [{ object: "a", note: "why a" }]);
+  t = run(t, { op: "deleteState", object: "b", state: "x" });
+  assert.deepEqual(parse(t).processes!.p.yields, [{ object: "b", note: "first" }]);
+
+  // renaming and deleting reach the targets of entries in object form
+  t = run(t, { op: "renameId", oldId: "q", newId: "r" });
+  assert.deepEqual(parse(t).processes!.p.invokes, [{ process: "r", note: "async" }]);
+  assert.deepEqual(validate(parse(t)).filter((d) => d.severity === "error"), []);
+  t = run(t, { op: "deleteElements", ids: ["r"] });
+  assert.equal(parse(t).processes!.p.invokes, undefined);
+
+  // removing the note returns to the bare identifier
+  t = run(t, { op: "updateLink", id: linkTo(t, "consumption", "a").id, note: null });
+  assert.deepEqual(parse(t).processes!.p.consumes, ["a"]);
+  t = run(t, { op: "updateElement", id: "a", patch: { note: null } });
+  assert.equal(parse(t).objects!.a.note, undefined);
+});
+
+test("copy and paste keeps notes on links inside the selection", () => {
+  const text = JSON.stringify({ objects: { a: {} }, processes: { p: { yields: [{ object: "a", note: "n" }] } } }, null, 2);
+  const frag = fragmentOf(parse(text), ["a", "p"]);
+  const t = run(text, { op: "paste", fragment: frag, viewId: "system" });
+  assert.deepEqual(parse(t).processes!.p2.yields, [{ object: "a2", note: "n" }]);
+});

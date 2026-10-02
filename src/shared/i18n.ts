@@ -65,6 +65,14 @@ const en = {
   levelUp: "Level up",
   subprocessesHint: "Subprocesses run from top to bottom",
   cancel: "Cancel",
+  cut: "Cut",
+  paste: "Paste",
+  rename: "Rename",
+  properties: "Properties",
+  newState: "Add state",
+  note: "Note",
+  notePlaceholder: "Markdown: [text](https://…), a bare https:// address, or [file](docs/spec.md)",
+  editNote: "Click to edit",
 };
 
 export type Messages = typeof en;
@@ -136,6 +144,14 @@ const pl: Messages = {
   levelUp: "Poziom wyżej",
   subprocessesHint: "Podprocesy wykonują się od góry",
   cancel: "Anuluj",
+  cut: "Wytnij",
+  paste: "Wklej",
+  rename: "Zmień nazwę",
+  properties: "Właściwości",
+  newState: "Dodaj stan",
+  note: "Notatka",
+  notePlaceholder: "Markdown: [tekst](https://…), goły adres https:// albo [plik](docs/spec.md)",
+  editNote: "Kliknij, żeby edytować",
 };
 
 /** Word labels of the link kinds, shown when link labels are switched on and in the kind menu. */

@@ -3,7 +3,12 @@
   "displayName": "%displayName%",
   "description": "%description%",
   "version": "0.1.0",
-  "publisher": "object",
+  "publisher": "ObjectPL",
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theObjectCo/object-ontology.git"
+  },
   "private": true,
   "license": "UNLICENSED",
   "engines": {
@@ -176,7 +181,7 @@
     "build": "node build.mjs",
     "typecheck": "tsc && tsc -p tsconfig.webview.json",
     "test": "npm run build && node --test \"dist/test/*.test.js\"",
-    "package": "npm run build && vsce package --no-dependencies --allow-missing-repository --skip-license --no-rewrite-relative-links -o dist/object-ontology.vsix",
+    "package": "npm run build && vsce package --no-dependencies --skip-license -o dist/object-ontology.vsix",
     "shots": "node build.mjs --harness && node test/harness/shots.mjs examples/window-pricing/model.opm.json dist/shots"
   },
   "devDependencies": {

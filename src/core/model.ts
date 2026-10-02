@@ -1,25 +1,33 @@
 export type Essence = "informatical" | "physical";
 export type Affiliation = "systemic" | "environmental";
 
-/** A link target: an identifier, or an identifier with a state of the target object. */
-export type Ref = string | { object: string; state?: string };
+/** A link to an object: its identifier, or an object form that can carry a note. */
+export type ObjectRef = string | { object: string; note?: string };
+
+/** A link to a process: its identifier, or an object form that can carry a note. */
+export type ProcessRef = string | { process: string; note?: string };
+
+/** A link target: an identifier, or an identifier with a state of the target object and a note. */
+export type Ref = string | { object: string; state?: string; note?: string };
 
 export interface Tagged {
   object: string;
   tag: string;
+  note?: string;
 }
 
 export interface ObjectDef {
   label?: string;
   description?: string;
+  note?: string;
   role?: "module";
   essence?: Essence;
   affiliation?: Affiliation;
   states?: string[];
   schema?: string;
-  consistsOf?: string[];
-  exhibits?: string[];
-  isA?: string;
+  consistsOf?: ObjectRef[];
+  exhibits?: ObjectRef[];
+  isA?: ObjectRef;
   tagged?: Tagged[];
 }
 
@@ -27,30 +35,33 @@ export interface StateChange {
   object: string;
   from?: string;
   to: string;
+  note?: string;
 }
 
 export interface StateRef {
   object: string;
   state?: string;
+  note?: string;
 }
 
 export interface ProcessDef {
   label?: string;
   description?: string;
+  note?: string;
   essence?: Essence;
   affiliation?: Affiliation;
-  handledBy?: string[];
+  handledBy?: ObjectRef[];
   requires?: Ref[];
   consumes?: Ref[];
   yields?: Ref[];
-  affects?: string[];
+  affects?: ObjectRef[];
   changes?: StateChange[];
   conditions?: StateRef[];
   events?: StateRef[];
   zoomsInto?: string[];
-  invokes?: string[];
-  consistsOf?: string[];
-  isA?: string;
+  invokes?: ProcessRef[];
+  consistsOf?: ProcessRef[];
+  isA?: ProcessRef;
 }
 
 export interface ViewDef {
@@ -118,26 +129,39 @@ export function affiliation(o: { affiliation?: Affiliation }): Affiliation {
   return o.affiliation ?? "systemic";
 }
 
-export function refObject(r: Ref): string {
-  return typeof r === "string" ? r : r.object;
+/** Fields of a thing that hold text rather than references to other things. */
+export const TEXT_FIELDS = ["label", "description", "note", "schema", "states", "role", "essence", "affiliation"];
+
+/** The thing a link entry points at. */
+export function refObject(r: string | { object: string } | { process: string }): string {
+  return typeof r === "string" ? r : "object" in r ? r.object : r.process;
+}
+
+/** The things a list of link entries points at. */
+export function refIds(list: (string | { object: string } | { process: string })[] | undefined): string[] {
+  return (list ?? []).map(refObject);
 }
 
 export function refState(r: Ref): string | undefined {
   return typeof r === "string" ? undefined : r.state;
 }
 
+export function refNote(r: string | { note?: string }): string | undefined {
+  return typeof r === "string" ? undefined : r.note;
+}
+
 /** All procedural links declared directly on one process. */
 export function linksOf(id: string, p: ProcessDef): Link[] {
   const out: Link[] = [];
-  for (const target of p.handledBy ?? []) out.push({ kind: "handledBy", process: id, target });
+  for (const target of refIds(p.handledBy)) out.push({ kind: "handledBy", process: id, target });
   for (const kind of ["requires", "consumes", "yields"] as const) {
     for (const r of p[kind] ?? []) out.push({ kind, process: id, target: refObject(r), state: refState(r) });
   }
-  for (const target of p.affects ?? []) out.push({ kind: "affects", process: id, target });
+  for (const target of refIds(p.affects)) out.push({ kind: "affects", process: id, target });
   for (const c of p.changes ?? []) out.push({ kind: "changes", process: id, target: c.object, from: c.from, to: c.to });
   for (const c of p.conditions ?? []) out.push({ kind: "conditions", process: id, target: c.object, state: c.state });
   for (const e of p.events ?? []) out.push({ kind: "events", process: id, target: e.object, state: e.state });
-  for (const target of p.invokes ?? []) out.push({ kind: "invokes", process: id, target });
+  for (const target of refIds(p.invokes)) out.push({ kind: "invokes", process: id, target });
   return out;
 }
 

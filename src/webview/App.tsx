@@ -1,9 +1,9 @@
 import {
   Background, BackgroundVariant, ConnectionLineType, ConnectionMode, Edge, EdgeChange, FinalConnectionState, Node, NodeChange,
-  ReactFlow, Viewport, ViewportPortal, applyNodeChanges, getNodesBounds, useReactFlow, useViewport,
+  ReactFlow, SelectionMode, Viewport, ViewportPortal, applyNodeChanges, getNodesBounds, useReactFlow, useViewport,
 } from "@xyflow/react";
 import { toPng, toSvg } from "html-to-image";
-import { CSSProperties, ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Operation } from "../core/edit";
 import { fragmentOf } from "../core/edit";
 import { EditorLinkKind, STATEFUL, allowedKinds, editorLinks, stateOwner, thingKind } from "../core/links";
@@ -16,7 +16,7 @@ import { EdgeData, edgeTypes } from "./edges";
 import { Rect } from "./geometry";
 import { Positions, Shapes, autoLayout, layoutKey, manualLayout, shapesOf, sizeOf, topLevel } from "./layout";
 import { NodeData, ThingLabels, nodeTypes } from "./nodes";
-import { Inspector, InspectorProps, LinkMenu, OplBar, Toast, Toolbar, ZoomControls } from "./panels";
+import { ContextItem, ContextMenu, Inspector, InspectorProps, LinkMenu, OplBar, Toast, Toolbar, ZoomControls } from "./panels";
 import { edit, post, saveTabState, settle, tabState } from "./vscode";
 
 interface TabState {
@@ -51,7 +51,6 @@ const NONE = new Set<string>();
  */
 const THINGS_Z = 1;
 const LINKS_Z = 2;
-const COMPACT_WIDTH = 196;
 const DRAWER_WIDTH = 270;
 const OPL_HEIGHT = 130;
 const OPL_COLLAPSED = 32;
@@ -82,8 +81,6 @@ function Splitter({ axis, onDrag, onReset }: { axis: "x" | "y"; onDrag: (delta: 
     />
   );
 }
-/** How long a selection stays still before the compact inspector appears, in milliseconds. */
-const INSPECTOR_DELAY = 500;
 
 const isEditable = (t: EventTarget | null) =>
   t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
@@ -133,39 +130,6 @@ function rectOf(content: ViewContent, shapes: Shapes, positions: Positions, id: 
   return p ? { x: p[0], y: p[1], ...sizeOf(shapes, id) } : undefined;
 }
 
-const zoomProcessOf = (content: ViewContent) => content.nodes.find((n) => n.container)?.id;
-
-function union(rects: Rect[]): Rect | undefined {
-  if (!rects.length) return undefined;
-  const x = Math.min(...rects.map((r) => r.x)), y = Math.min(...rects.map((r) => r.y));
-  const x2 = Math.max(...rects.map((r) => r.x + r.w)), y2 = Math.max(...rects.map((r) => r.y + r.h));
-  return { x, y, w: x2 - x, h: y2 - y };
-}
-
-/** The compact inspector, next to the selection on the side with free space. */
-function Anchored({ rect, avoid, size, height, render }: {
-  rect: Rect; avoid: Rect[]; size: { w: number; h: number }; height: number; render: (style: CSSProperties) => ReactElement;
-}) {
-  const { x, y, zoom } = useViewport();
-  const screen = (r: Rect): Rect => ({ x: r.x * zoom + x, y: r.y * zoom + y, w: r.w * zoom, h: r.h * zoom });
-  const s = screen(rect);
-  const others = avoid.map(screen);
-  const gap = 16, w = COMPACT_WIDTH;
-  const clampY = (v: number) => Math.max(56, Math.min(v, size.h - height - 48));
-  const clampX = (v: number) => Math.max(8, Math.min(v, size.w - w - 8));
-  const candidates: Rect[] = [
-    { x: s.x + s.w + gap, y: clampY(s.y), w, h: height },
-    { x: s.x - gap - w, y: clampY(s.y), w, h: height },
-    { x: clampX(s.x), y: s.y + s.h + gap, w, h: height },
-    { x: clampX(s.x), y: s.y - gap - height, w, h: height },
-  ];
-  const inside = (c: Rect) => c.x >= 8 && c.x + c.w <= size.w - 8 && c.y >= 56 && c.y + c.h <= size.h - 40;
-  const hits = (c: Rect) => others.filter((o) => c.x < o.x + o.w && c.x + c.w > o.x && c.y < o.y + o.h && c.y + c.h > o.y).length;
-  // the first side that fits on screen and covers the fewest related things
-  const best = candidates.filter(inside).sort((a, b) => hits(a) - hits(b))[0] ?? candidates[0];
-  return render({ left: best.x, top: best.y, width: w });
-}
-
 function Zoom({ t }: { t: ReturnType<typeof messages> }) {
   const flow = useReactFlow();
   const { zoom } = useViewport();
@@ -204,7 +168,8 @@ export function App() {
   const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
   const [confirm, setConfirm] = useState<{ text: string; action: string; run: () => void } | null>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
-  const [context, setContext] = useState<{ x: number; y: number; pos: [number, number] } | null>(null);
+  /** The open context menu, opened either on the pane or on the selection. */
+  const [context, setContext] = useState<{ x: number; y: number; pos: [number, number]; on: "pane" | "selection" } | null>(null);
   const [connecting, setConnecting] = useState<{ from: string; state?: string } | null>(null);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [rebuild, setRebuild] = useState(0);
@@ -215,6 +180,11 @@ export function App() {
 
   const flow = useReactFlow();
   const wrapper = useRef<HTMLDivElement>(null);
+  // Where the right button went down; a right click opens the context menu, a right drag pans.
+  const rightDown = useRef<{ x: number; y: number } | null>(null);
+  const boxSelecting = useRef(false);
+  /** The last fragment copied here, for pasting from the menu when the clipboard cannot be read. */
+  const copied = useRef<string | undefined>(undefined);
   const autoCache = useRef(new Map<string, Positions>());
   const viewports = useRef<Record<string, Viewport>>(saved?.viewports ?? {});
   const needsFit = useRef(true);
@@ -610,6 +580,8 @@ export function App() {
   }, []);
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
+    // links stay unselected while a selection rectangle is drawn
+    if (boxSelecting.current) return;
     for (const c of changes) {
       if (c.type !== "select") continue;
       if (c.selected) { setEdgeSel(c.id); setSelection([]); }
@@ -733,14 +705,18 @@ export function App() {
     return JSON.stringify(fragmentOf(model, selection, positions), null, 2);
   }, [model, selection, positions]);
 
-  const paste = useCallback(async (text: string) => {
+  /** Pastes a copied fragment; with `at`, its top-left corner lands there. */
+  const paste = useCallback(async (text: string, at?: [number, number]) => {
     if (frozen) return;
     let fragment: unknown;
     try { fragment = JSON.parse(text); } catch { return; }
     if (!fragment || typeof fragment !== "object") return;
-    const f = fragment as { objects?: unknown; processes?: unknown; positions?: unknown };
+    const f = fragment as { objects?: unknown; processes?: unknown; positions?: Record<string, [number, number]> };
     if (!f.objects && !f.processes) return;
-    const r = await run({ op: "paste", fragment: { objects: f.objects as never, processes: f.processes as never, positions: f.positions as never }, viewId, parentId: zoomProcess });
+    const corners = Object.values(f.positions ?? {});
+    const offset: [number, number] | undefined = at && corners.length
+      ? [at[0] - Math.min(...corners.map((c) => c[0])), at[1] - Math.min(...corners.map((c) => c[1]))] : undefined;
+    const r = await run({ op: "paste", fragment: { objects: f.objects as never, processes: f.processes as never, positions: f.positions as never }, viewId, parentId: zoomProcess, offset });
     if (r.ok && r.select?.length) {
       if (zoomProcess) setExtra((x) => ({ ...x, [viewId]: [...(x[viewId] ?? []), ...r.select!] }));
       setSelection(r.select);
@@ -753,6 +729,18 @@ export function App() {
     post({ type: "saveViewFromSelection", ids: selection, positions: pos });
   }, [selection, manual, positions]);
   saveViewRef.current = saveView;
+
+  // the menu writes and reads the clipboard itself; the keyboard goes through the copy, cut and paste events
+  const copySelection = useCallback(() => {
+    const text = copyText();
+    if (!text) return;
+    copied.current = text;
+    void navigator.clipboard?.writeText(text);
+  }, [copyText]);
+  const pasteFromMenu = useCallback(async (at?: [number, number]) => {
+    const text = await navigator.clipboard?.readText().catch(() => undefined);
+    await paste(text || copied.current || "", at);
+  }, [paste]);
 
   const autoLayoutNow = useCallback(async () => {
     if (!content || !shapes) return;
@@ -831,6 +819,8 @@ export function App() {
   copyRef.current = copyText;
   const pasteRef = useRef(paste);
   pasteRef.current = paste;
+  const deleteRef = useRef(deleteSelection);
+  deleteRef.current = deleteSelection;
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => keyRef.current(e);
@@ -838,8 +828,13 @@ export function App() {
       if (isEditable(e.target)) return;
       const text = copyRef.current();
       if (!text || !e.clipboardData) return;
+      copied.current = text;
       e.clipboardData.setData("text/plain", text);
       e.preventDefault();
+    };
+    const cut = (e: ClipboardEvent) => {
+      copy(e);
+      if (e.defaultPrevented) deleteRef.current();
     };
     const pasteEvent = (e: ClipboardEvent) => {
       if (isEditable(e.target)) return;
@@ -848,10 +843,12 @@ export function App() {
     };
     window.addEventListener("keydown", key);
     document.addEventListener("copy", copy);
+    document.addEventListener("cut", cut);
     document.addEventListener("paste", pasteEvent);
     return () => {
       window.removeEventListener("keydown", key);
       document.removeEventListener("copy", copy);
+      document.removeEventListener("cut", cut);
       document.removeEventListener("paste", pasteEvent);
     };
   }, []);
@@ -883,10 +880,9 @@ export function App() {
   }, [model, run, t]);
 
   const inspectorProps: InspectorProps | undefined = model ? {
-    t, language, model, schemas, drawer,
+    t, language, model, schemas,
     ids: selection,
     link: selection.length ? undefined : selectedEdge?.link,
-    onMore: () => setDrawer(true),
     onLess: () => setDrawer(false),
     onShowJson: (id) => post({ type: "revealInText", id, open: true }),
     onOpenZoom: (id) => void openZoom(id),
@@ -907,36 +903,14 @@ export function App() {
       if (l) pendingEdge.current = { kind: patch.kind ?? l.kind, from: l.from, to: l.to };
       void run({ op: "updateLink", id, ...patch });
     },
+    onOpenLink: (href) => post({ type: "openLink", href }),
     onDelete: deleteSelection,
     onCopy: () => { const text = copyText(); if (text) void navigator.clipboard?.writeText(text); },
     onSaveView: saveView,
   } : undefined;
 
-  const selectionRect = useMemo(() => {
-    if (!content || !shapes) return undefined;
-    const ids = selection.length ? selection : selectedEdge ? [selectedEdge.source, selectedEdge.target] : [];
-    return union(ids.map((id) => rectOf(content, shapes, positions, id)).filter((r): r is Rect => !!r));
-  }, [content, shapes, positions, selection, selectedEdge]);
-  const relatedRects = useMemo(() => {
-    if (!content || !shapes || !related) return [];
-    return [...related].filter((id) => !selection.includes(id) && id !== zoomProcessOf(content))
-      .map((id) => rectOf(content, shapes, positions, id)).filter((r): r is Rect => !!r);
-  }, [content, shapes, positions, related, selection]);
-
   const hasSelection = selection.length > 0 || !!selectedEdge;
 
-  // the compact inspector waits until the selection has stood still for a moment, so that it does not
-  // get in the way of dragging; a drag hides it and a new wait starts when the drag ends
-  const [inspectorReady, setInspectorReady] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  useEffect(() => {
-    setInspectorReady(false);
-    if (!hasSelection || dragging) return;
-    const timer = window.setTimeout(() => setInspectorReady(true), INSPECTOR_DELAY);
-    return () => window.clearTimeout(timer);
-  }, [selection, edgeSel, hasSelection, dragging]);
-  const inspectorHeight = selection.length > 1 ? 110 : selectedObject && model
-    ? 120 + 26 * Math.ceil(((objects(model)[selectedObject].states?.length ?? 0) + 1) / 3) : 130;
   const trail = useMemo(() => {
     if (!view) return [];
     const out: ViewInfo[] = [view];
@@ -953,12 +927,87 @@ export function App() {
 
   const empty = !!model && !Object.keys(objects(model)).length && !Object.keys(processes(model)).length;
 
+  /* ---------- context menu ---------- */
+
+  // one menu for the right button: on a thing or a link it acts on the selection, on the pane it adds things
+  const openContext = (e: ReactMouseEvent) => {
+    const el = e.target as HTMLElement;
+    if (isEditable(el)) return;
+    e.preventDefault();
+    const down = rightDown.current;
+    rightDown.current = null;
+    if (el.closest(".opm-context") || (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4)) return;
+    const nodeId = el.closest(".react-flow__node")?.getAttribute("data-id");
+    const edgeId = el.closest("[data-edge]")?.getAttribute("data-edge");
+    let on: "pane" | "selection";
+    if (nodeId) {
+      if (!selection.includes(nodeId)) { setSelection([nodeId]); setEdgeSel(null); }
+      on = "selection";
+    } else if (edgeId) {
+      setEdgeSel(edgeId); setSelection([]);
+      on = "selection";
+    } else if (el.classList.contains("react-flow__pane")) {
+      if (frozen) return;
+      on = "pane";
+    } else return;
+    const box = wrapper.current!.getBoundingClientRect();
+    const p = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    setContext({ x: e.clientX - box.left, y: e.clientY - box.top, pos: [Math.round(p.x), Math.round(p.y)], on });
+  };
+  const closeContext = useCallback(() => setContext(null), []);
+
+  const contextMenu = ((): { title?: string; subtitle?: string; items: ContextItem[] } | undefined => {
+    if (!context || !model) return undefined;
+    const properties: ContextItem = { label: t.properties, keys: "F2", action: () => setDrawer(true) };
+    const paste: ContextItem = { label: t.paste, keys: "Ctrl+V", action: () => void pasteFromMenu(context.on === "pane" ? context.pos : undefined), disabled: frozen };
+    if (context.on === "pane") {
+      return { items: [
+        { label: `▭ ${t.object}`, keys: "O", action: () => void addElement("object", context.pos) },
+        { label: `◯ ${t.process}`, keys: "P", action: () => void addElement("process", context.pos) },
+        "-", paste,
+      ] };
+    }
+    const edit: ContextItem[] = [
+      { label: t.cut, keys: "Ctrl+X", action: () => { copySelection(); deleteSelection(); }, disabled: frozen || !selection.length },
+      { label: t.copy, keys: "Ctrl+C", action: copySelection, disabled: !selection.length },
+      paste,
+      { label: t.delete, keys: "Del", action: deleteSelection, disabled: frozen },
+    ];
+    if (selection.length > 1) {
+      return { title: format(t.elements, { n: selection.length }), items: [...edit, "-", { label: t.saveAsView, action: saveView }] };
+    }
+    if (selection.length === 1) {
+      const id = selection[0];
+      const isProcess = !!processes(model)[id];
+      return { title: label(model, id), subtitle: id, items: [
+        ...(isProcess && id !== zoomProcess ? [{ label: t.openZoom, keys: "Enter", action: () => void openZoom(id) }] : []),
+        ...(isProcess ? [] : [{ label: t.newState, keys: "S", action: () => addState(id), disabled: frozen }]),
+        { label: t.rename, action: () => startEdit(id), disabled: frozen },
+        "-", ...edit,
+        "-", { label: t.showInJson, action: () => post({ type: "revealInText", id, open: true }) }, properties,
+      ] };
+    }
+    const l = selectedEdge?.link;
+    if (!l) return undefined;
+    const canReverse = allowedKinds(model, l.to, l.from).includes(l.kind);
+    return { title: words[l.kind] ?? l.kind, subtitle: `${label(model, l.from)} → ${label(model, l.to)}`, items: [
+      ...(canReverse ? [{ label: `⇄ ${t.reverse}`, action: () => void run({ op: "updateLink", id: l.id, reverse: true }), disabled: frozen }] : []),
+      { label: t.delete, keys: "Del", action: deleteSelection, disabled: frozen },
+      "-", { label: t.properties, action: () => setDrawer(true) },
+    ] };
+  })();
+
   /* ---------- render ---------- */
 
   return (
     <div className={`opm-app${drawer && hasSelection ? " with-drawer" : ""}`}>
       <div className="opm-canvas" ref={wrapper}
-           style={{ "--opl-h": `${oplExpanded ? oplHeight : OPL_COLLAPSED}px` } as CSSProperties}>
+           style={{ "--opl-h": `${oplExpanded ? oplHeight : OPL_COLLAPSED}px` } as CSSProperties}
+           onPointerDownCapture={(e) => {
+             if (e.button === 2) rightDown.current = { x: e.clientX, y: e.clientY };
+             if (!(e.target as HTMLElement).closest(".opm-context")) setContext(null);
+           }}
+           onContextMenu={openContext}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -966,18 +1015,10 @@ export function App() {
           edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onNodeDragStart={() => setDragging(true)}
-          onNodeDragStop={(e, node, dragged) => { setDragging(false); onNodeDragStop(e, node, dragged); }}
+          onNodeDragStop={onNodeDragStop}
           onConnectStart={onConnectStart}
           onConnectEnd={onConnectEnd}
           onPaneClick={() => { setMenu(null); setContext(null); }}
-          onPaneContextMenu={(e) => {
-            e.preventDefault();
-            if (frozen) return;
-            const box = wrapper.current!.getBoundingClientRect();
-            const p = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-            setContext({ x: e.clientX - box.left, y: e.clientY - box.top, pos: [Math.round(p.x), Math.round(p.y)] });
-          }}
           onMoveEnd={(_e, vp) => {
             viewports.current = { ...viewports.current, [viewId]: vp };
             saveTabState({ viewId, drawer, oplExpanded, oplMode, labelsOn, viewports: viewports.current, drawerWidth, oplHeight } satisfies TabState);
@@ -992,6 +1033,11 @@ export function App() {
           deleteKeyCode={null}
           disableKeyboardA11y
           zoomOnDoubleClick={false}
+          panOnDrag={[1, 2]}
+          selectionOnDrag
+          selectionMode={SelectionMode.Full}
+          onSelectionStart={() => { boxSelecting.current = true; }}
+          onSelectionEnd={() => { boxSelecting.current = false; }}
           minZoom={0.1}
           maxZoom={3}
           proOptions={{ hideAttribution: true }}
@@ -1045,11 +1091,6 @@ export function App() {
           </div>
         )}
 
-        {hasSelection && inspectorReady && !dragging && !drawer && inspectorProps && selectionRect && !menu && (
-          <Anchored rect={selectionRect} avoid={relatedRects} size={size} height={inspectorHeight}
-                    render={(style) => <Inspector {...inspectorProps} style={style} />} />
-        )}
-
         {menu && model && (
           <LinkMenu
             t={t}
@@ -1063,11 +1104,8 @@ export function App() {
           />
         )}
 
-        {context && (
-          <div className="opm-menu opm-context" style={{ left: context.x, top: context.y }}>
-            <button onClick={() => { setContext(null); void addElement("object", context.pos); }}>▭ {t.object}</button>
-            <button onClick={() => { setContext(null); void addElement("process", context.pos); }}>◯ {t.process}</button>
-          </div>
+        {context && contextMenu && (
+          <ContextMenu x={context.x} y={context.y} {...contextMenu} onClose={closeContext} />
         )}
 
         {confirm && (

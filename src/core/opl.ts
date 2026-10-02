@@ -1,4 +1,4 @@
-import { Model, ProcessDef, Ref, affiliation, essence, label, objects, processes, refObject, refState } from "./model";
+import { Model, ProcessDef, Ref, affiliation, essence, label, objects, processes, refIds, refObject, refState } from "./model";
 
 export type Token = { text: string } | { thing: string; text: string } | { state: string; text: string };
 
@@ -59,9 +59,9 @@ export function oplSentences(model: Model): Sentence[] {
       o.states.forEach((st, i) => { if (i) s.t(i === o.states!.length - 1 ? " or " : ", "); s.state(st); });
       out.push(s.t(".").done());
     }
-    if (o.consistsOf?.length) out.push(b().thing(id).t(" consists of ").list(o.consistsOf).t(".").done());
-    if (o.exhibits?.length) out.push(b().thing(id).t(" exhibits ").list(o.exhibits).t(".").done());
-    if (o.isA) out.push(b().thing(id).t(" is a ").thing(o.isA).t(".").done());
+    if (o.consistsOf?.length) out.push(b().thing(id).t(" consists of ").list(refIds(o.consistsOf)).t(".").done());
+    if (o.exhibits?.length) out.push(b().thing(id).t(" exhibits ").list(refIds(o.exhibits)).t(".").done());
+    if (o.isA) out.push(b().thing(id).t(" is a ").thing(refObject(o.isA)).t(".").done());
     for (const tg of o.tagged ?? []) out.push(b().thing(id).t(` ${tg.tag} `).thing(tg.object).t(".").done());
   }
   for (const [id, p] of Object.entries(processes(model))) out.push(...processSentences(model, id, p));
@@ -73,11 +73,11 @@ function processSentences(model: Model, id: string, p: ProcessDef): Sentence[] {
   const out: Sentence[] = [];
   const traits = [essence(p) === "physical" ? "physical" : "", affiliation(p) === "environmental" ? "environmental" : ""].filter(Boolean);
   if (traits.length) out.push(b().thing(id).t(` is ${traits.join(" and ")}.`).done());
-  if (p.handledBy?.length) out.push(b().list(p.handledBy).t(p.handledBy.length > 1 ? " handle " : " handles ").thing(id).t(".").done());
+  if (p.handledBy?.length) out.push(b().list(refIds(p.handledBy)).t(p.handledBy.length > 1 ? " handle " : " handles ").thing(id).t(".").done());
   if (p.requires?.length) out.push(b().thing(id).t(" requires ").refs_(p.requires).t(".").done());
   if (p.consumes?.length) out.push(b().thing(id).t(" consumes ").refs_(p.consumes).t(".").done());
   if (p.yields?.length) out.push(b().thing(id).t(" yields ").refs_(p.yields).t(".").done());
-  if (p.affects?.length) out.push(b().thing(id).t(" affects ").list(p.affects).t(".").done());
+  if (p.affects?.length) out.push(b().thing(id).t(" affects ").list(refIds(p.affects)).t(".").done());
   for (const c of p.changes ?? []) {
     const s = b().thing(id).t(" changes ").thing(c.object);
     if (c.from) s.t(" from ").state(c.from);
@@ -94,9 +94,9 @@ function processSentences(model: Model, id: string, p: ProcessDef): Sentence[] {
     out.push(s.thing(e.object).t(" initiates ").thing(id).t(".").done());
   }
   if (p.zoomsInto?.length) out.push(b().thing(id).t(" zooms into ").list(p.zoomsInto).t(p.zoomsInto.length > 1 ? ", in that sequence." : ".").done());
-  if (p.invokes?.length) out.push(b().thing(id).t(" invokes ").list(p.invokes).t(".").done());
-  if (p.consistsOf?.length) out.push(b().thing(id).t(" consists of ").list(p.consistsOf).t(".").done());
-  if (p.isA) out.push(b().thing(id).t(" is a ").thing(p.isA).t(".").done());
+  if (p.invokes?.length) out.push(b().thing(id).t(" invokes ").list(refIds(p.invokes)).t(".").done());
+  if (p.consistsOf?.length) out.push(b().thing(id).t(" consists of ").list(refIds(p.consistsOf)).t(".").done());
+  if (p.isA) out.push(b().thing(id).t(" is a ").thing(refObject(p.isA)).t(".").done());
   return out;
 }
 

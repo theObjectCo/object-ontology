@@ -49,6 +49,8 @@ export type WebviewMessage =
   /** Selects the element in the text editor; open also opens the text beside when it is not visible. */
   | { type: "revealInText"; id: string; open?: boolean }
   | { type: "openTextBeside" }
+  /** A link from a note: a web address, or a path relative to the model, optionally with #L<line>. */
+  | { type: "openLink"; href: string }
   | { type: "export"; format: "png" | "svg"; data: string; viewId: string }
   | { type: "exportMarkdown" }
   | { type: "saveViewFromSelection"; ids: string[]; positions?: Record<string, [number, number]> }

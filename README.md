@@ -64,6 +64,12 @@ A process lists its links. Each link kind has one OPL sentence and one diagram n
 
 `requires`, `consumes` and `yields` accept an identifier or `{ "object": "snapshot", "state": "valid" }` for a link to one state. A process can also have `essence`, `affiliation`, `consistsOf` and `isA`, with the same meaning as for objects.
 
+### Notes
+
+An object, a process and every link can have a `note` with free text in Markdown, kept apart from `description`. The validator, OPL and the Mermaid output skip notes. A link written as a bare identifier switches to the object form when it gets a note: `{ "object": "generator", "note": "..." }`, or `{ "process": "pricing", "note": "..." }` in `invokes` and in the `consistsOf` and `isA` of a process. An entry that is already an object (`changes`, `conditions`, `events`, `tagged` or an entry with a state) gets a `note` property next to its other fields, and removing the note in the diagram editor brings a bare identifier back.
+
+In the diagram editor, `[text](https://...)` links and bare `https://` addresses open in the browser. A relative path such as `[spec](docs/spec.md#L12)` opens that file from the model's folder at line 12. Links with other schemes are not opened.
+
 ### Layout
 
 The optional `layout` section at the end of the file stores the positions that the diagram editor writes when something is moved: view id, thing id, `[x, y]` of the top-left corner.
@@ -123,9 +129,13 @@ code --install-extension dist/object-ontology.vsix
 
 A `*.opm.json` file opens in the diagram editor. **OPM: Open Text Beside** in the editor title bar shows the JSON next to it, and **OPM: Open Diagram Beside** does the reverse from the text editor. The JSON file stays the only source: the editor has no model of its own, each operation is one edit of the text, Ctrl+Z undoes it, and a change typed in the text redraws the diagram.
 
+![Diagram editor: the model tree, the system diagram SD with Configuration selected, the drawer with its properties and the JSON text beside it](docs/images/diagram-editor.png)
+
 The canvas shows one view at a time: the system diagram SD, the structure view SB when the model has parts, attributes or generalizations, one diagram per zoomed process (SD1, SD1.1 and so on) and the custom views from `views`. The path in the toolbar and Backspace lead one level up; a double click or Enter on a process opens its zoom and creates an empty one if the process has none. Subprocesses are stacked inside the zoomed process in their order of execution, and a vertical drag changes that order.
 
-Details appear in steps. With nothing selected, only the diagram, the toolbar and a one-line OPL bar are visible. A selection opens a small inspector next to it and dims unrelated things. **More** turns the inspector into a drawer with the identifier, label, description, states, the JSON Schema definition and the classification. The OPL bar expands into a panel with the sentences of the whole view or of the selection; a click on a sentence selects its things.
+The left mouse button selects and moves things, and a left drag on the empty canvas draws a selection rectangle. The right and middle buttons pan the view, and a right click without movement opens the context menu. On a thing the menu lists zoom, new state, rename, cut, copy, paste, delete, show in JSON and properties. On a link it lists reverse, delete and properties, and on the empty canvas it adds an object or a process or pastes at the clicked point.
+
+With nothing selected, only the diagram, the toolbar and a one-line OPL bar are visible. A selection dims unrelated things. **Properties** in the context menu, or F2, opens a drawer with the identifier, label, description, note, states, the JSON Schema definition and the classification. The OPL bar expands into a panel with the sentences of the whole view or of the selection; a click on a sentence selects its things.
 
 A link is drawn from the handle of a thing, or from a state box, to another thing. Only targets with an allowed link kind light up, and the menu after the drop lists those kinds with keys 1 to 9:
 

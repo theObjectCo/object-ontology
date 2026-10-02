@@ -78,3 +78,22 @@ test("locate finds the value, or the property name for objects", () => {
   assert.equal(text.substr(locate(tree, ["objects", "a", "states", 1]).offset, 3), '"y"');
   assert.equal(text.substr(locate(tree, ["objects", "a"]).offset, 3), '"a"');
 });
+
+test("notes are allowed on things and on every kind of link entry", () => {
+  const model = {
+    objects: { a: { note: "x", consistsOf: [{ object: "b", note: "y" }], isA: { object: "c", note: "z" } }, b: {}, c: {} },
+    processes: {
+      p: { note: "n", requires: [{ object: "a", state: "s", note: "n" }], yields: ["b"], invokes: [{ process: "q", note: "n" }],
+        conditions: [{ object: "c", note: "n" }], changes: [{ object: "b", to: "s", note: "n" }] },
+      q: { affects: [{ object: "a", note: "n" }], isA: { process: "p", note: "n" } },
+    },
+  };
+  assert.deepEqual(structureErrors(model), []);
+  assert.ok(structureErrors({ processes: { p: { invokes: [{ object: "q" }] } } }).length > 0, "a process link names its target with process");
+});
+
+test("an unknown target in object form is reported at its key", () => {
+  const d = validate({ objects: { a: {} }, processes: { p: { yields: ["a"], invokes: [{ process: "missing", note: "n" }] } } });
+  const unknown = d.find((x) => x.code === "unknown-process")!;
+  assert.deepEqual(unknown.path, ["processes", "p", "invokes", 0, "process"]);
+});

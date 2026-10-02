@@ -1,5 +1,5 @@
 {
-  "displayName": "Object Ontology: OPM models",
+  "displayName": "Object Ontology",
   "description": "A visual editor for OPM models stored as JSON, with validation, OPL text and markdown export.",
   "editor.diagram": "OPM Diagram",
   "container.opm": "OPM",

@@ -83,6 +83,70 @@
         "$ref": "#/$defs/id"
       }
     },
+    "note": {
+      "description": "A note in Markdown, with \\n for line breaks. The diagram editor opens [text](https://...) links and bare https:// addresses in the browser, and a relative path such as [spec](docs/spec.md) opens that file from the model's folder. The validator and the renderers skip notes.",
+      "type": "string"
+    },
+    "objectRef": {
+      "description": "An object, by identifier or as {\"object\": \"...\", \"note\": \"...\"} when the link carries a note.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/id"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "object"
+          ],
+          "properties": {
+            "object": {
+              "$ref": "#/$defs/id"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            }
+          }
+        }
+      ]
+    },
+    "objectRefs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/objectRef"
+      }
+    },
+    "processRef": {
+      "description": "A process, by identifier or as {\"process\": \"...\", \"note\": \"...\"} when the link carries a note.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/id"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "process"
+          ],
+          "properties": {
+            "process": {
+              "$ref": "#/$defs/id"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            }
+          }
+        }
+      ]
+    },
+    "processRefs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/processRef"
+      }
+    },
     "object": {
       "type": "object",
       "additionalProperties": false,
@@ -94,6 +158,9 @@
         },
         "description": {
           "type": "string"
+        },
+        "note": {
+          "$ref": "#/$defs/note"
         },
         "role": {
           "enum": [
@@ -131,15 +198,15 @@
           "description": "JSON Schema definition of the object's data: a file path relative to this model and a JSON pointer, for example contracts.schema.json#/$defs/priceResult. The validator checks that the definition exists and that the states occur in its enums."
         },
         "consistsOf": {
-          "$ref": "#/$defs/ids",
+          "$ref": "#/$defs/objectRefs",
           "description": "Aggregation: the parts of this object."
         },
         "exhibits": {
-          "$ref": "#/$defs/ids",
+          "$ref": "#/$defs/objectRefs",
           "description": "Exhibition: the attributes of this object."
         },
         "isA": {
-          "$ref": "#/$defs/id",
+          "$ref": "#/$defs/objectRef",
           "description": "Generalization: the more general object."
         },
         "tagged": {
@@ -160,6 +227,9 @@
               "tag": {
                 "type": "string",
                 "minLength": 1
+              },
+              "note": {
+                "$ref": "#/$defs/note"
               }
             }
           }
@@ -177,6 +247,9 @@
         "description": {
           "type": "string"
         },
+        "note": {
+          "$ref": "#/$defs/note"
+        },
         "essence": {
           "enum": [
             "informatical",
@@ -192,7 +265,7 @@
           "default": "systemic"
         },
         "handledBy": {
-          "$ref": "#/$defs/ids",
+          "$ref": "#/$defs/objectRefs",
           "description": "Agent links: the humans who perform the process."
         },
         "requires": {
@@ -208,7 +281,7 @@
           "description": "Result links: objects the process creates. An entry may name a state of the object."
         },
         "affects": {
-          "$ref": "#/$defs/ids",
+          "$ref": "#/$defs/objectRefs",
           "description": "Effect links: objects the process changes without naming states."
         },
         "changes": {
@@ -231,6 +304,9 @@
               },
               "to": {
                 "type": "string"
+              },
+              "note": {
+                "$ref": "#/$defs/note"
               }
             }
           }
@@ -252,15 +328,15 @@
           "description": "In-zooming: the subprocesses, in order of execution. An empty list is a zoom view without subprocesses yet."
         },
         "invokes": {
-          "$ref": "#/$defs/ids",
+          "$ref": "#/$defs/processRefs",
           "description": "Invocation links: processes this process starts."
         },
         "consistsOf": {
-          "$ref": "#/$defs/ids",
+          "$ref": "#/$defs/processRefs",
           "description": "Aggregation of processes: the parts of this process."
         },
         "isA": {
-          "$ref": "#/$defs/id",
+          "$ref": "#/$defs/processRef",
           "description": "Generalization: the more general process."
         }
       }
@@ -280,6 +356,9 @@
           },
           "state": {
             "type": "string"
+          },
+          "note": {
+            "$ref": "#/$defs/note"
           }
         }
       }
@@ -318,7 +397,7 @@
       ]
     },
     "ref": {
-      "description": "An object, or an object in a given state: \"license\" or {\"object\": \"license\", \"state\": \"expired\"}.",
+      "description": "An object, or an object in a given state, with an optional note: \"license\" or {\"object\": \"license\", \"state\": \"expired\", \"note\": \"...\"}.",
       "oneOf": [
         {
           "$ref": "#/$defs/id"
@@ -335,6 +414,9 @@
             },
             "state": {
               "type": "string"
+            },
+            "note": {
+              "$ref": "#/$defs/note"
             }
           }
         }

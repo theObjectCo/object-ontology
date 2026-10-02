@@ -5,6 +5,7 @@ import { Sentence } from "../core/opl";
 import { ViewInfo } from "../core/viewmodel";
 import { LINK_WORDS, Messages, format } from "../shared/i18n";
 import { SchemaFile } from "../shared/protocol";
+import { Markdown } from "./markdown";
 
 /* ---------- toolbar ---------- */
 
@@ -144,9 +145,6 @@ export interface InspectorProps {
   ids: string[];
   link?: EditorLink;
   schemas: SchemaFile[];
-  drawer: boolean;
-  style?: CSSProperties;
-  onMore: () => void;
   onLess: () => void;
   onShowJson: (id: string) => void;
   onOpenZoom: (id: string) => void;
@@ -156,7 +154,8 @@ export interface InspectorProps {
   onRenameState: (id: string, oldState: string, newState: string) => void;
   onDeleteState: (id: string, state: string) => void;
   onMoveState: (id: string, state: string, index: number) => void;
-  onUpdateLink: (id: string, patch: { kind?: EditorLinkKind; fromState?: string | null; toState?: string | null; tag?: string; reverse?: boolean }) => void;
+  onUpdateLink: (id: string, patch: { kind?: EditorLinkKind; fromState?: string | null; toState?: string | null; tag?: string; reverse?: boolean; note?: string | null }) => void;
+  onOpenLink: (href: string) => void;
   onDelete: () => void;
   onCopy: () => void;
   onSaveView: () => void;
@@ -173,6 +172,31 @@ function Field({ value, onCommit, mono, placeholder, multiline }: { value: strin
     onKeyDown: (e: ReactKeyboardEvent) => { e.stopPropagation(); if (e.key === "Enter" && !multiline) commit(); if (e.key === "Escape") setV(value); },
   };
   return multiline ? <textarea rows={2} {...props} /> : <input {...props} />;
+}
+
+/** A note in Markdown: shown with clickable links, edited as text after a click on it. */
+function Note({ value, onCommit, onLink, t }: { value: string; onCommit: (v: string | null) => void; onLink: (href: string) => void; t: Messages }) {
+  const [editing, setEditing] = useState(false);
+  const [v, setV] = useState(value);
+  useEffect(() => setV(value), [value]);
+  if (value && !editing) {
+    return (
+      <div className="opm-note" title={t.editNote} tabIndex={0}
+           onClick={() => setEditing(true)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); setEditing(true); } }}>
+        <Markdown text={value} onLink={onLink} />
+      </div>
+    );
+  }
+  const commit = () => {
+    setEditing(false);
+    if (v.trim() !== value.trim()) onCommit(v.trim() ? v : null);
+  };
+  return (
+    <textarea className="opm-input opm-note-input" autoFocus={editing} value={v} placeholder={t.notePlaceholder}
+              rows={Math.max(3, Math.min(16, v.split("\n").length + 1))}
+              onChange={(e) => setV(e.target.value)} onBlur={commit}
+              onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Escape") { setV(value); setEditing(false); } }} />
+  );
 }
 
 function IdField({ id, onRename, t }: { id: string; onRename: (o: string, n: string) => Promise<string | undefined>; t: Messages }) {
@@ -333,12 +357,13 @@ function LinkFields({ p, link }: { p: InspectorProps; link: EditorLink }) {
         <div className="opm-row"><span>{p.t.tag}</span><Field value={link.tag ?? ""} onCommit={(v) => p.onUpdateLink(link.id, { tag: v })} /></div>
       )}
       <Reverse p={p} link={link} allowed={reverseAllowed} />
+      <div className="opm-note-head">{p.t.note}</div>
+      <Note value={link.note ?? ""} onCommit={(v) => p.onUpdateLink(link.id, { note: v })} onLink={p.onOpenLink} t={p.t} />
     </>
   );
 }
 
 function Reverse({ p, link, allowed }: { p: InspectorProps; link: EditorLink; allowed: boolean }) {
-  if (!p.drawer) return null;
   return (
     <>
       <div className="opm-row readonly"><span>{p.t.source}</span><span>{label(p.model, link.from)}</span></div>
@@ -349,19 +374,17 @@ function Reverse({ p, link, allowed }: { p: InspectorProps; link: EditorLink; al
 }
 
 export function Inspector(p: InspectorProps) {
-  const cls = p.drawer ? "opm-drawer" : "opm-inspector";
   if (p.link) {
     return (
-      <div className={cls} style={p.drawer ? undefined : p.style} onKeyDown={(e) => e.stopPropagation()}>
-        <div className="opm-insp-head"><b>{p.t.link}</b>{p.drawer && <button className="link" onClick={p.onLess}>{p.t.less}</button>}</div>
+      <div className="opm-drawer" onKeyDown={(e) => e.stopPropagation()}>
+        <div className="opm-insp-head"><b>{p.t.link}</b><button className="link" onClick={p.onLess}>{p.t.less}</button></div>
         <LinkFields p={p} link={p.link} />
-        {!p.drawer && <button className="link" onClick={p.onMore}>{p.t.more}</button>}
       </div>
     );
   }
   if (p.ids.length > 1) {
     return (
-      <div className={cls} style={p.drawer ? undefined : p.style}>
+      <div className="opm-drawer">
         <div className="opm-insp-head"><b>{format(p.t.elements, { n: p.ids.length })}</b></div>
         <div className="opm-actions">
           <button className="opm-button" onClick={p.onDelete}>{p.t.delete}</button>
@@ -375,22 +398,8 @@ export function Inspector(p: InspectorProps) {
   const isObject = !!objects(p.model)[id];
   const def = objects(p.model)[id] ?? processes(p.model)[id];
   if (!def) return null;
-  if (!p.drawer) {
-    return (
-      <div className={cls} style={p.style}>
-        <div className="opm-insp-head"><b>{label(p.model, id)}</b></div>
-        <div className="opm-id">{id}</div>
-        {isObject && <StatePills p={p} id={id} editable={false} />}
-        <div className="opm-actions">
-          {!isObject && <button className="link" onClick={() => p.onOpenZoom(id)}>{p.t.openZoom}</button>}
-          <button className="link" onClick={() => p.onShowJson(id)}>{p.t.showInJson}</button>
-          <button className="link" onClick={p.onMore}>{p.t.more}</button>
-        </div>
-      </div>
-    );
-  }
   return (
-    <div className={cls} onKeyDown={(e) => e.stopPropagation()}>
+    <div className="opm-drawer" onKeyDown={(e) => e.stopPropagation()}>
       <div className="opm-insp-head">
         <b>{label(p.model, id)}</b>
         <button className="link" onClick={p.onLess}>{p.t.less}</button>
@@ -402,6 +411,9 @@ export function Inspector(p: InspectorProps) {
         <div className="opm-row"><span>{p.t.description}</span>
           <Field multiline value={def.description ?? ""} onCommit={(v) => p.onUpdate(id, { description: v || null })} /></div>
       </Section>
+      <Section title={p.t.note}>
+        <Note value={def.note ?? ""} onCommit={(v) => p.onUpdate(id, { note: v })} onLink={p.onOpenLink} t={p.t} />
+      </Section>
       {isObject && <Section title={p.t.states}><StatePills p={p} id={id} editable /></Section>}
       {isObject && <Section title={p.t.jsonSchema}><SchemaPicker p={p} id={id} /></Section>}
       <Classification p={p} id={id} />
@@ -409,6 +421,42 @@ export function Inspector(p: InspectorProps) {
         {!isObject && <button className="link" onClick={() => p.onOpenZoom(id)}>{p.t.openZoom}</button>}
         <button className="link" onClick={() => p.onShowJson(id)}>{p.t.showInJson}</button>
       </div>
+    </div>
+  );
+}
+
+/* ---------- context menu ---------- */
+
+/** A menu entry, or "-" for a separator. */
+export type ContextItem = { label: string; keys?: string; action: () => void; disabled?: boolean } | "-";
+
+export function ContextMenu({ x, y, title, subtitle, items, onClose }: {
+  x: number; y: number; title?: string; subtitle?: string; items: ContextItem[]; onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ x, y });
+  useEffect(() => {
+    // keep the menu inside the canvas
+    const el = ref.current, box = el?.parentElement?.getBoundingClientRect();
+    if (!el || !box) return;
+    setPos({ x: Math.max(4, Math.min(x, box.width - el.offsetWidth - 4)), y: Math.max(4, Math.min(y, box.height - el.offsetHeight - 4)) });
+  }, [x, y]);
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onClose(); } };
+    window.addEventListener("keydown", key, true);
+    return () => window.removeEventListener("keydown", key, true);
+  }, [onClose]);
+  const shown = items.filter((it, i) => it !== "-" || (i > 0 && items[i - 1] !== "-" && i < items.length - 1));
+  return (
+    <div ref={ref} className="opm-menu opm-context" style={{ left: pos.x, top: pos.y }} onContextMenu={(e) => e.preventDefault()}>
+      {title && <div className="opm-context-head"><b>{title}</b>{subtitle && <span className="opm-id">{subtitle}</span>}</div>}
+      {shown.map((it, i) => it === "-"
+        ? <div key={i} className="opm-context-sep" />
+        : (
+          <button key={i} disabled={it.disabled} onClick={() => { onClose(); it.action(); }}>
+            <span>{it.label}</span>{it.keys && <span className="opm-dim">{it.keys}</span>}
+          </button>
+        ))}
     </div>
   );
 }

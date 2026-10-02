@@ -52,6 +52,16 @@ const clickThing = async (id, dy = 0.3) => {
   const b = await box(`[data-thing="${id}"]`);
   await page.mouse.click(b.x + b.width / 2, b.y + b.height * dy);
 };
+const rightClickThing = async (id, dy = 0.3) => {
+  const b = await box(`[data-thing="${id}"]`);
+  await page.mouse.click(b.x + b.width / 2, b.y + b.height * dy, { button: "right" });
+};
+const pick = async (label) => {
+  await page.waitForSelector(".opm-context", { timeout: 2000 });
+  const item = await page.evaluateHandle((l) => [...document.querySelectorAll(".opm-context button")].find((b) => b.firstChild?.textContent === l), label);
+  await item.asElement().click();
+};
+const menuTitle = () => page.evaluate(() => document.querySelector(".opm-context .opm-context-head b")?.textContent ?? null);
 const check = (name, ok, detail = "") => console.log(`${ok ? "ok  " : "FAIL"} ${name}${detail ? `: ${detail}` : ""}`);
 const text = () => page.evaluate(() => window.harness.text);
 
@@ -65,12 +75,65 @@ async function scenario(lang, theme) {
 await scenario("en", "vscode-dark");
 await shot("01-system");
 
+// the right button pans and opens the menu only without movement; the left button draws a selection rectangle
+{
+  const transform = () => page.evaluate(() => document.querySelector(".react-flow__viewport").style.transform);
+  const spot = await page.evaluate(() => {
+    for (let y = 120; y < 700; y += 20) for (let x = 40; x < 900; x += 20) {
+      if (document.elementFromPoint(x, y)?.classList.contains("react-flow__pane")) return { x, y };
+    }
+    return null;
+  });
+  const before = await transform();
+  await page.mouse.move(spot.x, spot.y);
+  await page.mouse.down({ button: "right" });
+  await page.mouse.move(spot.x + 60, spot.y + 40, { steps: 6 });
+  await page.mouse.up({ button: "right" });
+  await wait(200);
+  const panned = (await transform()) !== before;
+  const menuAfterPan = await page.evaluate(() => !!document.querySelector(".opm-context"));
+  check("right drag pans", panned && !menuAfterPan, `moved: ${panned}, menu: ${menuAfterPan}`);
+  await page.mouse.click(spot.x, spot.y, { button: "right" });
+  await wait(100);
+  const paneItems = await page.evaluate(() => [...document.querySelectorAll(".opm-context button")].length);
+  check("right click on the pane", paneItems === 3, `${paneItems} items`);
+  await page.keyboard.press("Escape");
+  const pane = await box(".react-flow__pane");
+  await page.mouse.move(pane.x + 5, pane.y + 60);
+  await page.mouse.down();
+  await page.mouse.move(pane.x + pane.width / 2, pane.y + pane.height / 2, { steps: 10 });
+  await page.screenshot({ path: join(out, "01b-selection-rectangle.png") });
+  await page.mouse.up();
+  await wait(200);
+  const selected = await page.evaluate(() => document.querySelectorAll(".react-flow__node.selected").length);
+  check("selection rectangle", selected > 0, `${selected} selected`);
+  await page.keyboard.press("Escape");
+}
+
 await clickThing("snapshot", 0.2);
 await shot("02-selected-object");
 
-await page.waitForSelector(".opm-inspector .opm-actions button");
-await page.click(".opm-inspector .opm-actions button:last-child");
+await rightClickThing("snapshot", 0.6);
+check("context menu on a thing", (await menuTitle()) === "Snapshot", await menuTitle());
+await shot("02b-context-menu");
+await pick("Properties");
 await shot("03-drawer");
+
+// a note is written as Markdown and shown with clickable links
+{
+  await page.click(".opm-drawer .opm-note-input");
+  await page.keyboard.type("Frozen copy, see [spec](docs/spec.md) and https://example.com/a");
+  await page.click(".opm-drawer .opm-insp-head b");
+  await wait(400);
+  const note = JSON.parse(await text()).objects.snapshot.note;
+  const links = await page.evaluate(() => [...document.querySelectorAll(".opm-drawer .opm-note a")].map((a) => a.getAttribute("href")));
+  check("note", note?.startsWith("Frozen copy") && links.join(" ") === "docs/spec.md https://example.com/a", `${note} | ${links.join(" ")}`);
+  await page.click(".opm-drawer .opm-note a");
+  await wait(100);
+  const sent = await page.evaluate(() => window.harness.messages.filter((m) => m.type === "openLink").map((m) => m.href));
+  check("note link", sent[0] === "docs/spec.md", sent.join(", "));
+  await shot("03b-note");
+}
 
 await page.click(".opm-opl-toggle");
 await shot("04-opl-expanded");
@@ -132,7 +195,7 @@ await page.keyboard.press("Escape");
 // zoom view of configuring: double click on the process
 {
   const c = await box('[data-thing="configuring"]');
-  await page.mouse.click(c.x + 20, c.y + c.height / 2, { clickCount: 2 });
+  await page.mouse.click(c.x + c.width * 0.75, c.y + c.height * 0.7, { clickCount: 2 });
   await wait(900);
   await shot("08-zoom");
 }
@@ -150,25 +213,6 @@ await page.keyboard.press("Escape");
 }
 
 const model = async () => JSON.parse(await text());
-
-// the compact inspector appears after the selection stands still, and hides during a drag
-{
-  const shown = () => page.evaluate(() => !!document.querySelector(".opm-inspector"));
-  await page.keyboard.press("Escape");
-  await clickThing("proposing", 0.5);
-  await wait(150);
-  const early = await shown();
-  await wait(600);
-  const later = await shown();
-  const b = await box('[data-thing="proposing"]');
-  await page.mouse.move(b.x + 30, b.y + b.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(b.x + 30, b.y + b.height / 2 + 20, { steps: 5 });
-  const during = await shown();
-  await page.mouse.up();
-  await wait(700);
-  check("inspector delay", !early && later && !during, `150 ms: ${early}, 750 ms: ${later}, dragging: ${during}`);
-}
 
 // link labels: switched on from the menu, drawn in the label layer
 {
@@ -197,8 +241,8 @@ const model = async () => JSON.parse(await text());
   check("reorder subprocess", order[0] === "checkingStock", order.join(", "));
 }
 
-// selecting a link shows the link inspector
-async function clickEdge(id) {
+// the right button on a link opens its menu
+async function clickEdge(id, button = "left") {
   const pt = await page.evaluate((edgeId) => {
     const paths = document.querySelectorAll(`[data-edge="${edgeId}"] .react-flow__edge-interaction`);
     const path = paths[paths.length - 1];
@@ -214,16 +258,17 @@ async function clickEdge(id) {
       console.log(await page.evaluate(() => [...document.querySelectorAll('[data-edge*="applying/c"] .react-flow__edge-interaction')]
         .map((p) => `${p.closest("[data-edge]").getAttribute("data-edge")} ${p.getAttribute("d")}`).join(" | ")));
     }
-    await page.mouse.click(pt.x, pt.y);
+    await page.mouse.click(pt.x, pt.y, { button });
   }
   return !!pt;
 }
 {
-  const found = await clickEdge("processes/applying/changes/0");
-  await wait(700);
-  const head = await page.evaluate(() => document.querySelector(".opm-inspector .opm-insp-head")?.textContent);
-  check("link inspector", found && head === "Link", head ?? "no inspector");
-  await shot("12-link-inspector");
+  const found = await clickEdge("processes/applying/changes/0", "right");
+  await wait(300);
+  const head = await menuTitle();
+  check("link menu", found && head === "changes", head ?? "no menu");
+  await shot("12-link-menu");
+  await page.keyboard.press("Escape");
   await page.keyboard.press("Delete");
   await wait(300);
   check("delete link", !(await model()).processes.applying.changes, JSON.stringify((await model()).processes.applying.changes));

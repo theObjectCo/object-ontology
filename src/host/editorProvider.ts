@@ -152,6 +152,8 @@ export class OpmEditorProvider implements vscode.CustomTextEditorProvider {
         return void this.revealInText(doc, m.id, m.open ?? true);
       case "openTextBeside":
         return void vscode.commands.executeCommand("vscode.openWith", doc.uri, "default", vscode.ViewColumn.Beside);
+      case "openLink":
+        return void this.openLink(doc, m.href);
       case "export":
         return void this.saveExport(doc, m.format, m.data, m.viewId);
       case "exportMarkdown":
@@ -186,6 +188,22 @@ export class OpmEditorProvider implements vscode.CustomTextEditorProvider {
 <div id="root" data-elk-worker="${uri("media", "elk-worker.min.js")}"></div>
 <script nonce="${nonce}" src="${uri("dist", "webview.js")}"></script>
 </body></html>`;
+  }
+
+  /** Opens a link from a note: web and mail addresses outside VS Code, other paths relative to the model. */
+  private async openLink(doc: vscode.TextDocument, href: string) {
+    if (/^(https?|mailto):/i.test(href)) return void vscode.env.openExternal(vscode.Uri.parse(href));
+    if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return void vscode.window.showWarningMessage(vscode.l10n.t("Links of this kind are not opened: {0}", href));
+    const [path, fragment] = href.split("#");
+    const uri = path ? vscode.Uri.joinPath(doc.uri, "..", decodeURIComponent(path)) : doc.uri;
+    const line = /^L(\d+)$/.exec(fragment ?? "");
+    try {
+      await vscode.workspace.fs.stat(uri);
+    } catch {
+      return void vscode.window.showWarningMessage(vscode.l10n.t("File not found: {0}", uri.fsPath));
+    }
+    const selection = line ? new vscode.Range(Number(line[1]) - 1, 0, Number(line[1]) - 1, 0) : undefined;
+    await vscode.commands.executeCommand("vscode.open", uri, { viewColumn: vscode.ViewColumn.Beside, selection });
   }
 
   private async revealInText(doc: vscode.TextDocument, id: string, open: boolean) {

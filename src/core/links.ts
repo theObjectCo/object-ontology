@@ -1,4 +1,4 @@
-import { Model, objects, processes, refObject, refState } from "./model";
+import { Model, objects, processes, refNote, refObject, refState } from "./model";
 
 /** Link kinds as the editor presents them; each maps to one field of the model. */
 export type EditorLinkKind =
@@ -17,6 +17,7 @@ export interface EditorLink {
   fromState?: string;
   toState?: string;
   tag?: string;
+  note?: string;
   path: (string | number)[];
 }
 
@@ -55,26 +56,27 @@ export function allowedKinds(model: Model, from: string, to: string): EditorLink
 /** Every link of the model, in declaration order. */
 export function editorLinks(model: Model): EditorLink[] {
   const out: EditorLink[] = [];
-  const add = (l: Omit<EditorLink, "id">) => out.push({ ...l, id: l.path.join("/") });
+  const add = (l: Omit<EditorLink, "id" | "note">, entry: string | { note?: string }) =>
+    out.push({ ...l, id: l.path.join("/"), ...(refNote(entry) ? { note: refNote(entry) } : {}) });
   for (const [id, o] of Object.entries(objects(model))) {
-    (o.consistsOf ?? []).forEach((to, i) => add({ kind: "aggregation", from: id, to, path: ["objects", id, "consistsOf", i] }));
-    (o.exhibits ?? []).forEach((to, i) => add({ kind: "exhibition", from: id, to, path: ["objects", id, "exhibits", i] }));
-    if (o.isA) add({ kind: "generalization", from: id, to: o.isA, path: ["objects", id, "isA"] });
-    (o.tagged ?? []).forEach((t, i) => add({ kind: "tagged", from: id, to: t.object, tag: t.tag, path: ["objects", id, "tagged", i] }));
+    (o.consistsOf ?? []).forEach((r, i) => add({ kind: "aggregation", from: id, to: refObject(r), path: ["objects", id, "consistsOf", i] }, r));
+    (o.exhibits ?? []).forEach((r, i) => add({ kind: "exhibition", from: id, to: refObject(r), path: ["objects", id, "exhibits", i] }, r));
+    if (o.isA) add({ kind: "generalization", from: id, to: refObject(o.isA), path: ["objects", id, "isA"] }, o.isA);
+    (o.tagged ?? []).forEach((t, i) => add({ kind: "tagged", from: id, to: t.object, tag: t.tag, path: ["objects", id, "tagged", i] }, t));
   }
   for (const [id, p] of Object.entries(processes(model))) {
     const base = ["processes", id];
-    (p.handledBy ?? []).forEach((o, i) => add({ kind: "agent", from: o, to: id, path: [...base, "handledBy", i] }));
-    (p.requires ?? []).forEach((r, i) => add({ kind: "instrument", from: refObject(r), to: id, fromState: refState(r), path: [...base, "requires", i] }));
-    (p.consumes ?? []).forEach((r, i) => add({ kind: "consumption", from: refObject(r), to: id, fromState: refState(r), path: [...base, "consumes", i] }));
-    (p.yields ?? []).forEach((r, i) => add({ kind: "result", from: id, to: refObject(r), toState: refState(r), path: [...base, "yields", i] }));
-    (p.affects ?? []).forEach((o, i) => add({ kind: "effect", from: o, to: id, path: [...base, "affects", i] }));
-    (p.changes ?? []).forEach((c, i) => add({ kind: "effect", from: c.object, to: id, fromState: c.from, toState: c.to, path: [...base, "changes", i] }));
-    (p.conditions ?? []).forEach((c, i) => add({ kind: "condition", from: c.object, to: id, fromState: c.state, path: [...base, "conditions", i] }));
-    (p.events ?? []).forEach((c, i) => add({ kind: "event", from: c.object, to: id, fromState: c.state, path: [...base, "events", i] }));
-    (p.invokes ?? []).forEach((to, i) => add({ kind: "invocation", from: id, to, path: [...base, "invokes", i] }));
-    (p.consistsOf ?? []).forEach((to, i) => add({ kind: "aggregation", from: id, to, path: [...base, "consistsOf", i] }));
-    if (p.isA) add({ kind: "generalization", from: id, to: p.isA, path: [...base, "isA"] });
+    (p.handledBy ?? []).forEach((r, i) => add({ kind: "agent", from: refObject(r), to: id, path: [...base, "handledBy", i] }, r));
+    (p.requires ?? []).forEach((r, i) => add({ kind: "instrument", from: refObject(r), to: id, fromState: refState(r), path: [...base, "requires", i] }, r));
+    (p.consumes ?? []).forEach((r, i) => add({ kind: "consumption", from: refObject(r), to: id, fromState: refState(r), path: [...base, "consumes", i] }, r));
+    (p.yields ?? []).forEach((r, i) => add({ kind: "result", from: id, to: refObject(r), toState: refState(r), path: [...base, "yields", i] }, r));
+    (p.affects ?? []).forEach((r, i) => add({ kind: "effect", from: refObject(r), to: id, path: [...base, "affects", i] }, r));
+    (p.changes ?? []).forEach((c, i) => add({ kind: "effect", from: c.object, to: id, fromState: c.from, toState: c.to, path: [...base, "changes", i] }, c));
+    (p.conditions ?? []).forEach((c, i) => add({ kind: "condition", from: c.object, to: id, fromState: c.state, path: [...base, "conditions", i] }, c));
+    (p.events ?? []).forEach((c, i) => add({ kind: "event", from: c.object, to: id, fromState: c.state, path: [...base, "events", i] }, c));
+    (p.invokes ?? []).forEach((r, i) => add({ kind: "invocation", from: id, to: refObject(r), path: [...base, "invokes", i] }, r));
+    (p.consistsOf ?? []).forEach((r, i) => add({ kind: "aggregation", from: id, to: refObject(r), path: [...base, "consistsOf", i] }, r));
+    if (p.isA) add({ kind: "generalization", from: id, to: refObject(p.isA), path: [...base, "isA"] }, p.isA);
   }
   return out;
 }

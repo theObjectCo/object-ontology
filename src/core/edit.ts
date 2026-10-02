@@ -1,6 +1,6 @@
 import { Node, findNodeAtLocation, getNodeValue, parseTree } from "jsonc-parser";
 import { EditorLink, EditorLinkKind, STATEFUL, allowedKinds, editorLinks, stateOwner, thingKind } from "./links";
-import { Model, ObjectDef, ProcessDef, Ref, humanize, objects, processes, refObject } from "./model";
+import { Model, ObjectDef, ProcessDef, Ref, TEXT_FIELDS, humanize, objects, processes, refObject } from "./model";
 import { listViews, viewContent } from "./viewmodel";
 
 export type Position = [number, number];
@@ -25,7 +25,7 @@ export type Operation =
   | { op: "moveState"; object: string; state: string; index: number }
   | { op: "deleteElements"; ids: string[]; links?: string[] }
   | { op: "addLink"; kind: EditorLinkKind; from: string; to: string; fromState?: string; toState?: string; tag?: string }
-  | { op: "updateLink"; id: string; kind?: EditorLinkKind; fromState?: string | null; toState?: string | null; tag?: string; reverse?: boolean }
+  | { op: "updateLink"; id: string; kind?: EditorLinkKind; fromState?: string | null; toState?: string | null; tag?: string; reverse?: boolean; note?: string | null }
   | { op: "moveElements"; viewId: string; positions: Positions; all?: Positions }
   | { op: "setLayout"; viewId: string; positions: Positions | null }
   | { op: "reorderSubprocess"; parent: string; id: string; index: number }
@@ -250,12 +250,16 @@ function referencePaths(model: Model, id: string): JsonPath[] {
   const out: JsonPath[] = [];
   const scan = (base: JsonPath, def: Record<string, unknown>) => {
     for (const [field, v] of Object.entries(def)) {
-      if (["label", "description", "schema", "states", "role", "essence", "affiliation"].includes(field)) continue;
-      if (typeof v === "string" && v === id) out.push([...base, field]);
-      if (Array.isArray(v)) v.forEach((item, i) => {
-        if (item === id) out.push([...base, field, i]);
-        else if (item && typeof item === "object" && (item as { object?: string }).object === id) out.push([...base, field, i, "object"]);
-      });
+      if (TEXT_FIELDS.includes(field)) continue;
+      const entry = (item: unknown, path: JsonPath) => {
+        if (item === id) out.push(path);
+        else if (item && typeof item === "object") {
+          const key = targetKey(item);
+          if (key && (item as Record<string, unknown>)[key] === id) out.push([...path, key]);
+        }
+      };
+      if (Array.isArray(v)) v.forEach((item, i) => entry(item, [...base, field, i]));
+      else entry(v, [...base, field]);
     }
   };
   for (const [oid, o] of Object.entries(objects(model))) scan(["objects", oid], o as Record<string, unknown>);
@@ -285,6 +289,31 @@ function linkEntry(kind: EditorLinkKind, from: string, to: string, fromState?: s
   }
 }
 const fromIsObjectPlaceholder = "?";
+
+/** The key that names the target in a link entry written as an object. */
+function targetKey(entry: object): "object" | "process" | undefined {
+  return "object" in entry ? "object" : "process" in entry ? "process" : undefined;
+}
+
+/** Fields whose entries may be a bare identifier; the others are always objects. */
+const BARE_FIELDS = new Set(["handledBy", "requires", "consumes", "yields", "affects", "invokes", "consistsOf", "exhibits", "isA"]);
+
+/**
+ * A link entry with its note set or removed. A bare identifier takes the object form to carry a note,
+ * and an object form left with only its target goes back to the bare identifier where the field allows it.
+ */
+function withNote(path: JsonPath, entry: unknown, note: string | undefined): unknown {
+  const field = String(path[2]);
+  if (typeof entry === "string") {
+    if (!note) return entry;
+    const key = field === "invokes" || (path[0] === "processes" && (field === "consistsOf" || field === "isA")) ? "process" : "object";
+    return { [key]: entry, note };
+  }
+  const { note: _old, ...rest } = entry as Record<string, unknown>;
+  if (note) return { ...rest, note };
+  const keys = Object.keys(rest);
+  return keys.length === 1 && BARE_FIELDS.has(field) && (keys[0] === "object" || keys[0] === "process") ? rest[keys[0]] : rest;
+}
 
 export function applyOperation(text: string, op: Operation): EditResult {
   const doc = new Doc(text);
@@ -410,6 +439,10 @@ function run(doc: Doc, model: Model, op: Operation): Partial<EditResult> {
     case "updateLink": {
       const link = editorLinks(model).find((l) => l.id === op.id);
       if (!link) throw new EditError("The link no longer exists.");
+      if (op.note !== undefined) {
+        doc.set(link.path, withNote(link.path, doc.value(link.path), op.note?.trim() ? op.note : undefined));
+        return {};
+      }
       let kind = op.kind ?? link.kind;
       let from = link.from, to = link.to;
       if (op.reverse) [from, to] = [to, from];
@@ -420,7 +453,8 @@ function run(doc: Doc, model: Model, op: Operation): Partial<EditResult> {
       toState = STATEFUL[kind].to ? toState : undefined;
       removeLinks(doc, [link]);
       const cur = doc.model;
-      const { path, value, single } = resolveEntry(cur, linkEntry(kind, from, to, STATEFUL[kind].from ? fromState : undefined, effectTo(kind, fromState, toState), op.tag ?? link.tag));
+      const { path, value: bare, single } = resolveEntry(cur, linkEntry(kind, from, to, STATEFUL[kind].from ? fromState : undefined, effectTo(kind, fromState, toState), op.tag ?? link.tag));
+      const value = withNote(path, bare, link.note);
       if (single) doc.set(path, value);
       else doc.push(path, value);
       return {};
@@ -503,7 +537,8 @@ function removeLinks(doc: Doc, links: EditorLink[]) {
 /** Removes a reference to a deleted thing: an array entry, an isA property, or a view pointing at it. */
 function removeReference(doc: Doc, path: JsonPath) {
   if (path[0] === "views" && path[2] === "process") return doc.remove(["views", path[1]]);
-  const itemPath = path[path.length - 1] === "object" ? path.slice(0, -1) : path;
+  const last = path[path.length - 1];
+  const itemPath = last === "object" || last === "process" ? path.slice(0, -1) : path;
   if (typeof itemPath[itemPath.length - 1] !== "number") return doc.remove(itemPath);
   const listPath = itemPath.slice(0, -1);
   doc.remove(itemPath);
@@ -535,10 +570,14 @@ function clearState(doc: Doc, model: Model, object: string, state: string) {
         // a change without a target state becomes a plain effect
         removeLinks(doc, [l]);
         const cur = doc.model;
-        if (!(cur.processes?.[l.to]?.affects ?? []).includes(object)) doc.push(["processes", l.to, "affects"], object);
+        const affects: JsonPath = ["processes", l.to, "affects"];
+        if (!(cur.processes?.[l.to]?.affects ?? []).some((r) => refObject(r) === object)) doc.push(affects, withNote(affects, object, l.note));
       } else doc.remove([...l.path, "from"]);
     } else if (field === "conditions" || field === "events") doc.remove([...l.path, "state"]);
-    else doc.set(l.path, refObject(doc.value(l.path) as Ref));
+    else {
+      const { state: _state, ...rest } = doc.value(l.path) as Record<string, unknown>;
+      doc.set(l.path, withNote(l.path, rest, l.note));
+    }
   }
 }
 
@@ -553,16 +592,18 @@ function roundAll(ps: Positions): Positions {
 /** Elements with the links between them, for copying; links to things outside the selection are left out. */
 export function fragmentOf(model: Model, ids: string[], positions?: Positions): Fragment {
   const set = new Set(ids);
+  const target = (x: unknown): string | undefined =>
+    typeof x === "string" ? x : x && typeof x === "object" && targetKey(x) ? String((x as Record<string, unknown>)[targetKey(x)!]) : undefined;
   const keep = (v: unknown): unknown => {
     if (!Array.isArray(v)) return v;
-    const kept = v.filter((x) => typeof x === "string" ? set.has(x) : !(x && typeof x === "object" && "object" in x) || set.has((x as { object: string }).object));
+    const kept = v.filter((x) => !target(x) || set.has(target(x)!));
     return kept.length ? kept : undefined;
   };
   const clean = <T extends object>(def: T): T => {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(def)) {
-      if (["label", "description", "schema", "states", "role", "essence", "affiliation"].includes(k)) out[k] = v;
-      else if (k === "isA") { if (set.has(v as string)) out[k] = v; }
+      if (TEXT_FIELDS.includes(k)) out[k] = v;
+      else if (k === "isA") { if (set.has(target(v)!)) out[k] = v; }
       else { const kv = keep(v); if (kv !== undefined) out[k] = kv; }
     }
     return out as T;
@@ -594,12 +635,13 @@ function paste(doc: Doc, model: Model, op: Extract<Operation, { op: "paste" }>):
     if (v && typeof v === "object") {
       const o = { ...(v as Record<string, unknown>) };
       if (typeof o.object === "string") o.object = newIds.get(o.object) ?? o.object;
+      if (typeof o.process === "string") o.process = newIds.get(o.process) ?? o.process;
       return o;
     }
     return v;
   };
   const translate = (def: Record<string, unknown>) =>
-    Object.fromEntries(Object.entries(def).map(([k, v]) => [k, ["label", "description", "schema", "states", "role", "essence", "affiliation"].includes(k) ? v : map(v)]));
+    Object.fromEntries(Object.entries(def).map(([k, v]) => [k, TEXT_FIELDS.includes(k) ? v : map(v)]));
   for (const [group, defs] of [["objects", op.fragment.objects], ["processes", op.fragment.processes]] as const) {
     if (!defs) continue;
     if (!doc.node([group])) doc.set([group], {});

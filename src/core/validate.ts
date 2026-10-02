@@ -1,5 +1,5 @@
 import { EditorLink, editorLinks, stateOwner } from "./links";
-import { Model, ObjectDef, essence, label, objects, processes, refObject } from "./model";
+import { Model, ObjectDef, essence, label, objects, processes, refIds, refObject } from "./model";
 import { listViews, viewContent } from "./viewmodel";
 
 export type Severity = "error" | "warning" | "info";
@@ -44,7 +44,8 @@ export function validate(model: Model, options: ValidateOptions = {}): Diagnosti
     const [expectFrom, expectTo] = expectedEnds(l, ownerIsObject);
     const other = l.from === owner ? l.to : l.from;
     const otherExpected = l.from === owner ? expectTo : expectFrom;
-    const refPath = [...l.path, ...(typeof l.path[l.path.length - 1] === "number" && entryIsObject(model, l) ? ["object"] : [])];
+    const key = entryKey(model, l);
+    const refPath = key ? [...l.path, key] : l.path;
     if (other === owner) {
       report("error", "self-reference", `${L(owner)} cannot link to itself (${fieldOf(l)}).`, l.path);
       continue;
@@ -88,10 +89,10 @@ export function validate(model: Model, options: ValidateOptions = {}): Diagnosti
   }
   const cycles: [string, Record<string, object>, (id: string) => string[]][] = [
     ["zoomsInto", procs, (id) => (procs[id].zoomsInto ?? []).filter(isProcess)],
-    ["consistsOf", objs, (id) => (objs[id].consistsOf ?? []).filter(isObject)],
-    ["isA", objs, (id) => (objs[id].isA && isObject(objs[id].isA!) ? [objs[id].isA!] : [])],
-    ["consistsOf", procs, (id) => (procs[id].consistsOf ?? []).filter(isProcess)],
-    ["isA", procs, (id) => (procs[id].isA && isProcess(procs[id].isA!) ? [procs[id].isA!] : [])],
+    ["consistsOf", objs, (id) => refIds(objs[id].consistsOf).filter(isObject)],
+    ["isA", objs, (id) => (objs[id].isA ? [refObject(objs[id].isA!)].filter(isObject) : [])],
+    ["consistsOf", procs, (id) => refIds(procs[id].consistsOf).filter(isProcess)],
+    ["isA", procs, (id) => (procs[id].isA ? [refObject(procs[id].isA!)].filter(isProcess) : [])],
   ];
   for (const [field, group, next] of cycles) {
     for (const cycle of findCycles(Object.keys(group), next)) {
@@ -107,7 +108,7 @@ export function validate(model: Model, options: ValidateOptions = {}): Diagnosti
       report("error", "no-transformation", `${L(id)} does not transform any object. Add consumes, yields, affects or changes.`, base);
     }
     const transformed = new Set([
-      ...(p.consumes ?? []).map(refObject), ...(p.yields ?? []).map(refObject), ...(p.affects ?? []), ...(p.changes ?? []).map((c) => c.object),
+      ...(p.consumes ?? []).map(refObject), ...(p.yields ?? []).map(refObject), ...refIds(p.affects), ...(p.changes ?? []).map((c) => c.object),
     ]);
     for (const field of ["requires", "handledBy"] as const) {
       (p[field] ?? []).forEach((r, i) => {
@@ -120,7 +121,7 @@ export function validate(model: Model, options: ValidateOptions = {}): Diagnosti
         report("warning", "consume-and-yield", `${L(id)} consumes and yields ${L(refObject(r))}; use affects or changes instead.`, [...base, "consumes", i]);
       }
     });
-    (p.handledBy ?? []).forEach((ref, i) => {
+    refIds(p.handledBy).forEach((ref, i) => {
       const o = objs[ref];
       if (o && essence(o) !== "physical") {
         report("warning", "agent-not-physical", `${L(ref)} handles ${L(id)}, but an agent is a human and should have essence physical. Use requires for systems.`, [...base, "handledBy", i]);
@@ -169,11 +170,13 @@ function fieldOf(l: EditorLink): string {
   return String(l.path[2]);
 }
 
-/** True when the link entry is written as an object ({object, state} or a state reference). */
-function entryIsObject(model: Model, l: EditorLink): boolean {
+/** The key that names the target when the link entry is written as an object, e.g. {"object": ..., "note": ...}. */
+function entryKey(model: Model, l: EditorLink): "object" | "process" | undefined {
   const group = l.path[0] === "objects" ? objects(model) : processes(model);
-  const list = (group[l.path[1] as string] as Record<string, unknown>)?.[l.path[2] as string];
-  return Array.isArray(list) && typeof list[l.path[3] as number] === "object";
+  let v: unknown = (group[l.path[1] as string] as Record<string, unknown>)?.[l.path[2] as string];
+  if (l.path.length > 3) v = Array.isArray(v) ? v[l.path[3] as number] : undefined;
+  if (!v || typeof v !== "object") return undefined;
+  return "process" in v ? "process" : "object";
 }
 
 function statePathOf(l: EditorLink, end: "from" | "to"): Path {

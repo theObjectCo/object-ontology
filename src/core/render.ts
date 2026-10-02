@@ -1,5 +1,5 @@
 import {
-  Link, Model, ProcessDef, affiliation, descendants, label, linksOf, objects, parents, processes, refObject,
+  Link, Model, ProcessDef, affiliation, descendants, label, linksOf, objects, parents, processes, refIds, refObject,
 } from "./model";
 import { oplSentences, sentenceText } from "./opl";
 
@@ -52,15 +52,15 @@ function structuralEdges(model: Model, include: Set<string>): string[] {
   const out: string[] = [];
   for (const [id, o] of Object.entries(objects(model))) {
     if (!include.has(id)) continue;
-    for (const part of o.consistsOf ?? []) if (include.has(part)) out.push(`  o_${id} ---|consists of| o_${part}`);
-    for (const attr of o.exhibits ?? []) if (include.has(attr)) out.push(`  o_${id} ---|exhibits| o_${attr}`);
-    if (o.isA && include.has(o.isA)) out.push(`  o_${id} ---|is a| o_${o.isA}`);
+    for (const part of refIds(o.consistsOf)) if (include.has(part)) out.push(`  o_${id} ---|consists of| o_${part}`);
+    for (const attr of refIds(o.exhibits)) if (include.has(attr)) out.push(`  o_${id} ---|exhibits| o_${attr}`);
+    if (o.isA && include.has(refObject(o.isA))) out.push(`  o_${id} ---|is a| o_${refObject(o.isA)}`);
     for (const t of o.tagged ?? []) if (include.has(t.object)) out.push(`  o_${id} -->|${quote(t.tag)}| o_${t.object}`);
   }
   for (const [id, p] of Object.entries(processes(model))) {
     if (!include.has(id)) continue;
-    for (const part of p.consistsOf ?? []) if (include.has(part)) out.push(`  p_${id} ---|consists of| p_${part}`);
-    if (p.isA && include.has(p.isA)) out.push(`  p_${id} ---|is a| p_${p.isA}`);
+    for (const part of refIds(p.consistsOf)) if (include.has(part)) out.push(`  p_${id} ---|consists of| p_${part}`);
+    if (p.isA && include.has(refObject(p.isA))) out.push(`  p_${id} ---|is a| p_${refObject(p.isA)}`);
   }
   return out;
 }
@@ -110,7 +110,7 @@ export function systemView(model: Model): View {
 export function structureView(model: Model): View | undefined {
   const involved = new Set<string>();
   for (const [id, o] of Object.entries(objects(model))) {
-    const related = [...(o.consistsOf ?? []), ...(o.exhibits ?? []), ...(o.isA ? [o.isA] : [])];
+    const related = [...refIds(o.consistsOf), ...refIds(o.exhibits), ...(o.isA ? [refObject(o.isA)] : [])];
     if (related.length) [id, ...related].forEach((x) => involved.add(x));
   }
   if (!involved.size) return undefined;
@@ -222,7 +222,7 @@ export function moduleSummaries(model: Model): ModuleSummary[] {
       performs,
       takes: collect((p) => [...(p.consumes ?? []), ...(p.requires ?? [])].map(refObject)),
       gives: collect((p) => (p.yields ?? []).map(refObject)),
-      changes: collect((p) => [...(p.affects ?? []), ...(p.changes ?? []).map((c) => c.object)]),
+      changes: collect((p) => [...refIds(p.affects), ...(p.changes ?? []).map((c) => c.object)]),
     });
   }
   return out;

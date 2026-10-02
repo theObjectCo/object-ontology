@@ -15,5 +15,7 @@
   "Select elements in an OPM diagram first.": "Najpierw zaznacz elementy na diagramie OPM.",
   "The OPM model is not valid JSON.": "Model OPM nie jest poprawnym JSON.",
   "The model has {0} error(s). Export anyway?": "Model ma błędy: {0}. Eksportować mimo to?",
-  "Export": "Eksportuj"
+  "Export": "Eksportuj",
+  "Links of this kind are not opened: {0}": "Linki tego rodzaju nie są otwierane: {0}",
+  "File not found: {0}": "Nie znaleziono pliku: {0}"
 }
