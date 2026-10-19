@@ -75,6 +75,41 @@ async function scenario(lang, theme) {
 await scenario("en", "vscode-dark");
 await shot("01-system");
 
+// a user story opens as a makigami over the diagram; a click on a lane selects it in the diagram
+const openStory = (id) => page.evaluate((storyId) => window.postMessage({ type: "reveal", storyId }, "*"), id);
+{
+  await openStory("getPrice");
+  await page.waitForSelector(".opm-story", { timeout: 3000 });
+  const counts = await page.evaluate(() => ({
+    lanes: document.querySelectorAll(".opm-mk-lane-head").length,
+    cards: document.querySelectorAll(".opm-mk-card").length,
+    arrows: document.querySelectorAll(".opm-mk-arrow").length,
+    problems: document.querySelectorAll(".opm-mk-problem").length,
+  }));
+  check("makigami", counts.lanes === 4 && counts.cards === 5 && counts.arrows === 4 && counts.problems === 1, JSON.stringify(counts));
+  await shot("01c-makigami");
+  await page.evaluate(() => window.harness.setText(window.harness.text.replace("Reads the price and the lead time.", "Reads the price.")));
+  await wait(400);
+  const redrawn = await page.evaluate(() => [...document.querySelectorAll(".opm-mk-does")].some((d) => d.textContent === "Reads the price."));
+  check("makigami follows the text", redrawn);
+  await page.evaluate(() => window.harness.undo());
+  await wait(300);
+  const lane = await page.evaluateHandle(() => [...document.querySelectorAll(".opm-mk-thing button")].find((b) => b.textContent === "Pricing Module"));
+  await lane.asElement().click();
+  await wait(600);
+  const back = await page.evaluate(() => ({
+    story: !!document.querySelector(".opm-story"),
+    selected: [...document.querySelectorAll(".react-flow__node.selected")].map((n) => n.getAttribute("data-id")),
+  }));
+  check("lane click selects in the diagram", !back.story && back.selected.join() === "pricingModule", JSON.stringify(back));
+  await page.keyboard.press("Escape");
+  await openStory("changeWindow");
+  await page.waitForSelector(".opm-story", { timeout: 3000 });
+  await page.keyboard.press("Escape");
+  await wait(200);
+  check("Esc closes the story", !(await page.evaluate(() => !!document.querySelector(".opm-story"))));
+}
+
 // the right button pans and opens the menu only without movement; the left button draws a selection rectangle
 {
   const transform = () => page.evaluate(() => document.querySelector(".react-flow__viewport").style.transform);
@@ -392,6 +427,10 @@ for (const [i, name] of ["Layers, left to right", "Layers, top to bottom", "Stre
 await scenario("pl", "vscode-light");
 await clickThing("decision", 0.2);
 await shot("10-light-pl");
+await openStory("changeWindow");
+await page.waitForSelector(".opm-story", { timeout: 3000 });
+await shot("10b-makigami-light-pl");
+await page.keyboard.press("Escape");
 await page.evaluate(() => window.harness.setText(window.harness.text.replace('"objects": {', '"objects": {,')));
 await wait(500);
 await shot("11-parse-error");

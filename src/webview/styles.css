@@ -1049,3 +1049,292 @@ button.link:hover {
   right: auto;
   min-width: 260px;
 }
+
+/* ---------- user story: the makigami ---------- */
+
+.opm-story {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  background: var(--vscode-editor-background);
+  --opm-band: color-mix(in srgb, var(--vscode-foreground) 4%, transparent);
+  --opm-divider: color-mix(in srgb, var(--vscode-foreground) 14%, transparent);
+}
+
+.opm-story-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 14px 4px;
+}
+
+.opm-story-title {
+  font-size: 14px;
+}
+
+.opm-story-head .opm-id {
+  margin: 0;
+}
+
+.opm-story-sentence {
+  padding: 2px 14px 10px;
+  font-size: 13px;
+  max-width: 900px;
+}
+
+.opm-story-issues {
+  margin: 0 14px 10px;
+  padding: 6px 10px 6px 26px;
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border, var(--opm-divider));
+}
+
+.opm-story-issues li.severity-error::marker {
+  color: var(--vscode-editorError-foreground);
+}
+
+.opm-story-issues li.severity-warning::marker {
+  color: var(--vscode-editorWarning-foreground);
+}
+
+.opm-mk-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border-top: 1px solid var(--opm-divider);
+}
+
+.opm-mk {
+  display: flex;
+  position: relative;
+}
+
+/* the lane headers stay on screen while the roll scrolls sideways */
+.opm-mk-lanes {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  flex: none;
+  background: var(--vscode-editor-background);
+  border-right: 1px solid var(--opm-divider);
+}
+
+.opm-mk-corner,
+.opm-mk-column {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--opm-divider);
+}
+
+.opm-mk-column {
+  position: absolute;
+  top: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.opm-mk-lane-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--opm-divider);
+}
+
+.opm-mk-lane-head.odd,
+.opm-mk-band.odd {
+  background: var(--opm-band);
+}
+
+/* lanes drawn like objects in the diagram: modules with a thick border, agents with a shadow */
+.opm-mk-thing {
+  width: 140px;
+  box-sizing: border-box;
+  padding: 8px 6px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--vscode-editor-background);
+  border: 2px solid var(--vscode-editor-foreground);
+}
+
+.opm-mk-thing.module {
+  border-width: 4px;
+}
+
+.opm-mk-thing.agent {
+  box-shadow: 6px 6px 0 color-mix(in srgb, var(--vscode-editorLineNumber-foreground) 60%, transparent);
+}
+
+.opm-mk-thing.environmental {
+  border-style: dashed;
+}
+
+.opm-mk-thing.severity-error {
+  border-color: var(--vscode-editorError-foreground);
+}
+
+.opm-mk-thing.severity-warning {
+  border-color: var(--vscode-editorWarning-foreground);
+}
+
+.opm-mk-thing-label {
+  font-weight: 600;
+}
+
+.opm-mk-thing button.link {
+  color: var(--vscode-editor-foreground);
+}
+
+.opm-mk-kind {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.opm-mk-roll {
+  position: relative;
+  flex: none;
+}
+
+.opm-mk-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--opm-divider);
+}
+
+.opm-mk-arrows {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+.opm-mk-arrow {
+  fill: none;
+  stroke: var(--vscode-editor-foreground);
+  stroke-width: 1.5;
+}
+
+.opm-mk-arrow.open {
+  stroke-dasharray: 5 4;
+}
+
+.opm-mk-card {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 7px 9px;
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-editor-foreground));
+  box-shadow: 0 1px 3px var(--vscode-widget-shadow);
+}
+
+.opm-mk-card.severity-error {
+  border-color: var(--vscode-editorError-foreground);
+}
+
+.opm-mk-card.severity-warning {
+  border-color: var(--vscode-editorWarning-foreground);
+}
+
+.opm-mk-does {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.35;
+}
+
+.opm-mk-process {
+  align-self: flex-start;
+  font-size: 11px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+span.opm-mk-process,
+span.opm-mk-object {
+  color: var(--vscode-descriptionForeground);
+}
+
+.opm-mk-waits {
+  position: absolute;
+  font-size: 11px;
+  line-height: 14px;
+  font-style: italic;
+  color: var(--vscode-descriptionForeground);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* a problem is a red card pinned below its step */
+.opm-mk-pin {
+  position: absolute;
+  border-left: 2px solid var(--vscode-editorError-foreground);
+}
+
+.opm-mk-problem {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  font-size: 11px;
+  line-height: 1.35;
+  border-radius: 3px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  color: var(--vscode-editor-foreground);
+  background: color-mix(in srgb, var(--vscode-editorError-foreground) 22%, var(--vscode-editor-background));
+  border: 1px solid var(--vscode-editorError-foreground);
+}
+
+.opm-mk-handover {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  max-width: 200px;
+  padding: 1px 8px;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-editorLineNumber-foreground));
+}
+
+.opm-mk-handover button.link {
+  font-weight: 600;
+}
+
+.opm-story-done {
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--opm-divider);
+  max-height: 30%;
+  overflow-y: auto;
+}
+
+.opm-story-done ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+}

@@ -20,6 +20,9 @@
   "welcome.models": "No *.opm.json file in this workspace.\n[New Model](command:opm.newModel)",
   "welcome.model": "Click a model in the list above, or open a *.opm.json file.\n[New Model](command:opm.newModel)",
   "command.createSchema": "Create JSON Schema",
+  "view.stories": "Stories",
+  "command.openStory": "Open Story",
+  "welcome.stories": "No user stories in this model. Stories are written in the \"stories\" section of the model file, and a click on a story here draws its makigami in the diagram editor.",
   "view.methods": "Methods",
   "command.openMethod": "Open Method View"
 }

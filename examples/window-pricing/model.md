@@ -303,6 +303,50 @@ stateDiagram-v2
 - Lead Time Estimating requires Department Data.
 - Lead Time Estimating yields Lead Time.
 
+## User stories
+
+### Change a window and see the change accepted
+
+As a user I want to change the size of a window and see at once whether the generator accepts it, so that I only price windows that can be built.
+
+| User | UI | Generator | Hands over | Waits | Problem |
+|---|---|---|---|---|---|
+| Drags the width of the window to 1450 mm. *(Proposing)* |  |  | Change Proposal → UI |  |  |
+|  | Sends the change proposal to the generator. *(Proposing)* |  | Change Proposal → Generator |  |  |
+|  |  | Checks the proposal against the size limits of the profile system. *(Validating)* | Decision (passed) → UI |  | 🟥 A rejected proposal comes back without a reason the user can read. |
+|  |  | Applies the proposal to the configuration. *(Applying)* | Configuration → UI | about 200 ms |  |
+|  | Redraws the window with the new width. *(Configuring)* |  |  |  |  |
+
+Done when:
+
+- The configuration holds the new width only after the decision is applied.
+
+### Get a price for a configured window
+
+As a user I want a price for the window I configured, so that I can decide whether to order it.
+
+| User | Generator | Snapshot Store | Pricing Module | Hands over | Waits | Problem |
+|---|---|---|---|---|---|---|
+| Asks for the price of the current configuration. *(Configuring)* |  |  |  | Configuration → Generator |  |  |
+|  | Freezes the configuration and the context manifest into a snapshot. *(Freezing)* |  |  | Snapshot (valid) → Snapshot Store |  |  |
+|  |  | Stores the snapshot under its hash. *(Freezing)* |  | Snapshot (valid) → Pricing Module |  |  |
+|  |  |  | Prices the snapshot with the customer's discount and the carrier tariff. *(Pricing)* | Price Result → User | up to 20 s when the carrier tariff is fetched | 🟥 The transport price is approximate when the carrier tariff is older than a week. |
+| Reads the price and the lead time. |  |  |  |  |  |  |
+
+Done when:
+
+- The price result names the snapshot it priced.
+- An expired snapshot is not priced.
+
+### Expire an old snapshot
+
+As a sales manager I want snapshots to expire after 30 days, so that no customer is quoted a price from an outdated price list.
+
+| Snapshot Store | Pricing Module | Hands over | Waits | Problem |
+|---|---|---|---|---|
+| Marks snapshots older than 30 days as expired. *(Expiring)* |  | Snapshot (expired) → Pricing Module |  |  |
+|  | Skips pricing for the expired snapshot. *(Pricing)* |  |  |  |
+
 ## IDEF0
 
 Inputs are the objects a process consumes, requires, changes or affects, controls its conditions and events, outputs what it yields, changes or affects, and mechanisms the modules it requires and the agents that handle it.

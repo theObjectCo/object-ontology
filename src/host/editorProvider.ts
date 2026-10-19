@@ -37,8 +37,8 @@ export async function applyToDocument(doc: vscode.TextDocument, op: Operation) {
   return result;
 }
 
-/** What a reveal shows: an element, a view, or the view of another method. */
-type Reveal = Omit<Extract<HostMessage, { type: "reveal" }>, "type">;
+/** What to show in a diagram: an element, a view, a user story or the view of another method. */
+export type Reveal = Omit<Extract<HostMessage, { type: "reveal" }>, "type">;
 
 interface Editor {
   doc: vscode.TextDocument;
@@ -236,7 +236,7 @@ export class OpmEditorProvider implements vscode.CustomTextEditorProvider {
     vscode.window.setStatusBarMessage(vscode.l10n.t("Exported {0}", target.fsPath), 4000);
   }
 
-  /** Shows a view or selects an element in the diagrams of a document. */
+  /** Shows a view, a story or the view of another method, or selects an element, in the diagrams of a document. */
   reveal(uri: vscode.Uri, message: Reveal, focus = true): boolean {
     const editors = [...this.editors].filter((e) => e.doc.uri.toString() === uri.toString());
     for (const e of editors) {

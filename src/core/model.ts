@@ -71,6 +71,35 @@ export interface ViewDef {
   things?: string[];
 }
 
+/** What a step passes to another lane: an object, optionally in a state. */
+export interface HandOver {
+  object: string;
+  state?: string;
+  to: string;
+  note?: string;
+}
+
+/** One step of a user story, done by one lane. */
+export interface StoryStep {
+  lane: string;
+  does: string;
+  process?: string;
+  handsOver?: HandOver;
+  waits?: string;
+  problem?: string;
+  note?: string;
+}
+
+/** A user story drawn as a makigami: lanes are agents and modules, steps run in time order. */
+export interface StoryDef {
+  title?: string;
+  story: string;
+  lanes: string[];
+  steps: StoryStep[];
+  doneWhen?: string[];
+  note?: string;
+}
+
 /** View id -> thing id -> [x, y] of the top-left corner. */
 export type Layout = Record<string, Record<string, [number, number]>>;
 
@@ -81,6 +110,7 @@ export interface Model {
   objects?: Record<string, ObjectDef>;
   processes?: Record<string, ProcessDef>;
   views?: Record<string, ViewDef>;
+  stories?: Record<string, StoryDef>;
   layout?: Layout;
 }
 

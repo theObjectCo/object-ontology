@@ -4,6 +4,7 @@
  */
 import { applyOperation } from "../../src/core/edit";
 import { Model } from "../../src/core/model";
+import { storyPlace } from "../../src/core/stories";
 import { validate } from "../../src/core/validate";
 import type { HostMessage, WebviewMessage } from "../../src/shared/protocol";
 
@@ -26,7 +27,7 @@ function sendModel() {
   try {
     const model = JSON.parse(harness.text || "{}") as Model;
     send({ type: "model", model, version });
-    const items = validate(model).map((d) => ({ element: d.element, severity: d.severity, message: d.message, code: d.code }));
+    const items = validate(model).map((d) => ({ element: d.element, severity: d.severity, message: d.message, code: d.code, ...storyPlace(d.path) }));
     send({ type: "diagnostics", items });
   } catch (e) {
     send({ type: "parseError", message: String(e), line: 1, version });

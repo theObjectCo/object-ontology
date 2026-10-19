@@ -1,5 +1,6 @@
 import { EditorLink, editorLinks, stateOwner } from "./links";
 import { Model, ObjectDef, essence, label, objects, processes, refIds, refObject } from "./model";
+import { laneKind, stories, storyTitle, takesPart, usesObject } from "./stories";
 import { listViews, viewContent } from "./viewmodel";
 
 export type Severity = "error" | "warning" | "info";
@@ -153,6 +154,7 @@ export function validate(model: Model, options: ValidateOptions = {}): Diagnosti
   }
 
   for (const [id, o] of Object.entries(objs)) checkSchema(model, id, o, options, report);
+  checkStories(model, report);
   checkLayout(model, report);
   return out;
 }
@@ -188,6 +190,64 @@ function statePathOf(l: EditorLink, end: "from" | "to"): Path {
 
 function elementOf(path: Path): string | undefined {
   return (path[0] === "objects" || path[0] === "processes") && typeof path[1] === "string" ? path[1] : undefined;
+}
+
+type Report = (s: Severity, c: string, m: string, p: Path, e?: string) => void;
+
+/** User stories: lanes are agents or modules of the model, steps name its processes and objects. */
+function checkStories(model: Model, report: Report): void {
+  const objs = objects(model);
+  const procs = processes(model);
+  const L = (id: string) => label(model, id);
+  const unknown = (what: "object" | "process", id: string, where: string, path: Path) => {
+    const wrong = what === "object" ? id in procs : id in objs;
+    if (wrong) report("error", what === "object" ? "not-an-object" : "not-a-process", `"${id}" in ${where} is ${what === "object" ? "a process" : "an object"}; it needs ${what === "object" ? "an object" : "a process"}.`, path);
+    else report("error", `unknown-${what}`, `Unknown ${what} "${id}" in ${where}.`, path);
+  };
+  for (const [sid, s] of Object.entries(stories(model))) {
+    const base: Path = ["stories", sid];
+    const title = storyTitle(sid, s);
+    const lanes = (s.lanes ?? []).filter((l) => typeof l === "string");
+    const steps = (s.steps ?? []).filter((st) => st && typeof st === "object");
+    lanes.forEach((lane, i) => {
+      const path: Path = [...base, "lanes", i];
+      if (lanes.indexOf(lane) < i) report("error", "duplicate-lane", `${L(lane)} is listed twice in the lanes of story ${title}.`, path);
+      else if (!(lane in objs)) unknown("object", lane, `the lanes of story ${title}`, path);
+      else if (!laneKind(model, lane)) report("error", "lane-kind", `${L(lane)} cannot be a lane of story ${title}: a lane is an agent (essence physical) or a module.`, path);
+      else if (!steps.some((st) => st.lane === lane)) report("warning", "empty-lane", `${L(lane)} has no step in story ${title}.`, path);
+    });
+    let handOvers = 0;
+    steps.forEach((st, i) => {
+      const at: Path = [...base, "steps", i];
+      const where = `step ${i + 1} of story ${title}`;
+      const laneOk = lanes.includes(st.lane);
+      if (!laneOk) report("error", "lane-not-listed", `Lane "${st.lane}" of ${where} is not among the lanes of the story.`, [...at, "lane"]);
+      const processOk = typeof st.process === "string" && st.process in procs;
+      if (st.process !== undefined && !processOk) unknown("process", st.process, where, [...at, "process"]);
+      const kind = laneOk ? laneKind(model, st.lane) : undefined;
+      if (kind && processOk && !takesPart(model, st.lane, st.process!)) {
+        const field = objs[st.lane].role === "module" && essence(objs[st.lane]) === "physical" ? "handledBy or requires" : kind === "agent" ? "handledBy" : "requires";
+        report("warning", "lane-not-in-process",
+          `${L(st.lane)} takes no part in ${L(st.process!)} (${where}): it is not in ${field} of the process, its subprocesses or the processes it belongs to.`, [...at, "process"]);
+      }
+      const h = st.handsOver;
+      if (!h) return;
+      handOvers++;
+      if (!lanes.includes(h.to)) report("error", "lane-not-listed", `"${h.to}" in handsOver of ${where} is not among the lanes of the story.`, [...at, "handsOver", "to"]);
+      const o = objs[h.object];
+      if (!o) return unknown("object", h.object, `handsOver of ${where}`, [...at, "handsOver", "object"]);
+      if (h.state !== undefined) {
+        const statePath: Path = [...at, "handsOver", "state"];
+        if (!o.states) report("error", "no-states", `${L(h.object)} has no states, so handsOver of ${where} cannot name state "${h.state}".`, statePath);
+        else if (!o.states.includes(h.state)) report("error", "unknown-state", `${L(h.object)} has no state "${h.state}". States: ${o.states.join(", ")}.`, statePath);
+      }
+      if (processOk && !usesObject(model, st.process!, h.object)) {
+        report("warning", "object-not-in-process",
+          `${where[0].toUpperCase()}${where.slice(1)} hands over ${L(h.object)}, which ${L(st.process!)} does not consume, yield, affect, change, require or have as a condition.`, [...at, "handsOver", "object"]);
+      }
+    });
+    if (steps.length && !handOvers) report("warning", "no-hand-over", `No step of story ${title} hands anything over.`, [...base, "steps"]);
+  }
 }
 
 function checkLayout(model: Model, report: (s: Severity, c: string, m: string, p: Path, e?: string) => void): void {

@@ -8,6 +8,10 @@ export interface ElementDiagnostic {
   severity: Severity;
   message: string;
   code: string;
+  /** For a diagnostic inside a user story: the story key, and the index of the step or the lane it is about. */
+  story?: string;
+  step?: number;
+  lane?: number;
 }
 
 export interface SchemaDef {
@@ -37,8 +41,8 @@ export type HostMessage =
   | { type: "parseError"; message: string; line: number; version: number }
   | { type: "diagnostics"; items: ElementDiagnostic[] }
   | { type: "schemas"; files: SchemaFile[] }
-  /** method opens a view of another method over the diagram, for a process when given. */
-  | { type: "reveal"; elementId?: string; viewId?: string; method?: MethodId; process?: string }
+  /** fromText: the cursor moved in the JSON text; an open story stays open. method opens the view of another method over the diagram, for a process when given. */
+  | { type: "reveal"; elementId?: string; viewId?: string; storyId?: string; fromText?: boolean; method?: MethodId; process?: string }
   | { type: "theme"; theme: ThemeKind }
   | { type: "result"; requestId: number; ok: boolean; error?: string; select?: string[]; message?: string }
   | { type: "requestSaveView" };

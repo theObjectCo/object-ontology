@@ -2,6 +2,7 @@ import {
   Link, Model, ProcessDef, affiliation, descendants, label, linksOf, objects, parents, processes, refIds, refObject,
 } from "./model";
 import { oplSentences, sentenceText } from "./opl";
+import { stories, storyTitle } from "./stories";
 
 export interface View {
   id: string;
@@ -228,7 +229,32 @@ export function moduleSummaries(model: Model): ModuleSummary[] {
   return out;
 }
 
-/** A markdown document with every view, the state diagrams, the module summary and the OPL text. */
+/** Text for a Markdown table cell: pipes escaped, line breaks kept as <br>. */
+const tableCell = (text: string) => text.replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>");
+
+/**
+ * One user story as a makigami table: a column per lane in the given order, then the hand-over, the wait
+ * and the problem; a row per step. A problem is marked with a red square, the red card of a makigami.
+ */
+export function storyMarkdown(model: Model, id: string): string[] {
+  const s = stories(model)[id];
+  const L = (x: string) => tableCell(label(model, x));
+  const lanes = s.lanes ?? [];
+  const out = [`### ${storyTitle(id, s)}`, "", s.story, ""];
+  out.push(`| ${[...lanes.map(L), "Hands over", "Waits", "Problem"].join(" | ")} |`, `|${"---|".repeat(lanes.length + 3)}`);
+  for (const st of s.steps ?? []) {
+    const does = tableCell(st.does) + (st.process ? ` *(${L(st.process)})*` : "");
+    const h = st.handsOver;
+    const handsOver = h ? `${L(h.object)}${h.state ? ` (${tableCell(h.state)})` : ""} → ${L(h.to)}` : "";
+    const row = [...lanes.map((lane) => (lane === st.lane ? does : "")), handsOver, st.waits ? tableCell(st.waits) : "", st.problem ? `🟥 ${tableCell(st.problem)}` : ""];
+    out.push(`| ${row.join(" | ")} |`);
+  }
+  out.push("");
+  if (s.doneWhen?.length) out.push("Done when:", "", ...s.doneWhen.map((d) => `- ${d}`), "");
+  return out;
+}
+
+/** A markdown document with every view, the state diagrams, the module summary, the OPL text and the user stories. */
 export function markdown(model: Model): string {
   const L = (id: string) => label(model, id);
   const parts: string[] = [`# ${model.name ?? "OPM model"}`, ""];
@@ -252,5 +278,10 @@ export function markdown(model: Model): string {
     for (const s of states) parts.push(`### ${s.title}`, "", "```mermaid", s.mermaid, "```", "");
   }
   parts.push("## OPL", "", ...opl(model).map((s) => `- ${s}`), "");
+  const ids = Object.keys(stories(model));
+  if (ids.length) {
+    parts.push("## User stories", "");
+    for (const id of ids) parts.push(...storyMarkdown(model, id));
+  }
   return parts.join("\n");
 }

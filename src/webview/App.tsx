@@ -9,11 +9,13 @@ import { fragmentOf } from "../core/edit";
 import { EditorLinkKind, STATEFUL, allowedKinds, editorLinks, stateOwner, thingKind } from "../core/links";
 import { Model, affiliation, essence, label, objects, processes } from "../core/model";
 import { oplSentences } from "../core/opl";
+import { stories } from "../core/stories";
 import { ViewContent, ViewEdge, ViewInfo, ViewNode, listViews, viewContent, viewsContaining } from "../core/viewmodel";
 import { LINK_WORDS, format, messages } from "../shared/i18n";
 import { ElementDiagnostic, HostMessage, SchemaFile, UiDefaults } from "../shared/protocol";
 import { EdgeData, edgeTypes } from "./edges";
 import { Rect } from "./geometry";
+import { Makigami } from "./makigami";
 import { LayoutAlgorithm, Positions, Shapes, autoLayout, layoutKey, manualLayout, shapesOf, sizeOf, topLevel } from "./layout";
 import { NodeData, ThingLabels, nodeTypes } from "./nodes";
 import { ContextItem, ContextMenu, Inspector, InspectorProps, LinkMenu, OplBar, Toast, Toolbar, ZoomControls } from "./panels";
@@ -31,6 +33,8 @@ interface TabState {
   viewports: Record<string, Viewport>;
   drawerWidth?: number;
   oplHeight?: number;
+  /** The user story shown as a makigami over the diagram, if any. */
+  storyId?: string | null;
 }
 
 interface MenuState {
@@ -152,6 +156,7 @@ export function App() {
   const [diagnostics, setDiagnostics] = useState<ElementDiagnostic[]>([]);
   const [schemas, setSchemas] = useState<SchemaFile[]>([]);
   const [viewId, setViewId] = useState(saved?.viewId ?? "system");
+  const [storyId, setStoryId] = useState<string | null>(saved?.storyId ?? null);
   const [selection, setSelection] = useState<string[]>([]);
   const [edgeSel, setEdgeSel] = useState<string | null>(null);
   const [drawer, setDrawer] = useState(saved?.drawer ?? false);
@@ -201,6 +206,8 @@ export function App() {
   const editingRef = useRef<string | null>(null);
   const fromHost = useRef(false);
   const toastTimer = useRef<number | undefined>(undefined);
+  /** True while a story covers the diagram; the keyboard and the clipboard then leave the diagram alone. */
+  const storyOpen = useRef(false);
 
   const frozen = parseError !== null || method !== null;
   const views = useMemo(() => (model ? listViews(model) : []), [model]);
@@ -250,8 +257,18 @@ export function App() {
           setSchemas(m.files);
           return;
         case "reveal":
-          if (m.method) { setMethod({ id: m.method, process: m.process }); return; }
-          if (m.viewId) setMethod(null);
+          if (m.method) { setStoryId(null); setMethod({ id: m.method, process: m.process }); return; }
+          // a method view closes like a story, except when the text cursor moved
+          if (!m.fromText) setMethod(null);
+          if (m.storyId) {
+            setStoryId(m.storyId);
+            setSelection([]);
+            setEdgeSel(null);
+            return;
+          }
+          // the text cursor selects things on the diagram, but does not close a story being read
+          if (m.fromText && storyOpen.current) return;
+          setStoryId(null);
           setReveal({ elementId: m.elementId, viewId: m.viewId });
           return;
         case "theme":
@@ -281,8 +298,8 @@ export function App() {
   /* ---------- tab state and defaults ---------- */
 
   useEffect(() => {
-    saveTabState({ viewId, drawer, oplExpanded, oplMode, labelsOn, viewports: viewports.current, drawerWidth, oplHeight } satisfies TabState);
-  }, [viewId, drawer, oplExpanded, oplMode, labelsOn, drawerWidth, oplHeight]);
+    saveTabState({ viewId, drawer, oplExpanded, oplMode, labelsOn, viewports: viewports.current, drawerWidth, oplHeight, storyId } satisfies TabState);
+  }, [viewId, drawer, oplExpanded, oplMode, labelsOn, drawerWidth, oplHeight, storyId]);
 
   useEffect(() => {
     if (initialized) post({ type: "defaults", defaults: { drawerOpen: drawer, oplExpanded, oplMode, labelsOn, drawerWidth, oplHeight } });
@@ -796,6 +813,7 @@ export function App() {
     setSelection([]);
     setEdgeSel(null);
     setContext(null);
+    setStoryId(null);
     setMethod({ id, process: picked ?? zoomProcess });
   };
 
@@ -803,6 +821,10 @@ export function App() {
 
   const onKey = (e: KeyboardEvent) => {
     if (method) { if (e.key === "Escape" && !isEditable(e.target)) setMethod(null); return; }
+    if (story) {
+      if ((e.key === "Escape" || e.key === "Backspace") && !isEditable(e.target)) { e.preventDefault(); setStoryId(null); }
+      return;
+    }
     if (confirm && e.key === "Escape") { setConfirm(null); return; }
     if (isEditable(e.target) || menu || confirm) return;
     const ctrl = e.ctrlKey || e.metaKey;
@@ -843,7 +865,7 @@ export function App() {
   useEffect(() => {
     const key = (e: KeyboardEvent) => keyRef.current(e);
     const copy = (e: ClipboardEvent) => {
-      if (isEditable(e.target)) return;
+      if (isEditable(e.target) || storyOpen.current) return;
       const text = copyRef.current();
       if (!text || !e.clipboardData) return;
       copied.current = text;
@@ -855,7 +877,7 @@ export function App() {
       if (e.defaultPrevented) deleteRef.current();
     };
     const pasteEvent = (e: ClipboardEvent) => {
-      if (isEditable(e.target)) return;
+      if (isEditable(e.target) || storyOpen.current) return;
       const text = e.clipboardData?.getData("text/plain");
       if (text) { e.preventDefault(); void pasteRef.current(text); }
     };
@@ -945,6 +967,13 @@ export function App() {
 
   const empty = !!model && !Object.keys(objects(model)).length && !Object.keys(processes(model)).length;
 
+  /* ---------- user story ---------- */
+
+  // a story renamed or deleted in the text leaves the diagram in view
+  const story = model && storyId ? stories(model)[storyId] : undefined;
+  storyOpen.current = !!story;
+  const storyDiagnostics = useMemo(() => diagnostics.filter((d) => d.story === storyId), [diagnostics, storyId]);
+
   /* ---------- context menu ---------- */
 
   // one menu for the right button: on a thing or a link it acts on the selection, on the pane it adds things
@@ -1018,7 +1047,7 @@ export function App() {
   /* ---------- render ---------- */
 
   return (
-    <div className={`opm-app${drawer && hasSelection ? " with-drawer" : ""}`}>
+    <div className={`opm-app${drawer && hasSelection && !story ? " with-drawer" : ""}`}>
       <div className="opm-canvas" ref={wrapper}
            style={{ "--opl-h": `${oplExpanded ? oplHeight : OPL_COLLAPSED}px` } as CSSProperties}
            onPointerDownCapture={(e) => {
@@ -1039,7 +1068,7 @@ export function App() {
           onPaneClick={() => { setMenu(null); setContext(null); }}
           onMoveEnd={(_e, vp) => {
             viewports.current = { ...viewports.current, [viewId]: vp };
-            saveTabState({ viewId, drawer, oplExpanded, oplMode, labelsOn, viewports: viewports.current, drawerWidth, oplHeight } satisfies TabState);
+            saveTabState({ viewId, drawer, oplExpanded, oplMode, labelsOn, viewports: viewports.current, drawerWidth, oplHeight, storyId } satisfies TabState);
           }}
           zIndexMode="manual"
           connectionMode={ConnectionMode.Loose}
@@ -1143,6 +1172,11 @@ export function App() {
         {method && model && (
           <MethodPanel model={model} state={method} language={language} onChange={setMethod} onClose={() => setMethod(null)} />
         )}
+        {story && model && storyId && (
+          <Makigami t={t} model={model} id={storyId} story={story} diagnostics={storyDiagnostics}
+                    onBack={() => setStoryId(null)}
+                    onShow={(id) => { setStoryId(null); setReveal({ elementId: id }); }} />
+        )}
 
         <OplBar
           t={t}
@@ -1158,7 +1192,7 @@ export function App() {
             if (inView.length) { setSelection(inView); setEdgeSel(null); }
           }}
         />
-        {oplExpanded && (
+        {oplExpanded && !story && (
           <Splitter
             axis="y"
             onReset={() => setOplHeight(OPL_HEIGHT)}
@@ -1170,7 +1204,7 @@ export function App() {
           />
         )}
       </div>
-      {drawer && hasSelection && inspectorProps && (
+      {drawer && hasSelection && inspectorProps && !story && (
         <>
           <Splitter
             axis="x"
