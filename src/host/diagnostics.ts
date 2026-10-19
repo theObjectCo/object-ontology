@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { check, locate } from "../core/load";
+import { storyPlace } from "../core/stories";
 import { Severity } from "../core/validate";
 import { ElementDiagnostic } from "../shared/protocol";
 
@@ -38,7 +39,7 @@ export class Diagnostics implements vscode.Disposable {
       item.code = d.code;
       return item;
     }));
-    const items = errors.map((d) => ({ element: d.element, severity: d.severity, message: d.message, code: d.code }));
+    const items = errors.map((d) => ({ element: d.element, severity: d.severity, message: d.message, code: d.code, ...storyPlace(d.path) }));
     this.latest.set(doc.uri.toString(), items);
     for (const l of this.listeners) l(doc.uri, items);
   }

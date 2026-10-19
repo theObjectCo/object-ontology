@@ -231,10 +231,10 @@ function groupOf(model: Model, id: string): "objects" | "processes" {
   throw new EditError(`Unknown element "${id}".`);
 }
 
-/** Renames a thing everywhere: references, its key, and its layout keys. */
+/** Renames a thing everywhere: references, story steps, its key, and its layout keys. */
 function rename(doc: Doc, model: Model, oldId: string, newId: string) {
   const group = groupOf(model, oldId);
-  for (const path of referencePaths(model, oldId)) doc.replaceString(path, newId);
+  for (const path of [...referencePaths(model, oldId), ...storyPaths(model, oldId)]) doc.replaceString(path, newId);
   doc.renameKey([group, oldId], newId);
   for (const [vid, positions] of Object.entries(model.layout ?? {})) {
     if (oldId in positions) doc.renameKey(["layout", vid, oldId], newId);
@@ -267,6 +267,25 @@ function referencePaths(model: Model, id: string): JsonPath[] {
   for (const [oid, o] of Object.entries(objects(model))) scan(["objects", oid], o as Record<string, unknown>);
   for (const [pid, p] of Object.entries(processes(model))) scan(["processes", pid], p as Record<string, unknown>);
   for (const [vid, v] of Object.entries(model.views ?? {})) scan(["views", vid], v as Record<string, unknown>);
+  return out;
+}
+
+/**
+ * Paths of the identifiers in user stories that refer to a thing. A rename follows them; a delete leaves
+ * them, because a step is text written by a person, and the validator reports the reference.
+ */
+function storyPaths(model: Model, id: string): JsonPath[] {
+  const out: JsonPath[] = [];
+  for (const [sid, s] of Object.entries(model.stories ?? {})) {
+    (s.lanes ?? []).forEach((lane, i) => lane === id && out.push(["stories", sid, "lanes", i]));
+    (s.steps ?? []).forEach((st, i) => {
+      const at = ["stories", sid, "steps", i];
+      if (st.lane === id) out.push([...at, "lane"]);
+      if (st.process === id) out.push([...at, "process"]);
+      if (st.handsOver?.object === id) out.push([...at, "handsOver", "object"]);
+      if (st.handsOver?.to === id) out.push([...at, "handsOver", "to"]);
+    });
+  }
   return out;
 }
 
@@ -387,6 +406,11 @@ function run(doc: Doc, model: Model, op: Operation): Partial<EditResult> {
       if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(op.newState)) throw new EditError(`"${op.newState}" is not a valid state name.`);
       if (o.states!.includes(op.newState)) throw new EditError(`${op.object} already has state "${op.newState}".`);
       for (const path of statePaths(model, op.object, op.oldState)) doc.replaceString(path, op.newState);
+      for (const [sid, s] of Object.entries(model.stories ?? {})) {
+        (s.steps ?? []).forEach((st, k) => {
+          if (st.handsOver?.object === op.object && st.handsOver.state === op.oldState) doc.replaceString(["stories", sid, "steps", k, "handsOver", "state"], op.newState);
+        });
+      }
       doc.replaceString(["objects", op.object, "states", i], op.newState);
       return {};
     }

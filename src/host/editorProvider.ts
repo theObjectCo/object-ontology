@@ -37,6 +37,9 @@ export async function applyToDocument(doc: vscode.TextDocument, op: Operation) {
   return result;
 }
 
+/** What to show in a diagram: an element, a view or a user story. */
+export type Reveal = { elementId?: string; viewId?: string; storyId?: string; fromText?: boolean };
+
 interface Editor {
   doc: vscode.TextDocument;
   panel: vscode.WebviewPanel;
@@ -48,7 +51,7 @@ export class OpmEditorProvider implements vscode.CustomTextEditorProvider {
   private activeEditor?: Editor;
   private changeListeners = new Set<() => void>();
   /** Reveals waiting for a diagram that is still opening. */
-  private pending = new Map<string, { elementId?: string; viewId?: string }>();
+  private pending = new Map<string, Reveal>();
   /** When the diagram last moved the cursor of a text editor, per document, so that the move is not echoed back. */
   private ownSelection = new Map<string, number>();
 
@@ -233,8 +236,8 @@ export class OpmEditorProvider implements vscode.CustomTextEditorProvider {
     vscode.window.setStatusBarMessage(vscode.l10n.t("Exported {0}", target.fsPath), 4000);
   }
 
-  /** Shows a view or selects an element in the diagrams of a document. */
-  reveal(uri: vscode.Uri, message: { elementId?: string; viewId?: string }, focus = true): boolean {
+  /** Shows a view or a story, or selects an element, in the diagrams of a document. */
+  reveal(uri: vscode.Uri, message: Reveal, focus = true): boolean {
     const editors = [...this.editors].filter((e) => e.doc.uri.toString() === uri.toString());
     for (const e of editors) {
       e.panel.webview.postMessage({ type: "reveal", ...message } satisfies HostMessage);
@@ -244,7 +247,7 @@ export class OpmEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   /** Reveals in an open diagram, or opens the diagram and reveals when it is ready. */
-  async revealOrOpen(uri: vscode.Uri, message: { elementId?: string; viewId?: string }): Promise<void> {
+  async revealOrOpen(uri: vscode.Uri, message: Reveal): Promise<void> {
     if (this.reveal(uri, message)) return;
     this.pending.set(uri.toString(), message);
     await vscode.commands.executeCommand("vscode.openWith", uri, OpmEditorProvider.viewType);

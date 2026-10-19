@@ -105,7 +105,68 @@ Warnings cover objects linked to nothing, agents that are not physical, modules 
 - the views listed under `views`, either one process or a list of `things`;
 - a state diagram for every object with states, with transitions taken from `changes`;
 - a module table: what each module performs, takes, gives and changes, derived from the processes that require it;
-- the OPL text of the whole model.
+- the OPL text of the whole model;
+- a makigami table for every user story.
+
+## User stories (makigami)
+
+A makigami is a swimlane map of one process: one lane per participant, the steps in time order, the information each step hands to another lane, and red cards for problems. Every user story of a model is one makigami, kept in the optional `stories` section after `views` and before `layout`. Lanes, processes and handed-over objects are identifiers of the same model, and the validator checks each of them against it.
+
+```json
+"stories": {
+  "getPrice": {
+    "title": "Get a price for a configured window",
+    "story": "As a user I want a price for the window I configured, so that I can decide whether to order it.",
+    "lanes": ["user", "generator", "pricingModule"],
+    "steps": [
+      { "lane": "user", "does": "Asks for the price of the current configuration.", "process": "configuring",
+        "handsOver": { "object": "configuration", "to": "generator" } },
+      { "lane": "generator", "does": "Freezes the configuration into a snapshot.", "process": "freezing",
+        "handsOver": { "object": "snapshot", "state": "valid", "to": "pricingModule" } },
+      { "lane": "pricingModule", "does": "Prices the snapshot.", "process": "pricing",
+        "handsOver": { "object": "priceResult", "to": "user" },
+        "waits": "up to 20 s", "problem": "The transport price is approximate when the tariff is older than a week." },
+      { "lane": "user", "does": "Reads the price and the lead time." }
+    ],
+    "doneWhen": ["The price result names the snapshot it priced."]
+  }
+}
+```
+
+Story keys are camelCase, like every other identifier. `story`, `lanes`, `steps`, and `lane` and `does` in each step are required.
+
+| Field | Meaning |
+|---|---|
+| `title` | Title of the story. Without it, the title is derived from the key. |
+| `story` | The story sentence. |
+| `lanes` | At least one lane: objects of the model that are agents (essence `physical`) or modules, in the order they are drawn from the top. |
+| `steps` | At least one step, in time order. Each step gets its own column. |
+| `steps[].lane` | The lane that does the step. |
+| `steps[].does` | What the lane does, as a sentence. |
+| `steps[].process` | The process of the model the step belongs to. |
+| `steps[].handsOver` | `{ "object": ..., "state": ..., "to": ... }`: the object the step passes to the lane `to`, with an optional state of the object. |
+| `steps[].waits` | A wait or a duration as free text, for example `up to a few seconds`. |
+| `steps[].problem` | A problem found at the step, drawn as a red card below it. |
+| `doneWhen` | Sentences that are true when the story is done. |
+| `note` | On a story, a step or a hand-over: Markdown that the validator, OPL and the renderer skip. |
+
+The validator reports these errors:
+
+- a lane that is not an object of the model, or an object that is neither physical nor a module;
+- a lane listed twice;
+- a step lane or a receiving lane (`handsOver.to`) that is not among the story's lanes;
+- a `process` that is not a process of the model;
+- a handed-over object that does not exist, or a `state` the object does not have.
+
+Warnings cover a lane with no step, a story in which no step hands anything over, and two mismatches between a step and its process. In the first, the lane takes no part in the process: an agent is not in `handledBy`, a module is not in `requires`. In the second, the process does not consume, yield, affect, change, require or have as a condition the handed-over object. Both checks look at the process, its subprocesses at every depth and the processes it belongs to, because the system view carries the links of subprocesses on their parents. Event links do not count for the second check.
+
+The **Stories** tree in the OPM container lists the stories of the model that the other trees show, with error and warning icons. A click opens the story in the diagram editor, drawn over the canvas. Lanes are horizontal bands with the agent or module on the left, in the diagram's notation: a module has a thick border and an agent has a shadow. Steps are cards from left to right, one column per step, with the `does` text and the process. A hand-over is an arrow from the card to the next card of the receiving lane, labeled with the object and its state. When the receiving lane has no later step, the arrow is dashed and ends in that lane at the next column. The wait is written under the card, and a problem is a red card pinned below it. "Done when" is listed under the lanes.
+
+![Makigami of the Get a price story: four lanes, five steps, hand-over arrows labeled with objects and states, and a red card under the pricing step](docs/images/makigami.png)
+
+The makigami is read-only: the JSON stays the only source, and a change typed in the text redraws it. A click on a lane, a process or a handed-over object closes the story and selects that thing in the diagram. **‹ Diagram**, Esc or Backspace go back to the diagram. Renaming an identifier or a state in the diagram editor renames it in the stories too. Deleting a thing leaves the stories as they are, and the validator then reports the missing references.
+
+`opm render` and **OPM: Export Markdown** end the document with a section "User stories": for each story the sentence, a table with a column per lane and the columns Hands over, Waits and Problem, one row per step with problems marked 🟥, and the "Done when" list. OPL does not change, because stories are not OPM.
 
 ## Command line
 
@@ -162,13 +223,13 @@ A link that starts or ends in a state box keeps that state. An effect that start
 
 The ⋯ menu exports the view as PNG (twice the screen resolution, on the theme background) or SVG, exports markdown, saves the selection as a custom view and switches word labels on the links.
 
-The activity bar has an OPM container with three trees. **Models** lists every `*.opm.json` file of the workspace, outside `node_modules`, `dist`, `out` and `.git`; a click opens the file in the diagram editor, and an eye icon marks the model the two trees below show. **Model** lists objects with their states and processes with their subprocesses, with error and warning icons, and **Views** lists the views. Both follow the focused diagram or the active model text editor, and their titles carry the file name. A click selects the element in the diagram and switches to a view that contains it.
+The activity bar has an OPM container with four trees. **Models** lists every `*.opm.json` file of the workspace, outside `node_modules`, `dist`, `out` and `.git`; a click opens the file in the diagram editor, and an eye icon marks the model the two trees below show. **Model** lists objects with their states and processes with their subprocesses, with error and warning icons, and **Views** lists the views. These two and **Stories**, described under [User stories](#user-stories-makigami), follow the focused diagram or the active model text editor, and their titles carry the file name. A click in **Model** or **Views** selects the element in the diagram and switches to a view that contains it.
 
 **OPM: New Model**, the file icon above **Models**, or **New Model** in the context menu of a folder in the explorer creates a model file and opens it. The new file holds one agent, one process, an object the process consumes and an object it yields in a state, and it passes the validator without warnings. **OPM: Find Element** searches by label or identifier. The setting `opm.schemaGlob` (default `**/*.schema.json`) chooses the schema files offered in the drawer.
 
 **OPM: Create JSON Schema**, also in the ⋯ menu of the diagram, writes a definition for every informatical object that is not a module and has no `schema` yet, and links the objects to it in one edit of the model. States become an enum in a `state` property, parts and attributes become properties that refer to their definitions, and `isA` becomes an `allOf`. The definitions go to the schema file the objects already use, or to `<model>.schema.json` next to the model. Definitions already in the file stay as they are.
 
-**OPM: Export Markdown** writes the views, the module table, the state diagrams and the OPL text as `<model>.md` next to the model. The UI of the editor follows the VS Code display language (English or Polish); OPL is always English.
+**OPM: Export Markdown** writes the views, the module table, the state diagrams, the OPL text and the user stories as `<model>.md` next to the model. The UI of the editor follows the VS Code display language (English or Polish); OPL is always English.
 
 ## Development
 

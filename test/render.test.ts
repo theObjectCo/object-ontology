@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import * as fs from "fs";
 import { Model, humanize } from "../src/core/model";
 import { markdown, moduleSummaries, opl, processView, stateDiagrams, systemView, views } from "../src/core/render";
+import { handOverTarget } from "../src/core/stories";
 
 const model = JSON.parse(fs.readFileSync("examples/window-pricing/model.opm.json", "utf-8")) as Model;
 
@@ -77,4 +78,56 @@ test("markdown contains every view and the OPL section", () => {
   assert.equal((md.match(/```mermaid/g) ?? []).length, views(model).length + stateDiagrams(model).length);
   assert.ok(md.includes("## OPL"));
   assert.ok(md.includes("| Pricing Module | Pricing |"));
+});
+
+test("a user story is rendered as a makigami table with labels, hand-overs and red cards", () => {
+  const m: Model = {
+    objects: { clerk: { essence: "physical" }, orderDesk: { role: "module", label: "Desk | front" }, order: { states: ["open", "closed"] } },
+    processes: { placing: { handledBy: ["clerk"], requires: ["orderDesk"], yields: ["order"] } },
+    stories: {
+      placeAnOrder: {
+        story: "As a clerk I want to place an order.",
+        lanes: ["clerk", "orderDesk"],
+        steps: [
+          { lane: "clerk", does: "Fills in the form.", process: "placing", handsOver: { object: "order", state: "open", to: "orderDesk", note: "skipped" } },
+          { lane: "orderDesk", does: "Stores the order.", waits: "one day", problem: "Two clerks can\nopen one order.", note: "skipped" },
+        ],
+        doneWhen: ["The order is stored."],
+        note: "skipped",
+      },
+    },
+  };
+  const md = markdown(m);
+  const section = md.slice(md.indexOf("## User stories"));
+  assert.ok(md.indexOf("## OPL") < md.indexOf("## User stories"), "stories come after the existing sections");
+  assert.deepEqual(section.split("\n").slice(0, 10), [
+    "## User stories",
+    "",
+    "### Place An Order",
+    "",
+    "As a clerk I want to place an order.",
+    "",
+    "| Clerk | Desk \\| front | Hands over | Waits | Problem |",
+    "|---|---|---|---|---|",
+    "| Fills in the form. *(Placing)* |  | Order (open) → Desk \\| front |  |  |",
+    "|  | Stores the order. |  | one day | 🟥 Two clerks can<br>open one order. |",
+  ]);
+  assert.ok(section.includes("Done when:\n\n- The order is stored."));
+  assert.ok(!section.includes("skipped"), "notes are skipped");
+  assert.ok(!opl(m).some((s) => s.includes("Fills in")), "OPL is unchanged");
+  assert.ok(!markdown({ objects: { a: {} } }).includes("## User stories"), "no section without stories");
+});
+
+test("a hand-over lands on the next step of the receiving lane, or on that lane in the next column", () => {
+  const story = {
+    story: "s", lanes: ["a", "b"],
+    steps: [
+      { lane: "a", does: "1", handsOver: { object: "x", to: "b" } },
+      { lane: "a", does: "2" },
+      { lane: "b", does: "3", handsOver: { object: "x", to: "a" } },
+    ],
+  };
+  assert.deepEqual(handOverTarget(story, 0), { step: 2, column: 2 });
+  assert.deepEqual(handOverTarget(story, 2), { column: 3 }, "no later step of a: the next column, past the last step");
+  assert.equal(handOverTarget(story, 1), undefined);
 });

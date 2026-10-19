@@ -131,3 +131,115 @@ test("Create JSON Schema writes definitions the validator accepts and keeps exis
   assert.deepEqual(JSON.parse(kept.text).$defs.order, { type: "string" });
   assert.equal(Object.keys(kept.links).length, 3);
 });
+
+/** A small model for stories: an agent, two modules, and a process zoomed into one subprocess. */
+const storyBase = (stories: Model["stories"]): Model => ({
+  objects: {
+    clerk: { essence: "physical" }, desk: { role: "module" }, checker: { role: "module" },
+    order: { states: ["open", "closed"] }, receipt: {},
+  },
+  processes: {
+    ordering: { handledBy: ["clerk"], requires: ["desk"], zoomsInto: ["placing"] },
+    placing: { requires: ["desk"], yields: ["order"] },
+    closing: { requires: ["checker"], changes: [{ object: "order", from: "open", to: "closed" }], yields: ["receipt"] },
+  },
+  stories,
+});
+const validStory = (): NonNullable<Model["stories"]>[string] => ({
+  story: "As a clerk I want to place an order, so that it can be closed.",
+  lanes: ["clerk", "desk", "checker"],
+  steps: [
+    // the clerk handles ordering, the parent of placing
+    { lane: "clerk", does: "Fills in the order form.", process: "placing", handsOver: { object: "order", state: "open", to: "desk" } },
+    // ordering yields the order through its subprocess placing
+    { lane: "desk", does: "Forwards the order.", process: "ordering", handsOver: { object: "order", to: "checker" } },
+    { lane: "checker", does: "Closes the order.", process: "closing", waits: "one day", problem: "Nobody is told when it is closed." },
+  ],
+  doneWhen: ["The order is closed."],
+});
+const storyDiagnostics = (story: NonNullable<Model["stories"]>[string]) =>
+  validate(storyBase({ s: story })).filter((d) => d.path[0] === "stories").map((d) => ({ severity: d.severity, code: d.code, path: d.path.slice(2) }));
+
+test("a story whose lanes, processes and objects agree with the model passes without warnings", () => {
+  assert.deepEqual(validate(storyBase({ s: validStory() })), []);
+  assert.deepEqual(structureErrors(storyBase({ s: { ...validStory(), title: "Placing", note: "n" } })), []);
+});
+
+test("the format schema requires the story sentence, lanes and steps, and lane and does in a step", () => {
+  assert.ok(structureErrors(storyBase({ s: { lanes: ["clerk"], steps: [{ lane: "clerk", does: "x" }] } as never })).length > 0);
+  assert.ok(structureErrors(storyBase({ s: { ...validStory(), lanes: [] } })).length > 0);
+  assert.ok(structureErrors(storyBase({ s: { ...validStory(), steps: [{ lane: "clerk" }] } as never })).length > 0);
+  assert.ok(structureErrors(storyBase({ s: { ...validStory(), steps: [{ lane: "clerk", does: "x", handsOver: { object: "order" } }] } as never })).length > 0);
+  assert.ok(structureErrors(storyBase({ s: { ...validStory(), actors: [] } as never })).length > 0);
+});
+
+test("a lane must be an agent or a module of the model, listed once", () => {
+  const s = validStory();
+  s.lanes = [...s.lanes, "nobody", "closing", "receipt", "desk"];
+  assert.deepEqual(storyDiagnostics(s), [
+    { severity: "error", code: "unknown-object", path: ["lanes", 3] },
+    { severity: "error", code: "not-an-object", path: ["lanes", 4] },
+    { severity: "error", code: "lane-kind", path: ["lanes", 5] },
+    { severity: "error", code: "duplicate-lane", path: ["lanes", 6] },
+  ]);
+});
+
+test("a step's lane and the receiving lane must be lanes of the story", () => {
+  const s = validStory();
+  s.lanes = ["clerk", "desk"];
+  s.steps = s.steps.slice(0, 2);
+  const d = storyDiagnostics(s);
+  assert.deepEqual(d.filter((x) => x.severity === "error"), [{ severity: "error", code: "lane-not-listed", path: ["steps", 1, "handsOver", "to"] }]);
+  s.steps = [{ lane: "checker", does: "x", handsOver: { object: "order", to: "desk" } }, ...s.steps];
+  assert.deepEqual(storyDiagnostics(s)[0], { severity: "error", code: "lane-not-listed", path: ["steps", 0, "lane"] });
+});
+
+test("a step's process must be a process of the model", () => {
+  const s = validStory();
+  s.steps[2].process = "archiving";
+  assert.deepEqual(storyDiagnostics(s), [{ severity: "error", code: "unknown-process", path: ["steps", 2, "process"] }]);
+  s.steps[2].process = "order";
+  assert.deepEqual(storyDiagnostics(s), [{ severity: "error", code: "not-a-process", path: ["steps", 2, "process"] }]);
+});
+
+test("a handed-over object must exist and have the named state", () => {
+  const s = validStory();
+  s.steps[0].handsOver = { object: "invoice", to: "desk" };
+  assert.deepEqual(storyDiagnostics(s), [{ severity: "error", code: "unknown-object", path: ["steps", 0, "handsOver", "object"] }]);
+  s.steps[0].handsOver = { object: "order", state: "lost", to: "desk" };
+  assert.deepEqual(storyDiagnostics(s), [{ severity: "error", code: "unknown-state", path: ["steps", 0, "handsOver", "state"] }]);
+  s.steps[2].handsOver = { object: "receipt", state: "printed", to: "clerk" };
+  assert.ok(storyDiagnostics(s).some((x) => x.code === "no-states" && x.path.join("/") === "steps/2/handsOver/state"));
+});
+
+test("a lane with no step is a warning", () => {
+  const s = validStory();
+  s.steps = s.steps.slice(0, 2);
+  assert.deepEqual(storyDiagnostics(s), [{ severity: "warning", code: "empty-lane", path: ["lanes", 2] }]);
+});
+
+test("a lane that takes no part in the step's process is a warning, for agents and modules", () => {
+  const s = validStory();
+  s.steps[2].lane = "clerk";
+  s.steps[2].handsOver = { object: "receipt", to: "checker" };
+  const d = storyDiagnostics(s);
+  assert.ok(d.some((x) => x.code === "lane-not-in-process" && x.path.join("/") === "steps/2/process"), "the clerk does not handle closing");
+  const m = validStory();
+  m.steps[0].lane = "checker";
+  m.steps[2].lane = "desk";
+  m.steps[2].handsOver = { object: "receipt", to: "clerk" };
+  const codes = storyDiagnostics(m).filter((x) => x.code === "lane-not-in-process").map((x) => x.path[1]);
+  assert.deepEqual(codes, [0, 2], "closing and placing do not require these modules");
+});
+
+test("a handed-over object that the step's process does not use is a warning", () => {
+  const s = validStory();
+  s.steps[0].handsOver = { object: "receipt", to: "desk" };
+  assert.deepEqual(storyDiagnostics(s), [{ severity: "warning", code: "object-not-in-process", path: ["steps", 0, "handsOver", "object"] }]);
+});
+
+test("a story that hands nothing over is a warning", () => {
+  const s = validStory();
+  s.steps = s.steps.map(({ handsOver: _h, ...rest }) => rest);
+  assert.deepEqual(storyDiagnostics(s), [{ severity: "warning", code: "no-hand-over", path: ["steps"] }]);
+});

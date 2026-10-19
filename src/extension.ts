@@ -8,7 +8,7 @@ import { OpmEditorProvider, applyToDocument, elementAt } from "./host/editorProv
 import { SchemaIndex } from "./host/schemas";
 import { draftSchema, schemaFileFor } from "./core/schemagen";
 import { modelName, starterModel } from "./core/template";
-import { CurrentModel, ModelTree, ModelsTree, ViewsTree, modelFolder } from "./host/trees";
+import { CurrentModel, ModelTree, ModelsTree, StoriesTree, ViewsTree, modelFolder } from "./host/trees";
 
 export function activate(context: vscode.ExtensionContext): void {
   const diagnostics = new Diagnostics();
@@ -19,6 +19,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const models = new ModelsTree(current);
   const modelView = vscode.window.createTreeView("opm.model", { treeDataProvider: new ModelTree(current, diagnostics) });
   const viewsView = vscode.window.createTreeView("opm.views", { treeDataProvider: new ViewsTree(current) });
+  const storiesView = vscode.window.createTreeView("opm.stories", { treeDataProvider: new StoriesTree(current, diagnostics) });
   // the file name next to the section titles says which model the side bar shows
   const describe = () => {
     const uri = current.uri;
@@ -26,6 +27,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const folder = uri ? modelFolder(uri) : "";
     modelView.description = name && (folder ? `${name} — ${folder}` : name);
     viewsView.description = name;
+    storiesView.description = name;
   };
   current.onChange(describe);
   describe();
@@ -40,7 +42,7 @@ export function activate(context: vscode.ExtensionContext): void {
       webviewOptions: { retainContextWhenHidden: true },
       supportsMultipleEditorsPerDocument: true,
     }),
-    modelView, viewsView,
+    modelView, viewsView, storiesView,
     models, vscode.window.registerTreeDataProvider("opm.models", models),
     vscode.languages.registerCodeActionsProvider({ pattern: "**/*.opm.json" },
       new LayoutFixes((doc) => applyToDocument(doc, { op: "removeStaleLayout" })), { providedCodeActionKinds: LayoutFixes.kinds }),
@@ -64,7 +66,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const byUser = e.kind === vscode.TextEditorSelectionChangeKind.Keyboard || e.kind === vscode.TextEditorSelectionChangeKind.Mouse;
       if (!byUser && Date.now() - (lastChange.get(doc.uri.toString()) ?? 0) < 150) return;
       const id = elementAt(doc.getText(), doc.offsetAt(e.selections[0].active));
-      if (id) provider.reveal(doc.uri, { elementId: id }, false);
+      if (id) provider.reveal(doc.uri, { elementId: id, fromText: true }, false);
     }),
 
     vscode.commands.registerCommand("opm.openTextBeside", async (uri?: vscode.Uri) => {
@@ -80,6 +82,9 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand("opm.openView", (uri: vscode.Uri | undefined, viewId: string) => {
       if (uri) return provider.revealOrOpen(uri, { viewId });
+    }),
+    vscode.commands.registerCommand("opm.openStory", (uri: vscode.Uri | undefined, storyId: string) => {
+      if (uri) return provider.revealOrOpen(uri, { storyId });
     }),
     vscode.commands.registerCommand("opm.openModel", (uri: vscode.Uri) =>
       vscode.commands.executeCommand("vscode.openWith", uri, OpmEditorProvider.viewType)),

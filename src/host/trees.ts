@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { Model, label, objects, parents, processes } from "../core/model";
+import { stories, storyTitle } from "../core/stories";
 import { listViews } from "../core/viewmodel";
 import { Diagnostics, isModel } from "./diagnostics";
 import { OpmEditorProvider } from "./editorProvider";
@@ -145,6 +146,36 @@ export class ViewsTree implements vscode.TreeDataProvider<ViewItem> {
     const t = new vscode.TreeItem(view ? `${view.code} · ${view.title}` : item.id, vscode.TreeItemCollapsibleState.None);
     t.iconPath = new vscode.ThemeIcon(view?.kind === "zoom" ? "zoom-in" : view?.kind === "custom" ? "eye" : "type-hierarchy");
     t.command = { command: "opm.openView", title: "", arguments: [this.current.uri, item.id] };
+    return t;
+  }
+}
+
+/** The user stories of the model; a click opens the story's makigami in the diagram editor. */
+export class StoriesTree implements vscode.TreeDataProvider<string> {
+  private emitter = new vscode.EventEmitter<void>();
+  readonly onDidChangeTreeData = this.emitter.event;
+
+  constructor(private current: CurrentModel, private diagnostics: Diagnostics) {
+    current.onChange(() => this.emitter.fire());
+  }
+
+  getChildren(id?: string): string[] {
+    const model = this.current.model;
+    return model && !id ? Object.keys(stories(model)) : [];
+  }
+
+  getTreeItem(id: string): vscode.TreeItem {
+    const s = stories(this.current.model ?? {})[id];
+    const uri = this.current.uri;
+    const t = new vscode.TreeItem(s ? storyTitle(id, s) : id, vscode.TreeItemCollapsibleState.None);
+    t.description = id;
+    const issues = uri ? this.diagnostics.forDocument(uri).filter((d) => d.story === id && d.severity !== "info") : [];
+    const error = issues.some((d) => d.severity === "error");
+    t.iconPath = issues.length
+      ? new vscode.ThemeIcon(error ? "error" : "warning", new vscode.ThemeColor(error ? "list.errorForeground" : "list.warningForeground"))
+      : new vscode.ThemeIcon("book");
+    t.tooltip = [typeof s?.story === "string" ? s.story : "", ...issues.map((d) => d.message)].filter(Boolean).join("\n\n") || undefined;
+    t.command = { command: "opm.openStory", title: "", arguments: [uri, id] };
     return t;
   }
 }

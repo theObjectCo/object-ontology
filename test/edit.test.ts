@@ -258,3 +258,18 @@ test("copy and paste keeps notes on links inside the selection", () => {
   const t = run(text, { op: "paste", fragment: frag, viewId: "system" });
   assert.deepEqual(parse(t).processes!.p2.yields, [{ object: "a2", note: "n" }]);
 });
+
+test("renaming an identifier or a state follows into user stories; deleting leaves the story to the validator", () => {
+  let t = run(EXAMPLE, { op: "renameId", oldId: "pricingModule", newId: "pricer" });
+  t = run(t, { op: "renameId", oldId: "configuring", newId: "setting" });
+  t = run(t, { op: "renameState", object: "snapshot", oldState: "valid", newState: "fresh" });
+  const s = parse(t).stories!.getPrice;
+  assert.deepEqual(s.lanes, ["user", "generator", "snapshotStore", "pricer"]);
+  assert.equal(s.steps[0].process, "setting");
+  assert.deepEqual(s.steps[2].handsOver, { object: "snapshot", state: "fresh", to: "pricer" });
+  assert.equal(s.steps[3].lane, "pricer");
+  assert.deepEqual(validate(parse(t)).filter((d) => d.severity !== "info"), []);
+  const deleted = run(t, { op: "deleteElements", ids: ["pricer"] });
+  assert.deepEqual(parse(deleted).stories!.getPrice.lanes, s.lanes);
+  assert.ok(errors(deleted).includes("unknown-object"));
+});

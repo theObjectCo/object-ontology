@@ -79,6 +79,10 @@
         {
           "id": "opm.views",
           "name": "%view.views%"
+        },
+        {
+          "id": "opm.stories",
+          "name": "%view.stories%"
         }
       ]
     },
@@ -136,6 +140,11 @@
       {
         "command": "opm.openView",
         "title": "%command.openView%",
+        "category": "OPM"
+      },
+      {
+        "command": "opm.openStory",
+        "title": "%command.openStory%",
         "category": "OPM"
       },
       {
@@ -213,6 +222,10 @@
         {
           "command": "opm.openModel",
           "when": "false"
+        },
+        {
+          "command": "opm.openStory",
+          "when": "false"
         }
       ]
     },
@@ -234,6 +247,10 @@
       {
         "view": "opm.model",
         "contents": "%welcome.model%"
+      },
+      {
+        "view": "opm.stories",
+        "contents": "%welcome.stories%"
       }
     ]
   },

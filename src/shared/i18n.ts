@@ -78,6 +78,14 @@ const en = {
   note: "Note",
   notePlaceholder: "Markdown: [text](https://…), a bare https:// address, or [file](docs/spec.md)",
   editNote: "Click to edit",
+  diagram: "Diagram",
+  userStory: "User story",
+  lanes: "Lanes",
+  agent: "Agent",
+  waits: "waits",
+  doneWhen: "Done when",
+  showInDiagram: "Show in the diagram",
+  backHint: "Esc or Backspace",
 };
 
 export type Messages = typeof en;
@@ -162,6 +170,14 @@ const pl: Messages = {
   note: "Notatka",
   notePlaceholder: "Markdown: [tekst](https://…), goły adres https:// albo [plik](docs/spec.md)",
   editNote: "Kliknij, żeby edytować",
+  diagram: "Diagram",
+  userStory: "Historia użytkownika",
+  lanes: "Uczestnicy",
+  agent: "Wykonawca",
+  waits: "czeka",
+  doneWhen: "Gotowe, gdy",
+  showInDiagram: "Pokaż na diagramie",
+  backHint: "Esc albo Backspace",
 };
 
 /** Word labels of the link kinds, shown when link labels are switched on and in the kind menu. */

@@ -45,6 +45,16 @@
         "$ref": "#/$defs/view"
       }
     },
+    "stories": {
+      "description": "User stories, each drawn as a makigami: one lane per agent or module, the steps in time order, what each step hands over to another lane, and the problems found on the way. Lanes, processes and handed-over objects are identifiers of this model, so the validator checks a story against it. OPL skips this section.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/story"
+      }
+    },
     "layout": {
       "description": "Optional positions per view: view key (system, structure, a process id for its zoom view, or a custom view key) -> thing id -> [x, y] of the top-left corner. A view without an entry is laid out automatically. The validator, the Mermaid renderer and OPL ignore this section.",
       "type": "object",
@@ -427,6 +437,116 @@
       "minItems": 1,
       "items": {
         "$ref": "#/$defs/ref"
+      }
+    },
+    "story": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "story",
+        "lanes",
+        "steps"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Title of the story. Default: derived from its key."
+        },
+        "story": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The story sentence, for example \"As a customer I want ..., so that ...\"."
+        },
+        "lanes": {
+          "description": "The participants, in the order the lanes are drawn from the top: objects of the model that are agents (essence physical) or modules.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "steps": {
+          "description": "The steps in time order; each one is drawn in its own column of the makigami.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/storyStep"
+          }
+        },
+        "doneWhen": {
+          "description": "Acceptance criteria: sentences that are true when the story is done.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "note": {
+          "$ref": "#/$defs/note"
+        }
+      }
+    },
+    "storyStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lane",
+        "does"
+      ],
+      "properties": {
+        "lane": {
+          "$ref": "#/$defs/id",
+          "description": "The lane that does the step; one of the story's lanes."
+        },
+        "does": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What the lane does, as a sentence."
+        },
+        "process": {
+          "$ref": "#/$defs/id",
+          "description": "The process of the model the step belongs to. The lane should handle it (an agent) or be required by it (a module), directly or through its subprocesses or parents."
+        },
+        "handsOver": {
+          "description": "What the step passes to another lane. The arrow goes to the next step of the target lane.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "object",
+            "to"
+          ],
+          "properties": {
+            "object": {
+              "$ref": "#/$defs/id",
+              "description": "The object handed over; the step's process should consume, yield, affect, change, require or have it as a condition."
+            },
+            "state": {
+              "type": "string",
+              "description": "A state of the object at the hand-over."
+            },
+            "to": {
+              "$ref": "#/$defs/id",
+              "description": "The receiving lane; one of the story's lanes."
+            },
+            "note": {
+              "$ref": "#/$defs/note"
+            }
+          }
+        },
+        "waits": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How long the step waits or takes, as free text, for example \"up to a few seconds\"."
+        },
+        "problem": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A problem found at this step, drawn as a red card below it."
+        },
+        "note": {
+          "$ref": "#/$defs/note"
+        }
       }
     }
   }
