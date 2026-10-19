@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `dist/mcp.js`, also started as `opm mcp`, is an MCP server over stdio with 17 tools that list, validate, query, render and edit OPM models. Edits go through the edit engine of the diagram editor and return the diagnostics they introduced. See [MCP server](README.md#mcp-server).
+- An entry written on one line that grows past 120 characters after an edit is written again with one field per line.
+- A new top-level section such as `stories` is inserted in the order of the format, before `layout`.
+
 ## 0.1.0
 
 First release on the Visual Studio Marketplace, marked as preview.

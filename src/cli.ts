@@ -8,6 +8,7 @@ import { flowMarkdown } from "./core/methods/flow";
 import { idef0Markdown } from "./core/methods/idef0";
 import { sipocMarkdown } from "./core/methods/sipoc";
 import { processes } from "./core/model";
+import { serveStdio } from "./mcp/server";
 
 const USAGE = `Usage:
   opm validate <model.opm.json>...     report structural and OPM errors; exit code 1 on errors
@@ -19,7 +20,8 @@ const USAGE = `Usage:
   opm sipoc <model.opm.json> [process] print the SIPOC table of every top-level process
   opm dsm <model.opm.json> [--no-agents]
                                        print the N² matrix of modules and agents
-  opm flow <model.opm.json> [process]  print the swimlane flow of every zoomed process`;
+  opm flow <model.opm.json> [process]  print the swimlane flow of every zoomed process
+  opm mcp                              serve the MCP tools over stdio, for AI agents`;
 
 function load(file: string) {
   const text = fs.readFileSync(file, "utf-8");
@@ -98,4 +100,12 @@ function main(argv: string[]): number {
   return command === "help" || command === "--help" ? 0 : 2;
 }
 
-process.exit(main(process.argv.slice(2)));
+if (process.argv[2] === "mcp") {
+  // the server runs until the client closes stdin; stdout belongs to the protocol
+  serveStdio().catch((e) => {
+    console.error(e instanceof Error ? e.message : String(e));
+    process.exit(1);
+  });
+} else {
+  process.exit(main(process.argv.slice(2)));
+}

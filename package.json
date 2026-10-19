@@ -285,6 +285,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@xyflow/react": "^12.12.0",
     "ajv": "^8.20.0",
     "elkjs": "^0.12.0",

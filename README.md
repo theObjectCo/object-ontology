@@ -179,7 +179,7 @@ node dist/cli.js render examples/window-pricing/model.opm.json -o examples/windo
 node dist/cli.js opl examples/window-pricing/model.opm.json
 ```
 
-`validate` prints `file:line:column: severity [code] message` and exits with code 1 when there are errors. `render` writes a markdown document whose Mermaid diagrams GitHub and VS Code display without extra tools. [examples/window-pricing/model.md](examples/window-pricing/model.md) is the output for the example model.
+`opm mcp` starts the MCP server described under [MCP server](#mcp-server). `validate` prints `file:line:column: severity [code] message` and exits with code 1 when there are errors. `render` writes a markdown document whose Mermaid diagrams GitHub and VS Code display without extra tools. [examples/window-pricing/model.md](examples/window-pricing/model.md) is the output for the example model.
 
 ## VS Code extension
 
@@ -277,6 +277,78 @@ In the diagram editor, the ⋯ menu opens each method over the canvas for the se
 ![IDEF0 of Pricing in the editor: the A-0 box with four inputs, a control, four outputs and a mechanism, and the three subprocess boxes of the A0 decomposition](docs/images/idef0.png)
 
 Methods that need data the format does not have are left out: value stream maps need durations and waiting times, activity-based costing needs costs, RACI needs responsibilities beyond "handles", and BPMN gateways need branching conditions.
+
+## MCP server
+
+`dist/mcp.js` is a Model Context Protocol server over stdio. AI agents such as Claude Code, or a local model in Kilo Code, use it to read, check and edit OPM models through tools instead of writing the JSON by hand. `node dist/cli.js mcp` starts the same server. The server reads and writes only the `*.opm.json` files whose absolute paths an agent passes, has no network access and runs no commands.
+
+| Tool | What it does |
+|---|---|
+| `opm_list_models(root)` | Every `*.opm.json` under a folder, outside `node_modules`, `dist`, `out` and `.git`, with its name, counts of things and counts of errors and warnings. |
+| `opm_validate(path)` | Diagnostics as JSON: severity, code, message, JSON path, line and column, and a one-line summary. |
+| `opm_summary(path)` | Agents, modules, objects with their states, processes as a zoom tree, views and stories, by identifier and label. |
+| `opm_get(path, id)` | One object, process, story or view: its definition with notes, the links it stores and the links that point at it, its parent and subprocesses, the stories that use it, the views that show it and its OPL sentences. |
+| `opm_query(path, question, ...)` | `modulesOfProcess` (over `zoomsInto` at every depth), `processesOfObject`, `exchange` (the N² cell between two modules, with the processes on both sides) and `storyLanes`. |
+| `opm_opl(path, ids?)` | OPL sentences of the model, or of the sentences that mention the given things. |
+| `opm_render(path, methods?, write?)` | The markdown document of `opm render` as text; with `write: true` it is written to `<model>.md` instead. |
+| `opm_method(path, method, process?)` | IDEF0, SIPOC, the N² matrix or the flow as markdown. |
+| `opm_add_object`, `opm_add_process` | A new thing with an exact identifier or one derived from the label, its fields, and for a process its place among the subprocesses of a parent. |
+| `opm_link`, `opm_unlink` | Any link of the format, named by its field (`requires`, `changes`, `zoomsInto`, `tagged` and the others), the thing that stores it and the thing it points at, with states, a tag or a note. |
+| `opm_rename` | A new identifier or state name; links, views, layout and stories follow. |
+| `opm_set` | Label, description, note, states, role, essence, affiliation or schema; `null` removes a field. |
+| `opm_delete` | Things with their links and positions, or states. Stories keep their text, and the validator reports the steps that lost their target. |
+| `opm_add_story`, `opm_set_story` | A whole user story, checked against the format before it is written; `opm_set_story` also deletes one. |
+
+Every edit goes through the same edit engine as the diagram editor, so it changes only the affected entries and the rest of the file keeps its formatting. A one-line entry that would grow past 120 characters is rewritten with one field per line. The edit tools write the file, validate it and return the diagnostics after the edit together with `introduced`, the diagnostics the edit added. An edit that would leave the file unparseable is refused and nothing is written; the same holds for a story that does not match the format, an unknown identifier or state, a link between the wrong kinds of things, and a file that is not valid JSON to begin with.
+
+The tool descriptions carry the parameters, the returned JSON and an example each, so an agent needs no other documentation. They are in English.
+
+### Registering the server
+
+Build once with `npm install` and `npm run build`. For Claude Code, on every project of the user:
+
+```
+claude mcp add --scope user opm -- node C:/path/to/object-ontology/dist/mcp.js
+```
+
+Kilo Code, Claude Desktop, Cline and most other clients take a JSON block in their MCP settings file:
+
+```json
+{
+  "mcpServers": {
+    "opm": {
+      "command": "node",
+      "args": ["C:/path/to/object-ontology/dist/mcp.js"]
+    }
+  }
+}
+```
+
+The Kilo command line reads `kilo.jsonc` instead, where the same server is:
+
+```jsonc
+"mcp": {
+  "opm": { "type": "local", "command": ["node", "C:/path/to/object-ontology/dist/mcp.js"], "enabled": true }
+}
+```
+
+### Example session
+
+An agent adds invoicing to the example model. Each line is one tool call with its arguments, and the answer that matters follows the arrow.
+
+```
+opm_summary   { path }                                              -> 11 processes, pricing zooms into 3
+opm_add_object  { path, id: "invoice", states: ["draft", "sent"] }  -> introduced: warning unused-object on invoice
+opm_add_process { path, id: "invoicing", parent: "pricing" }        -> introduced: error no-transformation on invoicing
+opm_link { path, kind: "consumes", owner: "invoicing", target: "priceResult" }
+opm_link { path, kind: "yields", owner: "invoicing", target: "invoice", state: "draft" }
+                                                                    -> summary "OK: no errors or warnings (2 infos)."
+opm_link { path, kind: "yields", owner: "invoicing", target: "invoice", state: "paid" }
+                                                                    -> refused: invoice has no state "paid". Its states are: draft, sent.
+opm_opl  { path, ids: ["invoicing"] }                               -> Invoicing consumes Price Result. Invoicing yields draft Invoice. ...
+```
+
+`path` is the absolute path of the model, for example `C:/work/window-pricing/model.opm.json`.
 
 ## Development
 

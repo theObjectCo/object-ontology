@@ -6,6 +6,7 @@ const common = { bundle: true, platform: "node", target: "node20", format: "cjs"
 
 await build({ ...common, entryPoints: ["src/extension.ts"], outfile: "dist/extension.js", external: ["vscode"] });
 await build({ ...common, entryPoints: ["src/cli.ts"], outfile: "dist/cli.js", banner: { js: "#!/usr/bin/env node" } });
+await build({ ...common, entryPoints: ["src/mcp.ts"], outfile: "dist/mcp.js", banner: { js: "#!/usr/bin/env node" } });
 await build({
   ...common,
   entryPoints: readdirSync("test").filter((f) => f.endsWith(".test.ts")).map((f) => `test/${f}`),
