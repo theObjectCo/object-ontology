@@ -19,5 +19,7 @@
   "command.openModel": "Open Model",
   "welcome.models": "No *.opm.json file in this workspace.\n[New Model](command:opm.newModel)",
   "welcome.model": "Click a model in the list above, or open a *.opm.json file.\n[New Model](command:opm.newModel)",
-  "command.createSchema": "Create JSON Schema"
+  "command.createSchema": "Create JSON Schema",
+  "view.methods": "Methods",
+  "command.openMethod": "Open Method View"
 }

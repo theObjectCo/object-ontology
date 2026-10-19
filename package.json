@@ -79,6 +79,10 @@
         {
           "id": "opm.views",
           "name": "%view.views%"
+        },
+        {
+          "id": "opm.methods",
+          "name": "%view.methods%"
         }
       ]
     },
@@ -141,6 +145,11 @@
       {
         "command": "opm.openModel",
         "title": "%command.openModel%",
+        "category": "OPM"
+      },
+      {
+        "command": "opm.openMethod",
+        "title": "%command.openMethod%",
         "category": "OPM"
       }
     ],
@@ -212,6 +221,10 @@
         },
         {
           "command": "opm.openModel",
+          "when": "false"
+        },
+        {
+          "command": "opm.openMethod",
           "when": "false"
         }
       ]

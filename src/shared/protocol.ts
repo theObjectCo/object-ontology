@@ -1,5 +1,6 @@
 import type { Operation } from "../core/edit";
 import type { Model } from "../core/model";
+import type { MethodId } from "../core/methods/common";
 import type { Severity } from "../core/validate";
 
 export interface ElementDiagnostic {
@@ -36,7 +37,8 @@ export type HostMessage =
   | { type: "parseError"; message: string; line: number; version: number }
   | { type: "diagnostics"; items: ElementDiagnostic[] }
   | { type: "schemas"; files: SchemaFile[] }
-  | { type: "reveal"; elementId?: string; viewId?: string }
+  /** method opens a view of another method over the diagram, for a process when given. */
+  | { type: "reveal"; elementId?: string; viewId?: string; method?: MethodId; process?: string }
   | { type: "theme"; theme: ThemeKind }
   | { type: "result"; requestId: number; ok: boolean; error?: string; select?: string[]; message?: string }
   | { type: "requestSaveView" };

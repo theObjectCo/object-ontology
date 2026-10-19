@@ -340,6 +340,54 @@ for (const [i, name] of ["Layers, left to right", "Layers, top to bottom", "Stre
   check("create schema message", await page.evaluate(() => window.harness.messages.some((m) => m.type === "createSchema")));
 }
 
+// the views of other methods: opened from the ⋯ menu, drawn over the diagram, redrawn on a text change, closed with Esc
+{
+  await scenario("en", "vscode-dark");
+  const methodText = () => page.evaluate(() => document.querySelector(".opm-method-body")?.textContent ?? "");
+  const tab = async (name) => {
+    const b = await page.evaluateHandle((n) => [...document.querySelectorAll(".opm-method-head .opm-seg button")].find((x) => x.textContent === n), name);
+    await b.asElement().click();
+    await wait(200);
+  };
+  await page.click(".opm-more");
+  const item = await page.evaluateHandle(() => [...document.querySelectorAll(".opm-menu button")].find((b) => b.textContent === "View as IDEF0"));
+  await item.asElement().click();
+  await page.waitForSelector(".opm-method", { timeout: 2000 });
+  const boxes = await page.evaluate(() => document.querySelectorAll(".opm-m-box").length);
+  check("IDEF0 of Configuring: A-0 and three subprocess boxes", boxes === 4, `${boxes} boxes`);
+  await shot("16-idef0");
+  await page.evaluate(() => document.querySelectorAll(".opm-method-body h3")[1].scrollIntoView());
+  await shot("16a-idef0-decomposition");
+  await page.evaluate(() => document.querySelector(".opm-method-body").scrollTo(0, 0));
+  await page.select(".opm-method-head select", "pricing");
+  await shot("16b-idef0-pricing");
+  await tab("SIPOC");
+  await page.select(".opm-method-head select", "pricing");
+  const rows = await page.evaluate(() => document.querySelectorAll(".opm-m-sipoc tbody tr").length);
+  check("SIPOC of Pricing", rows === 5, `${rows} rows`);
+  await shot("17-sipoc");
+  await tab("N² matrix");
+  const filled = await page.evaluate(() => document.querySelectorAll(".opm-m-dsm td.filled").length);
+  check("N² matrix", filled === 4, `${filled} filled cells`);
+  await shot("18-dsm");
+  await tab("Process flow");
+  const activities = await page.evaluate(() => document.querySelectorAll(".opm-m-activity").length);
+  check("process flow of Configuring", activities === 3, `${activities} activities`);
+  await shot("19-flow");
+  await page.evaluate(() => window.harness.setText(window.harness.text.replace('"generator": { "role": "module" }', '"generator": { "role": "module", "label": "Rule Engine" }')));
+  await wait(500);
+  check("a text change redraws the method view", (await methodText()).includes("Rule Engine"));
+  await page.keyboard.press("Escape");
+  await wait(200);
+  check("Esc closes the method view", !(await page.evaluate(() => !!document.querySelector(".opm-method"))));
+  await scenario("pl", "vscode-light");
+  await page.click(".opm-more");
+  const pl = await page.evaluateHandle(() => [...document.querySelectorAll(".opm-menu button")].find((b) => b.textContent === "Widok IDEF0"));
+  await pl.asElement().click();
+  await page.waitForSelector(".opm-method", { timeout: 2000 });
+  await shot("20-idef0-light-pl");
+}
+
 // Polish UI, light theme, a parse error banner
 await scenario("pl", "vscode-light");
 await clickThing("decision", 0.2);

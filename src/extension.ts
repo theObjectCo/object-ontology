@@ -2,13 +2,14 @@ import * as fs from "fs";
 import * as vscode from "vscode";
 import { check } from "./core/load";
 import { label, objects, processes } from "./core/model";
-import { markdown } from "./core/render";
 import { Diagnostics, LayoutFixes, isModel } from "./host/diagnostics";
 import { OpmEditorProvider, applyToDocument, elementAt } from "./host/editorProvider";
 import { SchemaIndex } from "./host/schemas";
 import { draftSchema, schemaFileFor } from "./core/schemagen";
 import { modelName, starterModel } from "./core/template";
 import { CurrentModel, ModelTree, ModelsTree, ViewsTree, modelFolder } from "./host/trees";
+import { MethodsTree } from "./host/methodsTree";
+import { MethodId, documentWithMethods } from "./core/methods/index";
 
 export function activate(context: vscode.ExtensionContext): void {
   const diagnostics = new Diagnostics();
@@ -130,11 +131,23 @@ export function activate(context: vscode.ExtensionContext): void {
         if (!answer) return;
       }
       const target = doc.fileName.replace(/\.opm\.json$/, ".md");
-      fs.writeFileSync(target, markdown(model), "utf-8");
+      fs.writeFileSync(target, documentWithMethods(model), "utf-8");
       await vscode.window.showTextDocument(vscode.Uri.file(target), { preview: false, viewColumn: vscode.ViewColumn.Beside });
     }),
   );
   vscode.workspace.textDocuments.forEach((doc) => diagnostics.refresh(doc));
+
+  // the other methods of describing processes, drawn read-only over the diagram
+  const methodsView = vscode.window.createTreeView("opm.methods", { treeDataProvider: new MethodsTree(current) });
+  const describeMethods = () => { methodsView.description = current.uri?.path.slice(current.uri.path.lastIndexOf("/") + 1); };
+  current.onChange(describeMethods);
+  describeMethods();
+  context.subscriptions.push(
+    methodsView,
+    vscode.commands.registerCommand("opm.openMethod", (uri: vscode.Uri | undefined, method: MethodId, process?: string) => {
+      if (uri) return provider.revealOrOpen(uri, { method, process });
+    }),
+  );
 }
 
 /** Creates a model file with a starter content and opens it in the diagram editor. */

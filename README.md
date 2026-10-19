@@ -170,6 +170,52 @@ The activity bar has an OPM container with three trees. **Models** lists every `
 
 **OPM: Export Markdown** writes the views, the module table, the state diagrams and the OPL text as `<model>.md` next to the model. The UI of the editor follows the VS Code display language (English or Polish); OPL is always English.
 
+## Other views of the same model
+
+Four methods of describing processes are computed from the links of the model: IDEF0, SIPOC, an N² matrix of modules and a swimlane process flow. The format has no fields for them, so they cannot disagree with the OPM diagram; a change of a link changes all of them. `opm render` and **OPM: Export Markdown** append them to the document after everything else.
+
+### IDEF0
+
+An IDEF0 box has inputs on the left, controls on top, outputs on the right and mechanisms below. Inputs are the objects the process consumes. An object it requires without consuming it is an input marked "not consumed", and an object it changes or affects comes in as an input as well, in the state the change starts from. Controls are its conditions and events, with their states. Outputs are its results, its state changes written as "valid → expired", and the objects it affects. Mechanisms are the modules it requires and the agents that handle it.
+
+A process with subprocesses gets two diagrams. A-0 is the process alone with what crosses its boundary: the links of its subprocesses count, as OPM migrates them to the parent, but an object that one subprocess yields and another one uses stays inside. A0 has one box per subprocess in the `zoomsInto` order, numbered A1, A2 and so on, and an arrow wherever one subprocess yields, changes or affects an object that a later one takes as an input or a control. An object that is both a condition and transformed by the later box arrives as a control. The markdown has an ICOM table and the A0 decomposition as a Mermaid flowchart for every top-level process and every process with subprocesses.
+
+IDEF0 is the method to use when a process has to be explained to someone who reads functional block diagrams, or when the boundary of one function matters more than the whole system.
+
+### SIPOC
+
+A SIPOC table for each top-level process lists suppliers, inputs, the process, outputs and customers, one input and one output per row. Inputs are the inputs and controls of the IDEF0 box, and the process column lists the subprocesses in order. A supplier is a process elsewhere in the model that yields, changes or affects the input. An environmental input that no process supplies comes from the environment: from the environmental object it is part of when there is one (ERP for Customer in the example), otherwise from itself. Any other input without a supplier is marked "outside the model". A customer is a process elsewhere that consumes, requires, changes or affects an output, or has it as a condition or an event, together with the agents that handle that process.
+
+A link to another state than the one the object is in does not count. Expiring leaves the snapshot expired, so it is not a supplier of the valid snapshot that Pricing has as a condition. A SIPOC fits on one page, and "outside the model" in it shows where the model stops.
+
+### N² matrix of modules
+
+The matrix, also called a design structure matrix, has a row and a column for every module and, unless switched off, every agent. A process is performed by the modules it requires and the agents that handle it; a subprocess with neither is performed by those of its nearest ancestor. The cell in row A and column B lists the objects that a process performed by A yields, changes or affects and another process performed by B consumes, requires, changes, affects or has as a condition or an event. The matrix is a coupling map: a pair with a long list exchanges a lot, and modules that feed each other form a cycle.
+
+The rows are partitioned. Modules in a cycle (a strongly connected group, found with Tarjan's algorithm) stay next to each other, and the groups follow a topological order, ties broken by the order of the model. Every filled cell is then above the diagonal unless it belongs to a cycle. The cycles are listed under the matrix and marked in the editor. The markdown adds the same exchanges as a Mermaid graph.
+
+### Process flow
+
+A swimlane activity diagram is drawn for every process with subprocesses. The lanes are the modules and agents that perform the subprocesses. Each subprocess is an activity in the lane of the first module it requires, else of the first agent that handles it, else in its parent's lane. Activities follow the `zoomsInto` order from a start node to an end node. The arrow to the next activity carries the objects passed between the two, and a dotted arrow leads to a later activity that takes an object. In markdown each lane is a subgraph of a Mermaid flowchart. A makigami in `stories` is written by hand step by step; this flow is derived and has only what the links say.
+
+### Commands and the editor
+
+```
+node dist/cli.js render examples/window-pricing/model.opm.json --methods idef0,dsm
+node dist/cli.js idef0 examples/window-pricing/model.opm.json pricing
+node dist/cli.js sipoc examples/window-pricing/model.opm.json
+node dist/cli.js dsm examples/window-pricing/model.opm.json --no-agents
+node dist/cli.js flow examples/window-pricing/model.opm.json configuring
+```
+
+`--methods` takes a comma-separated list of `idef0`, `sipoc`, `dsm` and `flow`, or `none`; without it `render` writes all four. The other commands print one method as markdown, for every process it applies to or for the process given.
+
+In the diagram editor, the ⋯ menu opens each method over the canvas for the selected process, or for the zoom on screen. The **Methods** tree in the OPM container lists the four methods with the processes each one can show. The view has a tab per method, a list of processes and, for the matrix, a switch for agents. It is read-only and follows every change of the text; Esc or **Back to the diagram** closes it.
+
+![IDEF0 of Pricing in the editor: the A-0 box with four inputs, a control, four outputs and a mechanism, and the three subprocess boxes of the A0 decomposition](docs/images/idef0.png)
+
+Methods that need data the format does not have are left out: value stream maps need durations and waiting times, activity-based costing needs costs, RACI needs responsibilities beyond "handles", and BPMN gateways need branching conditions.
+
 ## Development
 
 `npm test` builds the package and runs the tests in `test/`. `npm run typecheck` checks the extension and the webview, which have separate TypeScript configurations. The core in `src/core/` has no dependency on VS Code, so the command line, the extension and the webview share the validator, the OPL text and the edit engine (`src/core/edit.ts`), which turns each editor operation into a minimal change of the JSON text.

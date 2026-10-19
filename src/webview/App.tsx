@@ -18,6 +18,9 @@ import { LayoutAlgorithm, Positions, Shapes, autoLayout, layoutKey, manualLayout
 import { NodeData, ThingLabels, nodeTypes } from "./nodes";
 import { ContextItem, ContextMenu, Inspector, InspectorProps, LinkMenu, OplBar, Toast, Toolbar, ZoomControls } from "./panels";
 import { edit, post, saveTabState, settle, tabState } from "./vscode";
+import { METHODS, MethodId } from "../core/methods/common";
+import { methodMessages } from "./methods/messages";
+import { MethodPanel, MethodState } from "./methods/panel";
 
 interface TabState {
   viewId: string;
@@ -176,6 +179,8 @@ export function App() {
   const [reveal, setReveal] = useState<{ elementId?: string; viewId?: string } | null>(null);
   const [exporting, setExporting] = useState(false);
   const [initialized, setInitialized] = useState(!!saved);
+  /** The view of another method shown over the diagram (IDEF0, SIPOC, N², flow), read-only. */
+  const [method, setMethod] = useState<MethodState | null>(null);
 
   const flow = useReactFlow();
   const wrapper = useRef<HTMLDivElement>(null);
@@ -197,7 +202,7 @@ export function App() {
   const fromHost = useRef(false);
   const toastTimer = useRef<number | undefined>(undefined);
 
-  const frozen = parseError !== null;
+  const frozen = parseError !== null || method !== null;
   const views = useMemo(() => (model ? listViews(model) : []), [model]);
   const view: ViewInfo | undefined = views.find((v) => v.id === viewId);
   const stored = model?.layout?.[viewId];
@@ -245,6 +250,8 @@ export function App() {
           setSchemas(m.files);
           return;
         case "reveal":
+          if (m.method) { setMethod({ id: m.method, process: m.process }); return; }
+          if (m.viewId) setMethod(null);
           setReveal({ elementId: m.elementId, viewId: m.viewId });
           return;
         case "theme":
@@ -783,9 +790,19 @@ export function App() {
     }
   }, [nodes, flow, viewId, showToast]);
 
+  /** Opens a method view for the selected process, else for the process of the zoom on screen. */
+  const openMethod = (id: MethodId) => {
+    const picked = selection.length === 1 && model && processes(model)[selection[0]] ? selection[0] : undefined;
+    setSelection([]);
+    setEdgeSel(null);
+    setContext(null);
+    setMethod({ id, process: picked ?? zoomProcess });
+  };
+
   /* ---------- keyboard and clipboard ---------- */
 
   const onKey = (e: KeyboardEvent) => {
+    if (method) { if (e.key === "Escape" && !isEditable(e.target)) setMethod(null); return; }
     if (confirm && e.key === "Escape") { setConfirm(null); return; }
     if (isEditable(e.target) || menu || confirm) return;
     const ctrl = e.ctrlKey || e.metaKey;
@@ -1065,6 +1082,7 @@ export function App() {
               { label: t.saveAsView, action: saveView, disabled: !selection.length },
               { label: t.linkLabels, action: () => setLabelsOn(!labelsOn), checked: labelsOn },
               { label: t.openTextBeside, action: () => post({ type: "openTextBeside" }) },
+              ...METHODS.map((id) => ({ label: methodMessages(language).menu[id], action: () => openMethod(id) })),
             ]}
           />
         )}
@@ -1121,6 +1139,10 @@ export function App() {
         {toast && <Toast text={toast.text} error={toast.error} />}
 
         <Zoom t={t} />
+
+        {method && model && (
+          <MethodPanel model={model} state={method} language={language} onChange={setMethod} onClose={() => setMethod(null)} />
+        )}
 
         <OplBar
           t={t}

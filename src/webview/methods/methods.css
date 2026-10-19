@@ -1,0 +1,185 @@
+/* The method views: a read-only page over the diagram, colors from the VS Code theme. */
+
+.opm-method {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--vscode-editor-background);
+}
+
+.opm-method-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
+  background: var(--vscode-editorWidget-background);
+}
+
+.opm-method-head .opm-seg button {
+  padding: 3px 10px;
+}
+
+.opm-method-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.opm-method-option select {
+  width: auto;
+  min-width: 160px;
+}
+
+.opm-method-spacer {
+  flex: 1;
+}
+
+.opm-method-body {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 16px 24px;
+}
+
+.opm-method-body h3 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 18px 0 6px;
+}
+
+.opm-method-body > p {
+  max-width: 900px;
+}
+
+/* ---------- drawings ---------- */
+
+.opm-m-svg {
+  display: block;
+  font-size: 11px;
+  overflow: visible;
+}
+
+.opm-m-svg text {
+  fill: var(--vscode-editor-foreground);
+}
+
+.opm-m-svg line,
+.opm-m-svg path {
+  fill: none;
+  stroke: var(--vscode-editor-foreground);
+  stroke-width: 1.2;
+}
+
+.opm-m-head {
+  fill: var(--vscode-editor-foreground);
+}
+
+.opm-m-box rect,
+.opm-m-activity rect {
+  fill: var(--vscode-editorWidget-background);
+  stroke: var(--vscode-editor-foreground);
+  stroke-width: 1.5;
+}
+
+.opm-m-svg .opm-m-title {
+  font-weight: 600;
+}
+
+.opm-m-svg .opm-m-node {
+  fill: var(--vscode-descriptionForeground);
+  font-size: 10px;
+}
+
+.opm-m-sibling path {
+  stroke: var(--vscode-textLink-foreground);
+}
+
+.opm-m-sibling .opm-m-head {
+  fill: var(--vscode-textLink-foreground);
+}
+
+.opm-m-lane rect {
+  fill: none;
+  stroke: var(--vscode-editorWidget-border, var(--vscode-editorLineNumber-foreground));
+  stroke-width: 1;
+}
+
+.opm-m-lane.agent rect {
+  fill: color-mix(in srgb, var(--vscode-editor-foreground) 4%, transparent);
+}
+
+.opm-m-svg .opm-m-lane line {
+  stroke: var(--vscode-editorWidget-border, var(--vscode-editorLineNumber-foreground));
+  stroke-width: 1;
+}
+
+.opm-m-flowline.later path {
+  stroke-dasharray: 4 3;
+}
+
+.opm-m-start {
+  fill: var(--vscode-editor-foreground);
+}
+
+.opm-m-end {
+  fill: none;
+  stroke: var(--vscode-editor-foreground);
+  stroke-width: 1.5;
+}
+
+/* ---------- tables ---------- */
+
+.opm-m-table {
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+.opm-m-table th,
+.opm-m-table td {
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.opm-m-table th {
+  background: var(--vscode-editorWidget-background);
+  font-weight: 600;
+}
+
+.opm-m-sipoc .opm-m-step {
+  font-weight: 600;
+}
+
+.opm-m-dsm thead th {
+  text-align: center;
+  min-width: 28px;
+}
+
+.opm-m-dsm tbody th {
+  white-space: nowrap;
+}
+
+.opm-m-dsm td {
+  min-width: 28px;
+  font-size: 11px;
+}
+
+.opm-m-dsm td.opm-m-diagonal {
+  background: color-mix(in srgb, var(--vscode-editor-foreground) 35%, transparent);
+}
+
+.opm-m-dsm td.filled {
+  background: color-mix(in srgb, var(--vscode-textLink-foreground) 14%, transparent);
+}
+
+.opm-m-dsm td.cycle {
+  background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 12%, transparent);
+}
+
+.opm-m-dsm td.feedback {
+  background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 32%, transparent);
+  font-weight: 600;
+}

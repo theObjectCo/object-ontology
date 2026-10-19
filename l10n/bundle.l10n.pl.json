@@ -25,5 +25,7 @@
   "New OPM model": "Nowy model OPM",
   "{0} already exists.": "{0} już istnieje.",
   "Every informatical object already has a schema.": "Każdy obiekt informacyjny ma już schemat.",
-  "{0}: {1} new definition(s), {2} object(s) linked.": "{0}: nowe definicje: {1}, powiązane obiekty: {2}."
+  "{0}: {1} new definition(s), {2} object(s) linked.": "{0}: nowe definicje: {1}, powiązane obiekty: {2}.",
+  "N² matrix of modules": "Macierz N² modułów",
+  "Process flow": "Przebieg procesu"
 }

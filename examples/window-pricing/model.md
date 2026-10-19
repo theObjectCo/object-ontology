@@ -302,3 +302,181 @@ stateDiagram-v2
 - Transport Pricing yields Transport Price.
 - Lead Time Estimating requires Department Data.
 - Lead Time Estimating yields Lead Time.
+
+## IDEF0
+
+Inputs are the objects a process consumes, requires, changes or affects, controls its conditions and events, outputs what it yields, changes or affects, and mechanisms the modules it requires and the agents that handle it.
+
+### A-0 Configuring
+
+| Node | Process | Inputs | Controls | Outputs | Mechanisms |
+|---|---|---|---|---|---|
+| A0 | Configuring | Configuration (affected) | none | Decision, Configuration (affected), Decision (passed → applied) | User (agent), UI, Generator |
+| A1 | Proposing | none | none | Change Proposal | UI |
+| A2 | Validating | Change Proposal (not consumed) | none | Decision | Generator |
+| A3 | Applying | Change Proposal, Configuration (affected), Decision (passed) | Decision (passed) | Configuration (affected), Decision (passed → applied) | Generator |
+
+A0 decomposition of Configuring:
+
+```mermaid
+flowchart LR
+  b0["A1 · Proposing"]
+  b1["A2 · Validating"]
+  b2["A3 · Applying"]
+  b0 -->|"Change Proposal"| b1
+  b0 -->|"Change Proposal"| b2
+  b1 -.->|"Decision"| b2
+```
+
+### A-0 Context Updating
+
+| Node | Process | Inputs | Controls | Outputs | Mechanisms |
+|---|---|---|---|---|---|
+| A0 | Context Updating | Context Manifest (affected) | Department Data (event) | Context Manifest (affected) | Generator |
+
+### A-0 Freezing
+
+| Node | Process | Inputs | Controls | Outputs | Mechanisms |
+|---|---|---|---|---|---|
+| A0 | Freezing | Configuration (not consumed), Context Manifest (not consumed) | none | Snapshot | Generator, Snapshot Store |
+
+### A-0 Expiring
+
+| Node | Process | Inputs | Controls | Outputs | Mechanisms |
+|---|---|---|---|---|---|
+| A0 | Expiring | Snapshot (valid) | none | Snapshot (valid → expired) | Snapshot Store |
+
+### A-0 Pricing
+
+| Node | Process | Inputs | Controls | Outputs | Mechanisms |
+|---|---|---|---|---|---|
+| A0 | Pricing | Price Request, Snapshot (not consumed), Customer (not consumed), Department Data (not consumed) | Snapshot (valid) | Price Result, Product Price, Transport Price, Lead Time | Pricing Module |
+| A1 | Product Pricing | Snapshot (not consumed), Customer (not consumed) | none | Product Price | none |
+| A2 | Transport Pricing | Department Data (not consumed) | none | Transport Price | none |
+| A3 | Lead Time Estimating | Department Data (not consumed) | none | Lead Time | none |
+
+A0 decomposition of Pricing:
+
+```mermaid
+flowchart LR
+  b0["A1 · Product Pricing"]
+  b1["A2 · Transport Pricing"]
+  b2["A3 · Lead Time Estimating"]
+  b0 ~~~ b1
+  b1 ~~~ b2
+```
+
+## SIPOC
+
+One table per top-level process. Suppliers are the processes that yield, change or affect an input, customers the processes that use an output and the agents that handle them.
+
+### Configuring
+
+| Suppliers | Inputs | Process | Outputs | Customers |
+|---|---|---|---|---|
+| outside the model | Configuration (affected) | 1. Proposing | Decision | outside the model |
+|  |  | 2. Validating | Configuration (affected) | Freezing |
+|  |  | 3. Applying | Decision (passed → applied) | outside the model |
+
+### Context Updating
+
+| Suppliers | Inputs | Process | Outputs | Customers |
+|---|---|---|---|---|
+| outside the model | Context Manifest (affected) | Context Updating | Context Manifest (affected) | Freezing |
+| Department Data (environment) | Department Data (event) |  |  |  |
+
+### Freezing
+
+| Suppliers | Inputs | Process | Outputs | Customers |
+|---|---|---|---|---|
+| Applying | Configuration (not consumed) | Freezing | Snapshot | Expiring, Pricing, Product Pricing |
+| Context Updating | Context Manifest (not consumed) |  |  |  |
+
+### Expiring
+
+| Suppliers | Inputs | Process | Outputs | Customers |
+|---|---|---|---|---|
+| Freezing | Snapshot (valid) | Expiring | Snapshot (valid → expired) | Pricing, Product Pricing |
+
+### Pricing
+
+| Suppliers | Inputs | Process | Outputs | Customers |
+|---|---|---|---|---|
+| outside the model | Price Request | 1. Product Pricing | Price Result | outside the model |
+| Freezing, Expiring | Snapshot (not consumed) | 2. Transport Pricing | Product Price | outside the model |
+| ERP (environment) | Customer (not consumed) | 3. Lead Time Estimating | Transport Price | outside the model |
+| Department Data (environment) | Department Data (not consumed) |  | Lead Time | outside the model |
+| Freezing | Snapshot (valid) |  |  |  |
+
+## N² matrix of modules
+
+Rows give, columns take: the cell in row A and column B lists the objects that processes performed by A yield, change or affect and processes performed by B use. Agents are included. The order puts every module that gives before the modules that take from it, and keeps modules that exchange objects in a cycle next to each other; a filled cell below the diagonal belongs to a cycle.
+
+| | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| 1. User | ■ |  |  |  |  |  |
+| 2. UI |  | ■ | Change Proposal |  |  |  |
+| 3. Generator |  |  | ■ | Context Manifest, Configuration, Snapshot | Snapshot |  |
+| 4. Snapshot Store |  |  |  | ■ | Snapshot |  |
+| 5. Pricing Module |  |  |  |  | ■ |  |
+| 6. ERP |  |  |  |  |  | ■ |
+
+No cycles.
+
+```mermaid
+flowchart LR
+  m_user["User"]
+  m_ui["UI"]
+  m_generator["Generator"]
+  m_snapshotStore["Snapshot Store"]
+  m_pricingModule["Pricing Module"]
+  m_erp["ERP"]
+  m_ui -->|"Change Proposal"| m_generator
+  m_generator -->|"Context Manifest, Configuration, Snapshot"| m_snapshotStore
+  m_generator -->|"Snapshot"| m_pricingModule
+  m_snapshotStore -->|"Snapshot"| m_pricingModule
+```
+
+## Process flow
+
+Subprocesses as activities in the lane of the module they require first, or of the agent that handles them. Solid arrows lead to the next activity, dotted ones to a later activity that takes an object.
+
+### Configuring
+
+```mermaid
+flowchart LR
+  start(("start"))
+  stop((("end")))
+  subgraph lane0["UI"]
+    direction LR
+    a0["Proposing"]
+  end
+  subgraph lane1["Generator"]
+    direction LR
+    a1["Validating"]
+    a2["Applying"]
+  end
+  start --> a0
+  a0 -->|"Change Proposal"| a1
+  a0 -.->|"Change Proposal"| a2
+  a1 -->|"Decision"| a2
+  a2 --> stop
+```
+
+### Pricing
+
+```mermaid
+flowchart LR
+  start(("start"))
+  stop((("end")))
+  subgraph lane0["Pricing Module"]
+    direction LR
+    a0["Product Pricing"]
+    a1["Transport Pricing"]
+    a2["Lead Time Estimating"]
+  end
+  start --> a0
+  a0 --> a1
+  a1 --> a2
+  a2 --> stop
+```
