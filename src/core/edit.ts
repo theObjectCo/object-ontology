@@ -1,6 +1,6 @@
-import { Node, findNodeAtLocation, getNodeValue, parseTree } from "jsonc-parser";
+import { Node, findNodeAtLocation, findNodeAtOffset, getNodeValue, parseTree } from "jsonc-parser";
 import { EditorLink, EditorLinkKind, STATEFUL, allowedKinds, editorLinks, stateOwner, thingKind } from "./links";
-import { Model, ObjectDef, ProcessDef, Ref, TEXT_FIELDS, humanize, objects, processes, refObject } from "./model";
+import { Model, ObjectDef, ProcessDef, Ref, StoryDef, TEXT_FIELDS, humanize, objects, processes, refObject } from "./model";
 import { listViews, viewContent } from "./viewmodel";
 
 export type Position = [number, number];
@@ -24,7 +24,7 @@ export type Operation =
   | { op: "deleteState"; object: string; state: string }
   | { op: "moveState"; object: string; state: string; index: number }
   | { op: "deleteElements"; ids: string[]; links?: string[] }
-  | { op: "addLink"; kind: EditorLinkKind; from: string; to: string; fromState?: string; toState?: string; tag?: string }
+  | { op: "addLink"; kind: EditorLinkKind; from: string; to: string; fromState?: string; toState?: string; tag?: string; note?: string }
   | { op: "updateLink"; id: string; kind?: EditorLinkKind; fromState?: string | null; toState?: string | null; tag?: string; reverse?: boolean; note?: string | null }
   | { op: "moveElements"; viewId: string; positions: Positions; all?: Positions }
   | { op: "setLayout"; viewId: string; positions: Positions | null }
@@ -34,7 +34,13 @@ export type Operation =
   | { op: "paste"; fragment: Fragment; viewId: string; offset?: Position; parentId?: string }
   | { op: "removeStaleLayout" }
   /** Sets the "schema" field of several objects in one edit. */
-  | { op: "setSchemas"; schemas: Record<string, string> };
+  | { op: "setSchemas"; schemas: Record<string, string> }
+  /** Puts an existing process into the zoomsInto list of another one, at an index or at the end. */
+  | { op: "addSubprocess"; parent: string; id: string; index?: number }
+  /** Takes a process out of the zoomsInto list of its parent; the process itself stays. */
+  | { op: "removeSubprocess"; parent: string; id: string }
+  /** Writes a whole user story under its key, or removes it with null. */
+  | { op: "setStory"; id: string; story: StoryDef | null };
 
 export interface EditResult {
   text: string;
@@ -64,6 +70,9 @@ export function compact(v: unknown): string {
 }
 
 const MAX_LINE = 120;
+
+/** The order of the top-level sections; a new section goes before the first later one already in the file. */
+const SECTIONS = ["$schema", "name", "description", "objects", "processes", "views", "stories", "layout"];
 
 /**
  * A JSON document edited in place. Every change touches only the text of the affected entry, so the
@@ -114,11 +123,40 @@ class Doc {
     return this.text.slice(n.offset, n.offset + n.length).includes("\n");
   }
 
-  /** Text of a value that starts at a column: one line if it fits or if forced; otherwise indented JSON. */
+  /**
+   * Text of a value that starts at a column: one line if it fits or if forced; otherwise one entry per line,
+   * each entry again on one line if it fits, as in the example models.
+   */
   private render(value: unknown, column: number, indent: string, oneLine: boolean): string {
     const flat = compact(value);
     if (oneLine || column + flat.length <= MAX_LINE || typeof value !== "object" || value === null) return flat;
-    return JSON.stringify(value, null, this.unit).split("\n").join(this.eol + indent);
+    const inner = indent + this.unit;
+    const lines = Array.isArray(value)
+      ? value.map((v) => inner + this.render(v, inner.length, inner, false))
+      : Object.entries(value as Record<string, unknown>).filter(([, x]) => x !== undefined).map(([k, x]) => {
+          const key = JSON.stringify(k);
+          return `${inner}${key}: ${this.render(x, inner.length + key.length + 2, inner, false)}`;
+        });
+    if (!lines.length) return flat;
+    const [open, close] = Array.isArray(value) ? ["[", "]"] : ["{", "}"];
+    return `${open}${this.eol}${lines.join("," + this.eol)}${this.eol}${indent}${close}`;
+  }
+
+  /**
+   * After a change at an offset: when its line grew past the limit, the outermost one-line object or array on
+   * that line around the offset is written again, with one entry per line where the entries do not fit.
+   */
+  private reflow(offset: number) {
+    const start = this.text.lastIndexOf("\n", offset - 1) + 1;
+    const nl = this.text.indexOf("\n", offset);
+    if (this.text.slice(start, nl < 0 ? this.text.length : nl).trimEnd().length <= MAX_LINE) return;
+    let outer: Node | undefined;
+    for (let n: Node | undefined = findNodeAtOffset(parseTree(this.text)!, offset); n; n = n.parent) {
+      if (n.type !== "object" && n.type !== "array") continue;
+      if (n.offset < start || this.isMultiline(n)) break;
+      outer = n;
+    }
+    if (outer) this.replace(outer.offset, outer.length, this.render(getNodeValue(outer), this.column(outer.offset), this.lineIndent(outer.offset), false));
   }
 
   set(path: JsonPath, value: unknown) {
@@ -127,13 +165,16 @@ class Doc {
     const existing = this.node(path);
     if (existing) {
       const col = this.column(existing.offset);
-      return this.replace(existing.offset, existing.length, this.render(value, col, this.lineIndent(existing.offset), oneLine));
+      this.replace(existing.offset, existing.length, this.render(value, col, this.lineIndent(existing.offset), oneLine));
+      if (!oneLine) this.reflow(existing.offset);
+      return;
     }
     const parentPath = path.slice(0, -1);
     const key = path[path.length - 1];
     if (!this.node(parentPath)) this.set(parentPath, typeof key === "number" ? [] : {});
     const parent = this.node(parentPath)!;
     if (parent.type === "array") return this.insertItem(parent, value, oneLine);
+    if (!parentPath.length && this.insertSection(parent, String(key), value)) return;
     this.insertProperty(parent, String(key), value, parentPath.length <= 1, oneLine);
   }
 
@@ -153,7 +194,10 @@ class Doc {
         const indent = outer + this.unit;
         return this.replace(obj.offset, obj.length, `{${this.eol}${indent}${entry(indent, indent.length)}${this.eol}${outer}}`);
       }
-      return this.replace(obj.offset, obj.length, `{ ${entry(this.lineIndent(obj.offset), this.column(obj.offset) + 2)} }`);
+      // a one-line container takes the entry on one line, and reflow wraps the line if it grew too long
+      this.replace(obj.offset, obj.length, `{ ${k}: ${compact(value)} }`);
+      if (!oneLine) this.reflow(obj.offset + 2);
+      return;
     }
     const last = props[props.length - 1];
     const end = last.offset + last.length;
@@ -161,14 +205,29 @@ class Doc {
       const indent = this.lineIndent(last.offset);
       this.replace(end, 0, `,${this.eol}${indent}${entry(indent, indent.length)}`);
     } else {
-      this.replace(end, 0, `, ${entry(this.lineIndent(obj.offset), this.column(end) + 2)}`);
+      this.replace(end, 0, `, ${k}: ${compact(value)}`);
+      if (!oneLine) this.reflow(end + 2);
     }
+  }
+
+  /** Inserts a top-level section before the first section that follows it in SECTIONS; false if there is none. */
+  private insertSection(root: Node, key: string, value: unknown): boolean {
+    const rank = SECTIONS.indexOf(key);
+    if (rank < 0 || !this.isMultiline(root)) return false;
+    const next = (root.children ?? []).find((p) => SECTIONS.indexOf(String(p.children![0].value)) > rank);
+    if (!next) return false;
+    const indent = this.lineIndent(next.offset);
+    const k = JSON.stringify(key);
+    this.replace(next.offset, 0, `${k}: ${this.render(value, indent.length + k.length + 2, indent, false)},${this.eol}${indent}`);
+    return true;
   }
 
   private insertItem(list: Node, value: unknown, oneLine: boolean) {
     const items = list.children ?? [];
     if (!items.length) {
-      return this.replace(list.offset, list.length, `[${this.render(value, this.column(list.offset) + 1, this.lineIndent(list.offset), oneLine)}]`);
+      this.replace(list.offset, list.length, `[${compact(value)}]`);
+      if (!oneLine) this.reflow(list.offset + 1);
+      return;
     }
     const last = items[items.length - 1];
     const end = last.offset + last.length;
@@ -176,7 +235,8 @@ class Doc {
       const indent = this.lineIndent(last.offset);
       this.replace(end, 0, `,${this.eol}${indent}${this.render(value, indent.length, indent, oneLine)}`);
     } else {
-      this.replace(end, 0, `, ${this.render(value, this.column(end) + 2, this.lineIndent(list.offset), oneLine)}`);
+      this.replace(end, 0, `, ${compact(value)}`);
+      if (!oneLine) this.reflow(end + 2);
     }
   }
 
@@ -457,7 +517,8 @@ function run(doc: Doc, model: Model, op: Operation): Partial<EditResult> {
       // an effect drawn from the process is stored on the process, with the states on the object
       if (op.kind === "effect" && thingKind(model, op.from) === "process") [from, to, fromState, toState] = [op.to, op.from, op.toState, op.fromState];
       if (!kinds.includes(op.kind)) throw new EditError(`A ${op.kind} link is not allowed from ${op.from} to ${op.to}.`);
-      const { path, value, single } = resolveEntry(model, linkEntry(op.kind, from, to, fromState, effectTo(op.kind, fromState, toState), op.tag));
+      const { path, value: bare, single } = resolveEntry(model, linkEntry(op.kind, from, to, fromState, effectTo(op.kind, fromState, toState), op.tag));
+      const value = op.note?.trim() ? withNote(path, bare, op.note) : bare;
       if (single) doc.set(path, value);
       else if (!linkExists(doc, path, value)) doc.push(path, value);
       return {};
@@ -531,6 +592,38 @@ function run(doc: Doc, model: Model, op: Operation): Partial<EditResult> {
         doc.set(["objects", id, "schema"], schema);
       }
       return {};
+    case "addSubprocess": {
+      const procs = processes(model);
+      if (!procs[op.parent]) throw new EditError(`Unknown process "${op.parent}".`);
+      if (!procs[op.id]) throw new EditError(`Unknown process "${op.id}".`);
+      if (op.parent === op.id) throw new EditError("A process cannot zoom into itself.");
+      const subs = procs[op.parent].zoomsInto ?? [];
+      if (subs.includes(op.id)) throw new EditError(`${op.id} is already a subprocess of ${op.parent}.`);
+      const owner = Object.entries(procs).find(([, p]) => (p.zoomsInto ?? []).includes(op.id));
+      if (owner) throw new EditError(`${op.id} is already a subprocess of ${owner[0]}; a subprocess has one parent.`);
+      if (op.index === undefined || op.index >= subs.length) doc.push(["processes", op.parent, "zoomsInto"], op.id);
+      else doc.set(["processes", op.parent, "zoomsInto"], [...subs.slice(0, Math.max(0, op.index)), op.id, ...subs.slice(Math.max(0, op.index))]);
+      return {};
+    }
+    case "removeSubprocess": {
+      const subs = processes(model)[op.parent]?.zoomsInto ?? [];
+      const i = subs.indexOf(op.id);
+      if (i < 0) throw new EditError(`${op.id} is not a subprocess of ${op.parent}.`);
+      doc.remove(["processes", op.parent, "zoomsInto", i]);
+      return {};
+    }
+    case "setStory": {
+      if (!ID.test(op.id)) throw new EditError(`"${op.id}" is not a valid story key: use camelCase starting with a lowercase letter.`);
+      if (op.story === null) {
+        if (!model.stories?.[op.id]) throw new EditError(`Unknown story "${op.id}".`);
+        doc.remove(["stories", op.id]);
+        if (doc.model.stories && !Object.keys(doc.model.stories).length) doc.remove(["stories"]);
+        return {};
+      }
+      if (!doc.node(["stories"])) doc.set(["stories"], {});
+      doc.set(["stories", op.id], op.story);
+      return {};
+    }
   }
 }
 

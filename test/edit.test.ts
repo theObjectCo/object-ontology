@@ -273,3 +273,33 @@ test("renaming an identifier or a state follows into user stories; deleting leav
   assert.deepEqual(parse(deleted).stories!.getPrice.lanes, s.lanes);
   assert.ok(errors(deleted).includes("unknown-object"));
 });
+
+test("a one-line entry that grows past 120 characters is written again with one field per line", () => {
+  const t = run(EXAMPLE, { op: "addLink", kind: "consumption", from: "configuration", to: "transportPricing" });
+  const after = run(t, { op: "addLink", kind: "instrument", from: "pricingModule", to: "transportPricing", fromState: undefined });
+  const lines = after.split(/\r?\n/);
+  const at = lines.findIndex((l) => l.startsWith('    "transportPricing": {'));
+  assert.deepEqual(lines.slice(at, at + 5), [
+    '    "transportPricing": {',
+    '      "requires": ["departmentData", "pricingModule"],',
+    '      "yields": ["transportPrice"],',
+    '      "consumes": ["configuration"]',
+    "    },",
+  ]);
+});
+
+test("subprocesses and stories have their own operations, and new sections keep the order of the format", () => {
+  let t = run(EXAMPLE, { op: "addElement", kind: "process", viewId: "system", label: "Invoicing" });
+  t = run(t, { op: "addSubprocess", parent: "pricing", id: "invoicing", index: 0 });
+  assert.deepEqual(parse(t).processes!.pricing.zoomsInto, ["invoicing", "productPricing", "transportPricing", "leadTimeEstimating"]);
+  assert.throws(() => run(t, { op: "addSubprocess", parent: "configuring", id: "invoicing" }), /one parent/);
+  t = run(t, { op: "removeSubprocess", parent: "pricing", id: "invoicing" });
+  assert.deepEqual(parse(t).processes!.pricing.zoomsInto, ["productPricing", "transportPricing", "leadTimeEstimating"]);
+
+  const small = '{\n  "objects": {\n    "user": { "essence": "physical" }\n  },\n  "layout": {}\n}\n';
+  const story = { story: "As a user I want a story.", lanes: ["user"], steps: [{ lane: "user", does: "Writes it." }] };
+  const withStory = run(small, { op: "setStory", id: "first", story });
+  assert.ok(withStory.indexOf('"stories"') < withStory.indexOf('"layout"'));
+  assert.deepEqual(parse(withStory).stories, { first: story });
+  assert.equal(run(withStory, { op: "setStory", id: "first", story: null }), small, "removing the only story removes the section");
+});
