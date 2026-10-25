@@ -7,9 +7,10 @@
     "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true,
     "types": []
   },
-  "include": ["src/webview", "test/harness"]
+  "include": ["src/webview", "src/webapp", "test/harness"]
 }

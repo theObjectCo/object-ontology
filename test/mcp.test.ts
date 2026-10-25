@@ -37,7 +37,7 @@ test("every tool has a prefixed name, a description with an example and an objec
     assert.ok(t.description.includes("Example"), `${t.name} has no example`);
     assert.equal(t.inputSchema.type, "object");
   }
-  assert.equal(TOOLS.length, 17);
+  assert.equal(TOOLS.length, 18);
 });
 
 test("opm_list_models finds models under a folder and skips node_modules", () => {
@@ -280,6 +280,48 @@ test("opm_add_story and opm_set_story write whole stories and refuse broken ones
   assert.ok(lane.introduced.some((d: { severity: string }) => d.severity === "error"), "a lane that is not an agent or a module is reported");
   json("opm_set_story", { path: file, id: "orderWindow", delete: true });
   assert.ok(!model(file).stories!.orderWindow);
+});
+
+test("P28 fields and opm_sync_story work through the MCP tools", () => {
+  const file = copy();
+  json("opm_set", {
+    path: file,
+    id: "pricingModule",
+    deploymentName: "pricing_v1.2.0",
+    capabilities: ["can_price"],
+    owns: ["owns_price_result"],
+  });
+  json("opm_set", { path: file, id: "pricing", capability: "can_price" });
+  json("opm_set", { path: file, id: "priceResult", authority: "owns_price_result" });
+  const summary = json("opm_summary", { path: file });
+  const pm = summary.modules.find((m: { id: string }) => m.id === "pricingModule");
+  assert.equal(pm.deploymentName, "pricing_v1.2.0");
+  assert.deepEqual(pm.capabilities, ["can_price"]);
+  assert.deepEqual(pm.owns, ["owns_price_result"]);
+
+  // Refusals for invalid P28 fields or wrong kind
+  refused("opm_set", { path: file, id: "pricing", deploymentName: "pricing_v1.0.0" });
+  refused("opm_set", { path: file, id: "pricingModule", capability: "can_price" });
+  refused("opm_set", { path: file, id: "pricingModule", deploymentName: "invalid_name" });
+
+  // Add a story referencing new lanes/processes/objects and sync it into the OPM model
+  json("opm_add_story", {
+    path: file,
+    id: "exportOrder",
+    story: {
+      title: "Export Order",
+      story: "As a user I want to export the order.",
+      lanes: ["user", "exportModule"],
+      steps: [
+        { lane: "user", does: "Requests export.", process: "exportingOrder", handsOver: { object: "exportFile", state: "ready", to: "exportModule" } },
+      ],
+    },
+    sync: true,
+  });
+  const m = model(file);
+  assert.equal(m.objects!.exportModule.role, "module");
+  assert.ok(m.objects!.exportFile.states!.includes("ready"));
+  assert.ok(m.processes!.exportingOrder);
 });
 
 test("a new section goes before layout, and a file that is not JSON is never edited", () => {

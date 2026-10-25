@@ -131,3 +131,30 @@ test("a hand-over lands on the next step of the receiving lane, or on that lane 
   assert.deepEqual(handOverTarget(story, 2), { column: 3 }, "no later step of a: the next column, past the last step");
   assert.equal(handOverTarget(story, 1), undefined);
 });
+
+test("markdown module table includes Deployment, Capabilities and Owns columns when P28 fields are present", () => {
+  const p28Model: Model = {
+    name: "P28 Example",
+    objects: {
+      pricingModule: {
+        role: "module",
+        deploymentName: "pricing_v1.2.0",
+        capabilities: ["can_price"],
+        owns: ["owns_price_result"],
+      },
+      priceRequest: {},
+      priceResult: { authority: "owns_price_result" },
+    },
+    processes: {
+      pricing: {
+        capability: "can_price",
+        requires: ["pricingModule"],
+        consumes: ["priceRequest"],
+        yields: ["priceResult"],
+      },
+    },
+  };
+  const md = markdown(p28Model);
+  assert.ok(md.includes("| Module | Deployment | Capabilities | Owns | Performs | Takes | Gives | Changes |"));
+  assert.ok(md.includes("| Pricing Module | `pricing_v1.2.0` | `can_price` | `owns_price_result` | Pricing | Price Request | Price Result | none |"));
+});

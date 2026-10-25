@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OPM / Makigami Studio — Phenome Object Ontology</title>
+<link rel="stylesheet" href="./webview.css">
+<style>
+  body.vscode-dark {
+    --vscode-font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    --vscode-font-size: 13px;
+    --vscode-editor-font-family: Consolas, "JetBrains Mono", "Courier New", monospace;
+    --vscode-foreground: #cccccc;
+    --vscode-descriptionForeground: #9d9d9d;
+    --vscode-errorForeground: #f85149;
+    --vscode-focusBorder: #0078d4;
+    --vscode-editor-background: #1f1f1f;
+    --vscode-editor-foreground: #cccccc;
+    --vscode-editorLineNumber-foreground: #6e7681;
+    --vscode-editor-selectionBackground: #264f78;
+    --vscode-editorError-foreground: #f85149;
+    --vscode-editorWarning-foreground: #cca700;
+    --vscode-editorInfo-foreground: #3794ff;
+    --vscode-editorWidget-background: #202020;
+    --vscode-editorWidget-border: #454545;
+    --vscode-widget-shadow: rgba(0, 0, 0, 0.36);
+    --vscode-input-background: #313131;
+    --vscode-input-foreground: #cccccc;
+    --vscode-input-border: #3c3c3c;
+    --vscode-inputValidation-errorBackground: #5a1d1d;
+    --vscode-inputValidation-errorBorder: #be1100;
+    --vscode-inputValidation-warningBackground: #352a05;
+    --vscode-inputValidation-warningBorder: #b89500;
+    --vscode-button-background: #0078d4;
+    --vscode-button-foreground: #ffffff;
+    --vscode-button-hoverBackground: #026ec1;
+    --vscode-button-secondaryBackground: #313131;
+    --vscode-button-secondaryForeground: #cccccc;
+    --vscode-button-secondaryHoverBackground: #3c3c3c;
+    --vscode-textLink-foreground: #4daafc;
+    --vscode-toolbar-hoverBackground: rgba(90, 93, 94, 0.31);
+    --vscode-list-hoverBackground: #2a2d2e;
+    --vscode-list-activeSelectionBackground: #04395e;
+    --vscode-list-activeSelectionForeground: #ffffff;
+    --vscode-menu-background: #1f1f1f;
+    --vscode-menu-foreground: #cccccc;
+    --vscode-menu-selectionBackground: #0078d4;
+    --vscode-menu-selectionForeground: #ffffff;
+    --vscode-panel-border: #2b2b2b;
+  }
+  body.vscode-light {
+    --vscode-font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    --vscode-editor-font-family: Consolas, "JetBrains Mono", "Courier New", monospace;
+    --vscode-foreground: #3b3b3b;
+    --vscode-descriptionForeground: #717171;
+    --vscode-errorForeground: #f85149;
+    --vscode-focusBorder: #005fb8;
+    --vscode-editor-background: #ffffff;
+    --vscode-editor-foreground: #3b3b3b;
+    --vscode-editorLineNumber-foreground: #6e7681;
+    --vscode-editor-selectionBackground: #add6ff;
+    --vscode-editorError-foreground: #e51400;
+    --vscode-editorWarning-foreground: #bf8803;
+    --vscode-editorWidget-background: #f8f8f8;
+    --vscode-editorWidget-border: #e5e5e5;
+    --vscode-widget-shadow: rgba(0, 0, 0, 0.16);
+    --vscode-input-background: #ffffff;
+    --vscode-input-foreground: #3b3b3b;
+    --vscode-input-border: #cecece;
+    --vscode-inputValidation-errorBackground: #f2dede;
+    --vscode-inputValidation-errorBorder: #be1100;
+    --vscode-button-background: #005fb8;
+    --vscode-button-foreground: #ffffff;
+    --vscode-button-secondaryBackground: #e5e5e5;
+    --vscode-button-secondaryForeground: #3b3b3b;
+    --vscode-textLink-foreground: #005fb8;
+    --vscode-toolbar-hoverBackground: rgba(184, 184, 184, 0.31);
+    --vscode-list-hoverBackground: #f2f2f2;
+    --vscode-list-activeSelectionBackground: #e8e8e8;
+    --vscode-menu-background: #ffffff;
+    --vscode-menu-selectionBackground: #005fb8;
+    --vscode-menu-selectionForeground: #ffffff;
+    --vscode-panel-border: #e5e5e5;
+  }
+
+  #opm-webapp-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
+  #opm-webapp-bar {
+    height: 36px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    gap: 10px;
+    background: var(--vscode-editorWidget-background);
+    border-bottom: 1px solid var(--vscode-editorWidget-border);
+    user-select: none;
+    z-index: 40;
+  }
+
+  .opm-wa-left, .opm-wa-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .opm-wa-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    letter-spacing: 0.2px;
+    margin-right: 4px;
+    white-space: nowrap;
+  }
+
+  .opm-wa-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #0078d4;
+    box-shadow: 0 0 0 2px color-mix(in srgb, #0078d4 30%, transparent);
+  }
+
+  .opm-wa-select {
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 3px;
+    padding: 3px 8px;
+    font: inherit;
+    font-size: 12px;
+    max-width: 310px;
+  }
+
+  .opm-wa-filename {
+    font-family: var(--vscode-editor-font-family);
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--vscode-input-background) 60%, transparent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .opm-wa-btn {
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 3px;
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .opm-wa-btn:hover:not(:disabled) {
+    background: var(--vscode-toolbar-hoverBackground);
+  }
+  .opm-wa-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .opm-wa-btn.active, .opm-wa-btn-primary {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border-color: var(--vscode-button-background);
+  }
+
+  .opm-wa-sep {
+    width: 1px;
+    height: 18px;
+    background: var(--vscode-editorWidget-border);
+    margin: 0 2px;
+  }
+
+  #opm-webapp-workspace {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    position: relative;
+  }
+
+  #root {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+  }
+
+  #opm-webapp-workspace .opm-app {
+    height: calc(100vh - 36px);
+  }
+
+  #opm-webapp-json-pane {
+    width: 440px;
+    max-width: 48vw;
+    display: none;
+    flex-direction: column;
+    border-left: 1px solid var(--vscode-editorWidget-border);
+    background: var(--vscode-editorWidget-background);
+  }
+
+  .opm-wa-json-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--vscode-editorWidget-border);
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+  }
+
+  .opm-wa-json-head button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 4px;
+  }
+
+  #opm-webapp-json-editor {
+    flex: 1;
+    width: 100%;
+    box-sizing: border-box;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 10px 12px;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 12px;
+    line-height: 18px;
+    background: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
+  }
+
+  #opm-webapp-toast {
+    position: fixed;
+    bottom: 42px;
+    right: 18px;
+    padding: 7px 14px;
+    border-radius: 4px;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    font-size: 12px;
+    box-shadow: 0 4px 14px var(--vscode-widget-shadow);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+    z-index: 100;
+  }
+  #opm-webapp-toast.visible {
+    opacity: 1;
+  }
+</style>
+</head>
+<body class="vscode-dark">
+  <div id="opm-webapp-shell">
+    <header id="opm-webapp-bar"></header>
+    <div id="opm-webapp-workspace">
+      <div id="root" data-elk-worker="./elk-worker.min.js"></div>
+      <aside id="opm-webapp-json-pane">
+        <div class="opm-wa-json-head">
+          <span>Live <code>.opm.json</code> source</span>
+          <button id="opm-webapp-json-close" title="Close JSON editor">×</button>
+        </div>
+        <textarea id="opm-webapp-json-editor" spellcheck="false"></textarea>
+      </aside>
+    </div>
+  </div>
+  <script src="./webapp.js"></script>
+  <script src="./webview.js"></script>
+</body>
+</html>

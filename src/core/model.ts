@@ -25,6 +25,14 @@ export interface ObjectDef {
   affiliation?: Affiliation;
   states?: string[];
   schema?: string;
+  /** Data ownership authority for this object (owns_<fact>). */
+  authority?: string;
+  /** Capabilities (can_*) held by this module or agent. */
+  capabilities?: string[];
+  /** Data ownership authorities (owns_*) held by this module or agent. */
+  owns?: string[];
+  /** Concrete deployment instance name and SemVer, e.g. AI_Sprzedawca_v1.2.34. */
+  deploymentName?: string;
   consistsOf?: ObjectRef[];
   exhibits?: ObjectRef[];
   isA?: ObjectRef;
@@ -50,6 +58,8 @@ export interface ProcessDef {
   note?: string;
   essence?: Essence;
   affiliation?: Affiliation;
+  /** Capability contract (can_*) whose inputs, controls, outputs and invariants this process defines. */
+  capability?: string;
   handledBy?: ObjectRef[];
   requires?: Ref[];
   consumes?: Ref[];
@@ -139,6 +149,30 @@ export function humanize(id: string): string {
     .join(" ");
 }
 
+/** Converts camelCase or display text into a snake_case token, e.g. priceResult -> price_result. */
+export function toSnakeCase(text: string): string {
+  return text
+    .normalize("NFKD")
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[^\p{L}\p{N}]+/gu, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/_+/g, "_");
+}
+
+/** Derives a default P28 capability identifier (can_<snake_case>) from a process identifier. */
+export function deriveCapabilityId(processId: string): string {
+  const s = toSnakeCase(processId) || "act";
+  return s.startsWith("can_") ? s : `can_${s}`;
+}
+
+/** Derives a default P28 authority identifier (owns_<snake_case>) from an object identifier. */
+export function deriveAuthorityId(objectId: string): string {
+  const s = toSnakeCase(objectId) || "fact";
+  return s.startsWith("owns_") ? s : `owns_${s}`;
+}
+
 export function objects(model: Model): Record<string, ObjectDef> {
   return model.objects ?? {};
 }
@@ -160,7 +194,10 @@ export function affiliation(o: { affiliation?: Affiliation }): Affiliation {
 }
 
 /** Fields of a thing that hold text rather than references to other things. */
-export const TEXT_FIELDS = ["label", "description", "note", "schema", "states", "role", "essence", "affiliation"];
+export const TEXT_FIELDS = [
+  "label", "description", "note", "schema", "states", "role", "essence", "affiliation",
+  "capability", "authority", "capabilities", "owns", "deploymentName",
+];
 
 /** The thing a link entry points at. */
 export function refObject(r: string | { object: string } | { process: string }): string {

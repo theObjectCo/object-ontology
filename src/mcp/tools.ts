@@ -329,6 +329,7 @@ function walkModels(root: string): string[] {
 interface ZoomNode {
   id: string;
   label: string;
+  capability?: string;
   subprocesses?: ZoomNode[];
 }
 
@@ -339,7 +340,12 @@ function zoomTree(model: Model): ZoomNode[] {
   const node = (id: string): ZoomNode => {
     seen.add(id);
     const subs = (procs[id]?.zoomsInto ?? []).filter((s) => procs[s] && !seen.has(s));
-    return { id, label: label(model, id), ...(subs.length ? { subprocesses: subs.map(node) } : {}) };
+    return {
+      id,
+      label: label(model, id),
+      ...(procs[id]?.capability ? { capability: procs[id].capability } : {}),
+      ...(subs.length ? { subprocesses: subs.map(node) } : {}),
+    };
   };
   const roots = Object.keys(procs).filter((id) => !parentOf.has(id)).map(node);
   // processes in a zoomsInto cycle have a parent each and no root; list them at the top so none is lost
@@ -403,6 +409,9 @@ function inlineDef(name: string): Json {
 }
 
 const STORY_SCHEMA = inlineDef("story");
+const CAPABILITY_ID = inlineDef("capabilityId");
+const AUTHORITY_ID = inlineDef("authorityId");
+const DEPLOYMENT_NAME = inlineDef("deploymentName");
 
 const READ = { readOnly: true };
 
@@ -450,7 +459,7 @@ Example: {"root": "C:/work/project"} -> [{"path": "C:/work/project/model.opm.jso
     name: "opm_validate",
     title: "Validate an OPM model",
     ...READ,
-    description: `Validates one OPM model: JSON syntax, the format schema, and the OPM rules (references, states, transformations, zoom cycles, JSON Schema enums, user stories).
+    description: `Validates one OPM model: JSON syntax, the format schema, and the OPM rules (references, states, transformations, zoom cycles, JSON Schema enums, user stories, P28 capabilities and authorities).
 
 Parameters:
 - path: absolute path of the *.opm.json file.
@@ -474,7 +483,7 @@ Example: {"path": "C:/work/model.opm.json"}`,
 Parameters:
 - path: absolute path of the *.opm.json file.
 
-Returns JSON with: name, description, agents (physical objects), modules (objects with role "module"), objects (the rest, with states, essence, affiliation and schema where set), processes as a zoom tree (each process with its "subprocesses" in execution order), views (generated and custom: id, kind, code such as SD1.2, title), stories (id, title, lanes, number of steps) and the validation summary line. Use opm_get for the links of one thing.
+Returns JSON with: name, description, agents (physical objects), modules (objects with role "module", plus deploymentName, capabilities and owns where set), objects (the rest, with states, essence, affiliation, schema and authority where set), processes as a zoom tree (each process with its capability and "subprocesses" in execution order), views (generated and custom: id, kind, code such as SD1.2, title), stories (id, title, lanes, number of steps) and the validation summary line. Use opm_get for the links of one thing.
 
 Example: {"path": "C:/work/model.opm.json"}`,
     inputSchema: { type: "object", properties: { path: PATH }, required: ["path"], additionalProperties: false },
@@ -486,13 +495,23 @@ Example: {"path": "C:/work/model.opm.json"}`,
         file,
         name: model.name,
         ...(model.description ? { description: model.description } : {}),
-        agents: objs.filter(([, o]) => o.role !== "module" && essence(o) === "physical").map(([id]) => brief(id)),
-        modules: objs.filter(([, o]) => o.role === "module").map(([id]) => brief(id)),
+        agents: objs.filter(([, o]) => o.role !== "module" && essence(o) === "physical").map(([id, o]) => ({
+          ...brief(id),
+          ...(o.capabilities?.length ? { capabilities: o.capabilities } : {}),
+          ...(o.owns?.length ? { owns: o.owns } : {}),
+        })),
+        modules: objs.filter(([, o]) => o.role === "module").map(([id, o]) => ({
+          ...brief(id),
+          ...(o.deploymentName ? { deploymentName: o.deploymentName } : {}),
+          ...(o.capabilities?.length ? { capabilities: o.capabilities } : {}),
+          ...(o.owns?.length ? { owns: o.owns } : {}),
+        })),
         objects: objs.filter(([, o]) => o.role !== "module" && essence(o) !== "physical").map(([id, o]) => ({
           ...brief(id),
           ...(o.states ? { states: o.states } : {}),
           ...(o.affiliation ? { affiliation: o.affiliation } : {}),
           ...(o.schema ? { schema: o.schema } : {}),
+          ...(o.authority ? { authority: o.authority } : {}),
         })),
         processes: zoomTree(model),
         views: listViews(model).map((v) => ({ id: v.id, kind: v.kind, code: v.code, title: v.title, ...(v.process ? { process: v.process } : {}) })),
@@ -739,11 +758,12 @@ Parameters:
 - path: absolute path of the *.opm.json file.
 - id and/or label: the identifier (camelCase, e.g. "priceResult") and the display label. With only a label the id is derived from it; with only an id the label is derived from the id and not written.
 - description, note (Markdown, skipped by OPL), states (at least two names), essence ("informatical" default, "physical" for agents and material things), affiliation ("systemic" default, "environmental" for things outside the system), role ("module" for a part of the system that processes require), schema ("file#/json/pointer" relative to the model).
+- authority ("owns_<snake_case>", for domain fact objects), capabilities (list of "can_<snake_case>" for modules/agents), owns (list of "owns_<snake_case>" for modules/agents), deploymentName ("<module>_v<major>.<minor>.<patch>" for modules).
 - view (optional): a custom view with a "things" list to add the object to.
 
 Returns JSON: changed, ids (the new identifier), summary, "introduced" (diagnostics the edit added), resolved (how many it removed) and all diagnostics after the edit. A new object linked to nothing gets an "unused-object" warning until opm_link connects it.
 
-Example: {"path": "C:/work/model.opm.json", "id": "invoice", "states": ["draft", "sent"]}`,
+Example: {"path": "C:/work/model.opm.json", "id": "invoice", "states": ["draft", "sent"], "authority": "owns_invoice"}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -757,14 +777,18 @@ Example: {"path": "C:/work/model.opm.json", "id": "invoice", "states": ["draft",
         affiliation: { type: "string", enum: ["systemic", "environmental"] },
         role: { type: "string", enum: ["module"] },
         schema: { type: "string", description: "JSON Schema definition, file#/json/pointer relative to the model." },
+        authority: AUTHORITY_ID,
+        capabilities: { type: "array", items: CAPABILITY_ID, uniqueItems: true, description: "Capabilities (can_<snake_case>) this module or agent provides." },
+        owns: { type: "array", items: AUTHORITY_ID, uniqueItems: true, description: "Authorities (owns_<snake_case>) this module or agent holds." },
+        deploymentName: DEPLOYMENT_NAME,
         view: ID_ARG("Optional custom view (with a things list) to add the object to."),
       },
       required: ["path"],
       additionalProperties: false,
     },
     handler: (args) => edit(args.path, (s, model) => {
-      const { description, note, states, essence: ess, affiliation, role, schema } = args;
-      const id = addThing(s, model, "object", args, { description, note, states, essence: ess, affiliation, role, schema });
+      const { description, note, states, essence: ess, affiliation, role, schema, authority, capabilities, owns, deploymentName } = args;
+      const id = addThing(s, model, "object", args, { description, note, states, essence: ess, affiliation, role, schema, authority, capabilities, owns, deploymentName });
       return { ids: [id] };
     }),
   },
@@ -780,11 +804,12 @@ Parameters:
 - parent (optional): the process this one is a subprocess of; it is added to the parent's zoomsInto.
 - index (optional, with parent): position in the parent's execution order, 0 = first; at the end when omitted.
 - description, note, essence, affiliation: as in opm_add_object.
+- capability (optional): capability token "can_<snake_case>" representing this process in P28.
 - view (optional): a custom view with a "things" list to add the process to.
 
 Returns the same JSON as every edit tool. A new process has the error "no-transformation" until it consumes, yields, affects or changes an object: link it with opm_link.
 
-Example: {"path": "C:/work/model.opm.json", "id": "discounting", "parent": "pricing", "index": 1}`,
+Example: {"path": "C:/work/model.opm.json", "id": "discounting", "parent": "pricing", "index": 1, "capability": "can_discount"}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -797,6 +822,7 @@ Example: {"path": "C:/work/model.opm.json", "id": "discounting", "parent": "pric
         note: { type: "string", description: "Markdown note; skipped by the validator and OPL." },
         essence: { type: "string", enum: ["informatical", "physical"] },
         affiliation: { type: "string", enum: ["systemic", "environmental"] },
+        capability: CAPABILITY_ID,
         view: ID_ARG("Optional custom view (with a things list) to add the process to."),
       },
       required: ["path"],
@@ -804,8 +830,8 @@ Example: {"path": "C:/work/model.opm.json", "id": "discounting", "parent": "pric
     },
     handler: (args) => edit(args.path, (s, model) => {
       if (args.index !== undefined && !args.parent) throw new ToolError("\"index\" needs \"parent\".");
-      const { description, note, essence: ess, affiliation } = args;
-      const id = addThing(s, model, "process", args, { description, note, essence: ess, affiliation });
+      const { description, note, essence: ess, affiliation, capability } = args;
+      const id = addThing(s, model, "process", args, { description, note, essence: ess, affiliation, capability });
       if (typeof args.index === "number") s.apply({ op: "reorderSubprocess", parent: String(args.parent), id, index: args.index });
       return { ids: [id] };
     }),
@@ -1021,10 +1047,15 @@ Parameters:
 - essence: "informatical", "physical" or null.
 - affiliation: "systemic", "environmental" or null.
 - schema: "file#/json/pointer" of the JSON Schema definition, or null (objects only).
+- authority: "owns_<snake_case>" or null (objects only).
+- capabilities: list of "can_<snake_case>" or null (objects only).
+- owns: list of "owns_<snake_case>" or null (objects only).
+- deploymentName: "<module>_v<major>.<minor>.<patch>" or null (objects only).
+- capability: "can_<snake_case>" or null (processes only).
 
 Returns the same JSON as every edit tool.
 
-Example: {"path": "...", "id": "customer", "description": "The buyer, as kept in the ERP.", "affiliation": "environmental"}`,
+Example: {"path": "...", "id": "pricingModule", "deploymentName": "pricing_v1.2.0", "capabilities": ["can_price"]}`,
     inputSchema: {
       type: "object",
       properties: {
@@ -1038,6 +1069,11 @@ Example: {"path": "...", "id": "customer", "description": "The buyer, as kept in
         essence: { type: ["string", "null"], enum: ["informatical", "physical", null] },
         affiliation: { type: ["string", "null"], enum: ["systemic", "environmental", null] },
         schema: NULLABLE_TEXT("JSON Schema reference file#/pointer, or null."),
+        authority: { type: ["string", "null"], pattern: AUTHORITY_ID.pattern as string, description: "Authority token (owns_<snake_case>), or null." },
+        capabilities: { type: ["array", "null"], items: CAPABILITY_ID, uniqueItems: true, description: "Capabilities (can_<snake_case>) this module or agent provides, or null." },
+        owns: { type: ["array", "null"], items: AUTHORITY_ID, uniqueItems: true, description: "Authorities (owns_<snake_case>) this module or agent holds, or null." },
+        deploymentName: { type: ["string", "null"], pattern: DEPLOYMENT_NAME.pattern as string, description: "Deployment package name (<module>_v<major>.<minor>.<patch>), or null." },
+        capability: { type: ["string", "null"], pattern: CAPABILITY_ID.pattern as string, description: "Capability token (can_<snake_case>) of a process, or null." },
       },
       required: ["path", "id"],
       additionalProperties: false,
@@ -1045,11 +1081,15 @@ Example: {"path": "...", "id": "customer", "description": "The buyer, as kept in
     handler: (args) => edit(args.path, (s, model) => {
       const id = need(args, "id", "the object or process");
       const kind = thingOrFail(model, id);
-      const fields = ["label", "description", "note", "states", "role", "essence", "affiliation", "schema"].filter((f) => f in args);
-      if (!fields.length) throw new ToolError("Nothing to set: give at least one of label, description, note, states, role, essence, affiliation, schema.");
+      const allFields = ["label", "description", "note", "states", "role", "essence", "affiliation", "schema", "authority", "capabilities", "owns", "deploymentName", "capability"];
+      const fields = allFields.filter((f) => f in args);
+      if (!fields.length) throw new ToolError(`Nothing to set: give at least one of ${allFields.join(", ")}.`);
       if (kind === "process") {
-        const bad = fields.filter((f) => f === "states" || f === "role" || f === "schema");
+        const bad = fields.filter((f) => f === "states" || f === "role" || f === "schema" || f === "authority" || f === "capabilities" || f === "owns" || f === "deploymentName");
         if (bad.length) throw new ToolError(`A process has no ${bad.join(", ")}; these fields belong to objects.`);
+      } else {
+        const bad = fields.filter((f) => f === "capability");
+        if (bad.length) throw new ToolError(`An object has no ${bad.join(", ")}; this field belongs to processes.`);
       }
       if ("label" in args) s.apply({ op: "setLabel", id, label: (args.label as string | null) ?? null });
       const patch = Object.fromEntries(fields.filter((f) => f !== "label").map((f) => [f, args[f] ?? null]));
@@ -1114,6 +1154,7 @@ Parameters:
   - lanes (required): agents (physical objects) or modules of the model, top to bottom.
   - steps (required, in time order): {lane, does, process?, handsOver?: {object, state?, to}, waits?, problem?, note?}. lane and handsOver.to are among the lanes; process is a process of the model; object is an object of the model, state one of its states.
   - title, doneWhen (list of sentences), note: optional.
+- sync (optional, default false): when true, also generates and wires any missing OPM objects, states, processes and links implied by the story.
 
 The validator then checks the references against the model; its findings are in the returned diagnostics.
 
@@ -1122,7 +1163,12 @@ Returns the same JSON as every edit tool.
 Example: {"path": "...", "id": "orderWindow", "story": {"story": "As a user I want to order the priced window.", "lanes": ["user", "ui"], "steps": [{"lane": "user", "does": "Presses Order.", "process": "configuring", "handsOver": {"object": "configuration", "to": "ui"}}]}}`,
     inputSchema: {
       type: "object",
-      properties: { path: PATH, id: ID_ARG("Story key, camelCase."), story: STORY_SCHEMA },
+      properties: {
+        path: PATH,
+        id: ID_ARG("Story key, camelCase."),
+        story: STORY_SCHEMA,
+        sync: { type: "boolean", description: "Also generate/wire missing OPM elements and links from the story." },
+      },
       required: ["path", "id", "story"],
       additionalProperties: false,
     },
@@ -1131,6 +1177,7 @@ Example: {"path": "...", "id": "orderWindow", "story": {"story": "As a user I wa
       return edit(args.path, (s, model) => {
         if (stories(model)[id]) throw new ToolError(`Story "${id}" already exists; use opm_set_story to replace it.`);
         s.apply({ op: "setStory", id, story: args.story as StoryDef });
+        if (args.sync === true) s.apply({ op: "syncStory", id });
         return { ids: [id] };
       }, storyGuard(id));
     },
@@ -1147,13 +1194,20 @@ Parameters:
 - id: the key of an existing story.
 - story: the whole new story object. Omit it and pass "delete": true to remove the story.
 - delete (optional): true removes the story.
+- sync (optional, default false): when true, also generates and wires any missing OPM objects, states, processes and links implied by the story.
 
 Returns the same JSON as every edit tool.
 
 Example: {"path": "...", "id": "getPrice", "delete": true}`,
     inputSchema: {
       type: "object",
-      properties: { path: PATH, id: ID_ARG("Key of an existing story."), story: STORY_SCHEMA, delete: { type: "boolean", description: "true removes the story." } },
+      properties: {
+        path: PATH,
+        id: ID_ARG("Key of an existing story."),
+        story: STORY_SCHEMA,
+        delete: { type: "boolean", description: "true removes the story." },
+        sync: { type: "boolean", description: "Also generate/wire missing OPM elements and links from the story." },
+      },
       required: ["path", "id"],
       additionalProperties: false,
     },
@@ -1168,8 +1222,40 @@ Example: {"path": "...", "id": "getPrice", "delete": true}`,
         }
         if (!args.story) throw new ToolError("Give the whole new \"story\", or \"delete\": true.");
         s.apply({ op: "setStory", id, story: args.story as StoryDef });
+        if (args.sync === true) s.apply({ op: "syncStory", id });
         return { ids: [id] };
       }, storyGuard(id));
+    },
+  },
+  {
+    name: "opm_sync_story",
+    title: "Sync story to OPM model",
+    readOnly: false,
+    description: `Materialises a Makigami user story into the OPM model: creates any missing lane objects (modules or physical agents), handed-over objects and states, step processes, enabler links (handledBy/requires), transformation links (yields/changes/affects) and receiving step links (requires).
+
+Parameters:
+- path: absolute path of the *.opm.json file.
+- id: the key of an existing story.
+
+Returns the same JSON as every edit tool, with the created/updated element ids in "ids".
+
+Example: {"path": "...", "id": "orderWindow"}`,
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: PATH,
+        id: ID_ARG("Key of an existing story to sync into the OPM model."),
+      },
+      required: ["path", "id"],
+      additionalProperties: false,
+    },
+    handler: (args) => {
+      const id = need(args, "id", "the story key");
+      return edit(args.path, (s, model) => {
+        if (!stories(model)[id]) throw new ToolError(`No story "${id}". Stories: ${Object.keys(stories(model)).join(", ") || "none"}.`);
+        const r = s.apply({ op: "syncStory", id });
+        return { ids: r.select ?? [id] };
+      });
     },
   },
 ];

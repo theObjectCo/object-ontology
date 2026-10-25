@@ -207,23 +207,40 @@ export interface ModuleSummary {
   takes: string[];
   gives: string[];
   changes: string[];
+  deploymentName?: string;
+  capabilities?: string[];
+  owns?: string[];
 }
 
 /** What each module takes part in, derived from the processes that require it. */
 export function moduleSummaries(model: Model): ModuleSummary[] {
   const out: ModuleSummary[] = [];
+  const objs = objects(model);
   const procs = processes(model);
-  for (const [id, o] of Object.entries(objects(model))) {
+  for (const [id, o] of Object.entries(objs)) {
     if (o.role !== "module") continue;
     const performs = Object.keys(procs).filter((pid) => procs[pid].requires?.some((r) => refObject(r) === id));
     const collect = (pick: (p: ProcessDef) => string[]) =>
-      [...new Set(performs.flatMap((pid) => pick(procs[pid])))].filter((x) => x !== id && objects(model)[x]?.role !== "module");
+      [...new Set(performs.flatMap((pid) => pick(procs[pid])))].filter((x) => x !== id && objs[x]?.role !== "module");
+    const gives = collect((p) => (p.yields ?? []).map(refObject));
+    const changes = collect((p) => [...refIds(p.affects), ...(p.changes ?? []).map((c) => c.object)]);
+    const caps = [...new Set([
+      ...(o.capabilities ?? []),
+      ...performs.map((pid) => procs[pid].capability).filter((c): c is string => !!c),
+    ])];
+    const owns = [...new Set([
+      ...(o.owns ?? []),
+      ...[...gives, ...changes].map((oid) => objs[oid]?.authority).filter((a): a is string => !!a),
+    ])];
     out.push({
       module: id,
       performs,
       takes: collect((p) => [...(p.consumes ?? []), ...(p.requires ?? [])].map(refObject)),
-      gives: collect((p) => (p.yields ?? []).map(refObject)),
-      changes: collect((p) => [...refIds(p.affects), ...(p.changes ?? []).map((c) => c.object)]),
+      gives,
+      changes,
+      ...(o.deploymentName ? { deploymentName: o.deploymentName } : {}),
+      ...(caps.length ? { capabilities: caps } : {}),
+      ...(owns.length ? { owns } : {}),
     });
   }
   return out;
@@ -267,9 +284,18 @@ export function markdown(model: Model): string {
   }
   const modules = moduleSummaries(model);
   if (modules.length) {
-    parts.push("## Modules", "", "| Module | Performs | Takes | Gives | Changes |", "|---|---|---|---|---|");
+    const hasP28 = modules.some((m) => m.deploymentName || m.capabilities?.length || m.owns?.length);
     const cell = (ids: string[]) => ids.map(L).join(", ") || "none";
-    for (const m of modules) parts.push(`| ${L(m.module)} | ${cell(m.performs)} | ${cell(m.takes)} | ${cell(m.gives)} | ${cell(m.changes)} |`);
+    const codeList = (items?: string[]) => items?.length ? items.map((x) => `\`${x}\``).join(", ") : "none";
+    if (hasP28) {
+      parts.push("## Modules", "", "| Module | Deployment | Capabilities | Owns | Performs | Takes | Gives | Changes |", "|---|---|---|---|---|---|---|---|");
+      for (const m of modules) {
+        parts.push(`| ${L(m.module)} | ${m.deploymentName ? `\`${m.deploymentName}\`` : "none"} | ${codeList(m.capabilities)} | ${codeList(m.owns)} | ${cell(m.performs)} | ${cell(m.takes)} | ${cell(m.gives)} | ${cell(m.changes)} |`);
+      }
+    } else {
+      parts.push("## Modules", "", "| Module | Performs | Takes | Gives | Changes |", "|---|---|---|---|---|");
+      for (const m of modules) parts.push(`| ${L(m.module)} | ${cell(m.performs)} | ${cell(m.takes)} | ${cell(m.gives)} | ${cell(m.changes)} |`);
+    }
     parts.push("");
   }
   const states = stateDiagrams(model);

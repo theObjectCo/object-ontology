@@ -1338,3 +1338,126 @@ span.opm-mk-object {
   margin: 4px 0 0;
   padding-left: 20px;
 }
+
+
+/* ---------- interactive makigami & P28 ---------- */
+
+.opm-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.opm-stories-menu {
+  left: 0;
+  right: auto;
+  min-width: 240px;
+}
+
+.opm-stories-menu button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.opm-story-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.opm-story-sentence-input {
+  width: 100%;
+  max-width: 900px;
+  font-size: 13px;
+}
+
+.opm-mk-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 14px 10px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-editorWidget-border, var(--opm-divider));
+}
+
+.opm-mk-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 14px 10px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  background: var(--vscode-editorWidget-background);
+  border: 1px solid var(--vscode-focusBorder, var(--opm-divider));
+}
+
+.opm-mk-editor-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.opm-mk-editor-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.opm-mk-editor-row label.opm-grow {
+  flex: 1;
+  min-width: 220px;
+}
+
+.opm-mk-editor-row label.opm-grow .opm-input {
+  flex: 1;
+}
+
+.opm-mk-step-btns {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.opm-mk-lane-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.opm-mk-lane-head:hover .opm-mk-lane-tools {
+  opacity: 1;
+}
+
+.opm-mk-card {
+  cursor: pointer;
+}
+
+.opm-mk-card.selected {
+  border-color: var(--vscode-focusBorder);
+  box-shadow: 0 0 0 2px var(--vscode-focusBorder);
+}
+
+.opm-mk-column {
+  cursor: pointer;
+}
+
+.opm-mk-column.selected {
+  color: var(--vscode-focusBorder);
+  font-weight: 700;
+}
+
+.opm-mk-handover {
+  cursor: pointer;
+}

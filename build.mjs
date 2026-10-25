@@ -33,6 +33,25 @@ await build({
 mkdirSync("media", { recursive: true });
 copyFileSync("node_modules/elkjs/lib/elk-worker.min.js", "media/elk-worker.min.js");
 
+// standalone web application (dist/web) for opm.phenome.object.pl
+mkdirSync("dist/web", { recursive: true });
+await build({
+  entryPoints: ["src/webapp/host.ts"],
+  outfile: "dist/web/webapp.js",
+  bundle: true,
+  platform: "browser",
+  format: "iife",
+  target: "es2022",
+  minify: true,
+  sourcemap: true,
+  logLevel: "warning",
+  mainFields: ["browser", "module", "main"],
+});
+copyFileSync("src/webapp/index.html", "dist/web/index.html");
+copyFileSync("dist/webview.js", "dist/web/webview.js");
+copyFileSync("dist/webview.css", "dist/web/webview.css");
+copyFileSync("node_modules/elkjs/lib/elk-worker.min.js", "dist/web/elk-worker.min.js");
+
 // the browser harness for the diagram editor (test/harness), only when asked for
 if (process.argv.includes("--harness")) {
   await build({

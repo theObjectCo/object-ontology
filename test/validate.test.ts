@@ -243,3 +243,54 @@ test("a story that hands nothing over is a warning", () => {
   s.steps = s.steps.map(({ handsOver: _h, ...rest }) => rest);
   assert.deepEqual(storyDiagnostics(s), [{ severity: "warning", code: "no-hand-over", path: ["steps"] }]);
 });
+
+test("P28 capabilities, authorities and deploymentName are validated by schema and semantic rules", () => {
+  const validP28: Model = {
+    objects: {
+      pricer: {
+        role: "module",
+        deploymentName: "pricing_v1.2.0",
+        capabilities: ["can_price_window"],
+        owns: ["owns_price_quote"],
+      },
+      quote: {
+        states: ["draft", "final"],
+        authority: "owns_price_quote",
+      },
+    },
+    processes: {
+      pricingWindow: {
+        capability: "can_price_window",
+        requires: ["pricer"],
+        yields: [{ object: "quote", state: "final" }],
+      },
+    },
+  };
+  assert.deepEqual(structureErrors(validP28), []);
+  assert.deepEqual(validate(validP28).filter((d) => d.severity !== "info"), []);
+
+  // Schema format checks for capabilityId, authorityId, deploymentName
+  assert.ok(structureErrors({ objects: { m: { role: "module", deploymentName: "badName" } } }).length > 0);
+  assert.ok(structureErrors({ objects: { m: { role: "module", capabilities: ["price_window"] } } }).length > 0);
+  assert.ok(structureErrors({ objects: { m: { role: "module", owns: ["price_quote"] } } }).length > 0);
+  assert.ok(structureErrors({ objects: { q: { authority: "quote" } } }).length > 0);
+  assert.ok(structureErrors({ processes: { p: { capability: "price_window" } } }).length > 0);
+
+  // Semantic checks: duplicate-authority, missing-capability, p28-not-performer
+  const brokenP28: Model = {
+    objects: {
+      modA: { role: "module", capabilities: ["can_other"], owns: ["owns_quote"] },
+      modB: { role: "module", owns: ["owns_quote"] },
+      plainObj: { capabilities: ["can_do_x"], deploymentName: "plain_v0.1.0" },
+      quote: { authority: "owns_quote" },
+    },
+    processes: {
+      pricing: { capability: "can_price", requires: ["modA"], yields: ["quote"] },
+    },
+  };
+  const diags = validate(brokenP28);
+  const brokenCodes = diags.map((d) => d.code);
+  assert.ok(brokenCodes.includes("duplicate-authority"), "two modules cannot claim the same authority");
+  assert.ok(brokenCodes.includes("missing-capability"), "performer lacks process capability");
+  assert.ok(brokenCodes.includes("p28-not-performer"), "plain object is not a module or physical agent");
+});

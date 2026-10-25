@@ -5,11 +5,11 @@ import {
 import { toPng, toSvg } from "html-to-image";
 import { CSSProperties, MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Operation } from "../core/edit";
-import { fragmentOf } from "../core/edit";
+import { fragmentOf, uniqueId } from "../core/edit";
 import { EditorLinkKind, STATEFUL, allowedKinds, editorLinks, stateOwner, thingKind } from "../core/links";
 import { Model, affiliation, essence, label, objects, processes } from "../core/model";
 import { oplSentences } from "../core/opl";
-import { stories } from "../core/stories";
+import { stories, storyTitle } from "../core/stories";
 import { ViewContent, ViewEdge, ViewInfo, ViewNode, listViews, viewContent, viewsContaining } from "../core/viewmodel";
 import { LINK_WORDS, format, messages } from "../shared/i18n";
 import { ElementDiagnostic, HostMessage, SchemaFile, UiDefaults } from "../shared/protocol";
@@ -969,6 +969,54 @@ export function App() {
 
   /* ---------- user story ---------- */
 
+  const storyList = useMemo(() => (
+    model ? Object.entries(stories(model)).map(([id, s]) => ({ id, title: storyTitle(id, s) })) : []
+  ), [model]);
+
+  const createNewStory = useCallback(async () => {
+    if (!model || frozen) return;
+    const existingPerformers = Object.entries(objects(model))
+      .filter(([, o]) => o.role === "module" || essence(o) === "physical")
+      .map(([id]) => id);
+    const lanes = existingPerformers.length >= 2
+      ? existingPerformers.slice(0, 3)
+      : existingPerformers.length === 1
+        ? [existingPerformers[0], "systemModule"]
+        : ["user", "systemModule"];
+    const takenStories = new Set(Object.keys(stories(model)));
+    const newId = uniqueId(model, "procedure", takenStories);
+    const dataObjs = Object.entries(objects(model))
+      .filter(([, o]) => o.role !== "module" && essence(o) !== "physical")
+      .map(([id]) => id);
+    const defaultObj = dataObjs[0] ?? "requestData";
+    await run({
+      op: "setStory",
+      id: newId,
+      story: {
+        title: `Procedure ${storyList.length + 1}`,
+        story: "As a user I want to complete the procedure, so that the result is produced.",
+        lanes,
+        steps: [
+          {
+            lane: lanes[0],
+            does: "Initiates the request.",
+            handsOver: { object: defaultObj, state: "draft", to: lanes[1] ?? lanes[0] },
+          },
+          {
+            lane: lanes[1] ?? lanes[0],
+            does: "Processes the request and returns the result.",
+            handsOver: { object: defaultObj, state: "ready", to: lanes[0] },
+          },
+        ],
+        doneWhen: ["The procedure finishes without errors."],
+      },
+    });
+    setMethod(null);
+    setSelection([]);
+    setEdgeSel(null);
+    setStoryId(newId);
+  }, [model, frozen, run, storyList.length]);
+
   // a story renamed or deleted in the text leaves the diagram in view
   const story = model && storyId ? stories(model)[storyId] : undefined;
   storyOpen.current = !!story;
@@ -1103,6 +1151,9 @@ export function App() {
             onAddProcess={() => void addElement("process")}
             onAddState={selectedObject ? () => addState() : undefined}
             onArrange={(a) => void arrange(a)}
+            stories={storyList}
+            onOpenStory={(id) => { setMethod(null); setStoryId(id); setSelection([]); setEdgeSel(null); }}
+            onNewStory={() => void createNewStory()}
             menu={[
               { label: t.exportPng, action: () => void exportImage("png") },
               { label: t.exportSvg, action: () => void exportImage("svg") },
@@ -1134,6 +1185,7 @@ export function App() {
             <div className="opm-actions">
               <button className="opm-button primary" onClick={() => void addElement("object")}>▭ {t.object}</button>
               <button className="opm-button primary" onClick={() => void addElement("process")}>◯ {t.process}</button>
+              <button className="opm-button primary" onClick={() => void createNewStory()}>▤ {t.newStory}</button>
             </div>
           </div>
         )}
@@ -1173,9 +1225,20 @@ export function App() {
           <MethodPanel model={model} state={method} language={language} onChange={setMethod} onClose={() => setMethod(null)} />
         )}
         {story && model && storyId && (
-          <Makigami t={t} model={model} id={storyId} story={story} diagnostics={storyDiagnostics}
-                    onBack={() => setStoryId(null)}
-                    onShow={(id) => { setStoryId(null); setReveal({ elementId: id }); }} />
+          <Makigami
+            t={t}
+            model={model}
+            id={storyId}
+            story={story}
+            diagnostics={storyDiagnostics}
+            onBack={() => setStoryId(null)}
+            onShow={(id) => { setStoryId(null); setReveal({ elementId: id }); }}
+            onRun={frozen ? undefined : (op) => run(op)}
+            onDeleteStory={frozen ? undefined : () => {
+              void run({ op: "setStory", id: storyId, story: null });
+              setStoryId(null);
+            }}
+          />
         )}
 
         <OplBar

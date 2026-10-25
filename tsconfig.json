@@ -12,5 +12,5 @@
     "types": ["node", "vscode"]
   },
   "include": ["src", "test"],
-  "exclude": ["src/webview", "test/harness"]
+  "exclude": ["src/webview", "src/webapp", "test/harness"]
 }

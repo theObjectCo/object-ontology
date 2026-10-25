@@ -85,6 +85,21 @@
       "type": "string",
       "pattern": "^[a-z][A-Za-z0-9]*$"
     },
+    "capabilityId": {
+      "description": "Capability identifier (can_<action>), for example can_price or can_configure.",
+      "type": "string",
+      "pattern": "^can_[a-z0-9]+(_[a-z0-9]+)*$"
+    },
+    "authorityId": {
+      "description": "Data ownership authority identifier (owns_<fact>), for example owns_price or owns_snapshot.",
+      "type": "string",
+      "pattern": "^owns_[a-z0-9]+(_[a-z0-9]+)*$"
+    },
+    "deploymentName": {
+      "description": "Concrete deployment instance name with SemVer, for example AI_Sprzedawca_v1.2.34.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*_v\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
     "ids": {
       "type": "array",
       "minItems": 1,
@@ -207,6 +222,32 @@
           "pattern": "^[^#]+#/.*$",
           "description": "JSON Schema definition of the object's data: a file path relative to this model and a JSON pointer, for example contracts.schema.json#/$defs/priceResult. The validator checks that the definition exists and that the states occur in its enums."
         },
+        "authority": {
+          "$ref": "#/$defs/authorityId",
+          "description": "Data ownership authority for this object (owns_<fact>)."
+        },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/capabilityId"
+          },
+          "description": "Capabilities (can_*) held by this module or agent."
+        },
+        "owns": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/authorityId"
+          },
+          "description": "Data ownership authorities (owns_*) held by this module or agent."
+        },
+        "deploymentName": {
+          "$ref": "#/$defs/deploymentName",
+          "description": "Concrete deployment instance name and SemVer, for example AI_Sprzedawca_v1.2.34."
+        },
         "consistsOf": {
           "$ref": "#/$defs/objectRefs",
           "description": "Aggregation: the parts of this object."
@@ -273,6 +314,10 @@
             "environmental"
           ],
           "default": "systemic"
+        },
+        "capability": {
+          "$ref": "#/$defs/capabilityId",
+          "description": "Capability contract (can_*) whose inputs, controls, outputs and invariants this process defines."
         },
         "handledBy": {
           "$ref": "#/$defs/objectRefs",

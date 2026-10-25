@@ -1,0 +1,783 @@
+{
+  "name": "Phenome: mapping, designing, building, verifying and monitoring a company's systems",
+  "description": "Phenome is not one architecture of a company. It is the system with which a company's present processes are mapped, the systems it needs are designed from a catalogue of module roles, built or connected, verified against the roles' contracts, and monitored in operation. The platform's own modules appear here as roles. The architectures of particular companies are models of their own, made with this system; reference architectures such as configurator-to-order are kept beside this model as patterns. The first reference is the product configurator, because 3D is the implementing firm's strongest competence and there is market demand for configurators; the other roles follow from the gaps found in each deployment.",
+  "objects": {
+    "consultant": {
+      "essence": "physical",
+      "description": "A person from the implementing firm who maps, designs and leads a deployment."
+    },
+    "companyStaff": {
+      "essence": "physical",
+      "affiliation": "environmental",
+      "description": "People of the company being served: those who do the work being mapped and those who decide."
+    },
+    "partner": {
+      "essence": "physical",
+      "affiliation": "environmental",
+      "description": "Another firm that works on the same company's systems: a retrofitter turning NC machines into CNC, a simulation provider for CFD or FEA, an automation integrator, a machine builder.",
+      "note": "A partner may fill a module role in a deployment (machine control, simulation and validation) or only contribute knowledge and data."
+    },
+    "interviewKit": {
+      "role": "module",
+      "description": "Guides interviews and observation of work, by area of the enterprise map, and keeps the notes with their sources."
+    },
+    "modellingTool": {
+      "role": "module",
+      "description": "Edits and validates models of objects, processes and modules, user stories as makigami, and the views derived from them (process flows, interface matrices, input-control-output-mechanism boxes, supplier-input-process-output-customer tables)."
+    },
+    "aiAgent": {
+      "role": "module",
+      "affiliation": "environmental",
+      "label": "AI agent",
+      "description": "A language model that drafts models from notes, drafts code and adapters, and explains gaps.",
+      "note": "Optional in every process. A company's own rule on which AI may see its data always applies."
+    },
+    "moduleCatalogue": {
+      "role": "module",
+      "description": "Lists the module roles of the platform with their protocols, requirements and available implementations, and the reference architectures built from them."
+    },
+    "buildToolchain": {
+      "role": "module",
+      "description": "Builds module implementations and adapters, one step per unit, rebuilding only what a change reaches; gives each module its own version."
+    },
+    "conformanceSuite": {
+      "role": "module",
+      "description": "Checks an implementation or an adapter against the contract of the role it fills: valid and invalid examples, behaviour under retry, timeout and unknown outcome, replacement test."
+    },
+    "monitor": {
+      "role": "module",
+      "description": "Collects from a running deployment what each contract promises to report: health, latency, errors, unknown outcomes, contract versions in use. Keeps technical data apart from business data (handbook M32)."
+    },
+    "companySystems": {
+      "role": "module",
+      "affiliation": "environmental",
+      "description": "The systems a company already runs, whatever their kind and make. Each may fill a role through an adapter."
+    },
+    "enterpriseMap": {
+      "description": "The areas and responsibilities of a manufacturing company, used as the frame for mapping (handbook: enterprise module map, A01 to A16)."
+    },
+    "methodCatalogue": {
+      "description": "The research methods available for mapping a company (interviews, contextual inquiry, shadowing, case tracing, process mining, artefact study, value stream mapping, workshops, surveys, data audit, maturity assessment and others), each with when it fits, its effort and what it produces."
+    },
+    "companyProfile": {
+      "description": "A short description of the company used to choose methods: size and sites, written procedures, systems with history, dominant problems, time available, regulation, entry point."
+    },
+    "researchPlan": {
+      "description": "The methods chosen for this company, why, in which areas, with whom and in what order.",
+      "note": "**Requirements.**\n\n- RSM-1: Every engagement keeps interviews for each area in scope, the systems and integration inventory, and the review round, whatever else is chosen.\n- RSM-2: Each chosen method names the reason from the company profile and what it is expected to produce."
+    },
+    "interviewNotes": {
+      "description": "What was said and observed, with who said it and when."
+    },
+    "partnerContribution": {
+      "description": "What a partner said or delivered for the engagement: statements, machine and control data, simulation models and results, test reports, constraints, with the partner as the source.",
+      "note": "**Requirements.**\n\n- PRT-1: A partner's statement or data is recorded with the partner as its source, in its own place in the engagement, never mixed into the company's notes without the source.\n- PRT-2: What a partner may see of the company's data and what the company may see of the partner's is agreed in writing before the exchange, and the agreement is kept with the engagement.\n- PRT-3: A partner that fills a module role meets that role's contract and passes its conformance checks like any other implementation."
+    },
+    "exchangeAgreement": {
+      "description": "The written agreement between the company, the partner and the implementing firm on what data is exchanged, in which direction, for what purpose, and how long it is kept."
+    },
+    "observationNotes": {
+      "description": "What was seen at the place of work: who did what, with which documents and systems, how long it took, where work waited; with date, place and role."
+    },
+    "tracedCase": {
+      "description": "One real order or case followed end to end through the company: every hand-over, document, system and wait it passed, reconstructed from its traces (documents, e-mails, system records, files)."
+    },
+    "eventLog": {
+      "description": "Records exported from the company's systems that show what happened to which case and when (case, activity, time, role or system), with personal data removed before analysis."
+    },
+    "processHypothesis": {
+      "states": [
+        "hypothesis",
+        "confirmed",
+        "rejected"
+      ],
+      "description": "A process as it appears from observation, traced cases or event logs, before the people who do the work have recognised it.",
+      "note": "**Requirements.**\n\n- DSC-1: A discovered process enters the as-is model as a hypothesis, marked as such, and becomes confirmed only when the people who do the work recognise it.\n- DSC-2: Every hypothesis names the observations, traced cases or log analyses it rests on.\n- DSC-3: Event logs are stripped of personal data before analysis and stay on the company's or Object's systems."
+    },
+    "companyMap": {
+      "description": "Everything known about the company that a deployment depends on: its processes and everything around them.",
+      "consistsOf": [
+        "asIsModel",
+        "businessModel",
+        "goals",
+        "timeline",
+        "organisation",
+        "competences",
+        "sites",
+        "assetRegister",
+        "systemRegister",
+        "infrastructure",
+        "productPortfolio",
+        "supplierRegister",
+        "customerRegister",
+        "obligations",
+        "indicators",
+        "risks",
+        "dataInventory"
+      ],
+      "note": "**Requirements.** Every entry traces back to a source (a note, a document, a system export). Registers hold kinds and counts, not personal data; where a person must be named, the name stays in the company's own repository with their consent. The map is the company's property and is kept in its repository."
+    },
+    "businessModel": {
+      "description": "How the company earns: customers and segments, products and services, channels, revenue and main costs, partners."
+    },
+    "goals": {
+      "description": "What the company wants to reach, with measures and dates, and who owns each goal."
+    },
+    "timeline": {
+      "description": "The company's history that still shapes it (past systems, reorganisations, acquisitions, failed projects) and its planned future (investments, new plants, products, systems, people)."
+    },
+    "organisation": {
+      "description": "Units, roles, responsibilities and who decides what; people only as holders of roles."
+    },
+    "competences": {
+      "description": "What the company's people can do, how many can do it, and where knowledge sits with one person only."
+    },
+    "sites": {
+      "description": "Plants, buildings, warehouses and offices with their purpose, size and constraints."
+    },
+    "assetRegister": {
+      "description": "Machines, lines, tools, measuring equipment, vehicles of the fleet and other equipment: type, count, age, condition, control system, connectivity, what they produce or carry."
+    },
+    "systemRegister": {
+      "description": "Applications, databases, spreadsheets and shared folders that carry work: what each holds, which role it fills, who owns it, how it exchanges data, licences and age."
+    },
+    "infrastructure": {
+      "description": "Networks, servers, cloud services, identities and access, backups, security measures."
+    },
+    "productPortfolio": {
+      "description": "Products and services, their variants, what is made to order, volumes, and the data that describes them."
+    },
+    "supplierRegister": {
+      "description": "Suppliers and subcontractors: what they deliver or do, how orders and confirmations pass, what the company depends on."
+    },
+    "customerRegister": {
+      "description": "Customer groups and key customers by kind (no personal data): how they order, what they require, how they receive and pay."
+    },
+    "obligations": {
+      "description": "Standards, certifications, regulations, contracts and audits the company must meet, with their owners."
+    },
+    "indicators": {
+      "description": "What the company measures today, how, how often, and who looks at it."
+    },
+    "risks": {
+      "description": "What could stop or damage the company's work, with likelihood, impact and the current safeguard."
+    },
+    "dataInventory": {
+      "description": "Kinds of data, where each lives, who owns each fact, retention, and which data is personal or confidential."
+    },
+    "asIsModel": {
+      "states": [
+        "draft",
+        "reviewed"
+      ],
+      "description": "The company's present processes with their roles, systems and hand-overs, as an OPM model with makigami stories; one part of the company map.",
+      "note": "**Requirements.** Every statement traces back to a note or to a document. Reviewed means the people who do the work recognised it."
+    },
+    "contract": {
+      "description": "The protocol of one module role: objects exchanged, their schema and states, commands, events, failure behaviour, access."
+    },
+    "gapList": {
+      "description": "Roles the company needs and does not fill, roles filled twice, and handovers without a contract, each with its cost to the company."
+    },
+    "toBeModel": {
+      "description": "The model of the company after the deployment: the same processes, with roles filled by chosen implementations."
+    },
+    "deployment": {
+      "states": [
+        "designed",
+        "built",
+        "verified",
+        "live"
+      ],
+      "description": "For each role of the to-be model: the implementation that fills it (a platform module, a system the company has, a third-party product, or nothing yet), the adapter, the contract version, and the phase.",
+      "note": "**Requirements.** The first phase is small enough to go live on its own beside the systems that stay. No role is filled by two systems at once."
+    },
+    "moduleImplementation": {
+      "states": [
+        "built",
+        "conformant"
+      ],
+      "description": "Code that fills a role: a platform module or an adapter to a company system."
+    },
+    "adapter": {
+      "isA": "moduleImplementation",
+      "description": "Code that lets a company system fill a role by speaking the role's contract."
+    },
+    "conformanceReport": {
+      "states": [
+        "passed",
+        "failed"
+      ],
+      "description": "The result of the conformance suite for one implementation and one contract version."
+    },
+    "observations": {
+      "description": "What the monitor collected from the running deployment."
+    },
+    "deviation": {
+      "description": "A difference between what a contract promises and what the deployment does, or a process that changed in the company."
+    }
+  },
+  "processes": {
+    "mapping": {
+      "description": "Finding out how the company works today.",
+      "handledBy": [
+        "consultant",
+        "companyStaff"
+      ],
+      "zoomsInto": [
+        "methodSelecting",
+        "agreeingExchange",
+        "interviewing",
+        "discovering",
+        "partnerCollaborating",
+        "modelDrafting",
+        "reviewing"
+      ]
+    },
+    "methodSelecting": {
+      "description": "Choosing the research methods that fit this company.",
+      "handledBy": [
+        "consultant",
+        "companyStaff"
+      ],
+      "requires": [
+        "methodCatalogue",
+        "interviewKit",
+        "aiAgent"
+      ],
+      "consumes": [
+        "companyProfile"
+      ],
+      "yields": [
+        "researchPlan"
+      ]
+    },
+    "agreeingExchange": {
+      "handledBy": [
+        "consultant",
+        "companyStaff",
+        "partner"
+      ],
+      "yields": [
+        "exchangeAgreement"
+      ]
+    },
+    "interviewing": {
+      "handledBy": [
+        "consultant",
+        "companyStaff"
+      ],
+      "requires": [
+        "interviewKit",
+        "enterpriseMap",
+        "researchPlan"
+      ],
+      "yields": [
+        "interviewNotes"
+      ]
+    },
+    "partnerCollaborating": {
+      "description": "Taking in what partners know and deliver, through a channel of their own.",
+      "handledBy": [
+        "consultant",
+        "partner"
+      ],
+      "requires": [
+        "interviewKit",
+        {
+          "object": "exchangeAgreement"
+        }
+      ],
+      "yields": [
+        "partnerContribution"
+      ],
+      "note": "Partners are interviewed like the company's people and send data through the engagement's partner channel; their contributions feed the model, the registers and the gap list with their source."
+    },
+    "modelDrafting": {
+      "handledBy": [
+        "consultant"
+      ],
+      "requires": [
+        "modellingTool",
+        "aiAgent",
+        "interviewNotes",
+        "observationNotes",
+        "tracedCase",
+        "partnerContribution"
+      ],
+      "yields": [
+        {
+          "object": "asIsModel",
+          "state": "draft"
+        },
+        "companyMap"
+      ],
+      "note": "With or without the AI agent; a draft from the agent is checked against the notes like any other. The registers and the other facets of the company map are filled from the notes, from documents and from exports of the company's systems."
+    },
+    "discovering": {
+      "description": "Finding processes that nobody describes: the company's procedures may be unknown even to the company itself.",
+      "handledBy": [
+        "consultant"
+      ],
+      "zoomsInto": [
+        "observing",
+        "caseTracing",
+        "logMining",
+        "hypothesisForming",
+        "hypothesisConfirming"
+      ],
+      "note": "Which discovery methods are used comes from the research plan."
+    },
+    "observing": {
+      "handledBy": [
+        "consultant",
+        "companyStaff"
+      ],
+      "requires": [
+        "interviewKit",
+        "enterpriseMap"
+      ],
+      "yields": [
+        "observationNotes"
+      ],
+      "note": "Shadowing people at work, a day in the life of a role, timing the steps of real work."
+    },
+    "caseTracing": {
+      "handledBy": [
+        "consultant"
+      ],
+      "requires": [
+        "interviewKit",
+        "companySystems"
+      ],
+      "yields": [
+        "tracedCase"
+      ],
+      "note": "Following a few real orders end to end, including one that went wrong."
+    },
+    "logMining": {
+      "handledBy": [
+        "consultant"
+      ],
+      "requires": [
+        "modellingTool",
+        "aiAgent",
+        "companySystems"
+      ],
+      "consumes": [
+        "eventLog"
+      ],
+      "yields": [
+        {
+          "object": "processHypothesis",
+          "state": "hypothesis"
+        }
+      ],
+      "note": "Process discovery from system records: which activities happen in which order, how often, how long, where cases loop or wait."
+    },
+    "hypothesisForming": {
+      "handledBy": [
+        "consultant"
+      ],
+      "requires": [
+        "modellingTool",
+        "observationNotes",
+        "tracedCase"
+      ],
+      "yields": [
+        {
+          "object": "processHypothesis",
+          "state": "hypothesis"
+        }
+      ]
+    },
+    "hypothesisConfirming": {
+      "handledBy": [
+        "companyStaff"
+      ],
+      "requires": [
+        "modellingTool"
+      ],
+      "changes": [
+        {
+          "object": "processHypothesis",
+          "from": "hypothesis",
+          "to": "confirmed"
+        }
+      ],
+      "affects": [
+        "asIsModel"
+      ]
+    },
+    "reviewing": {
+      "handledBy": [
+        "companyStaff"
+      ],
+      "requires": [
+        "modellingTool"
+      ],
+      "changes": [
+        {
+          "object": "asIsModel",
+          "from": "draft",
+          "to": "reviewed"
+        }
+      ]
+    },
+    "designing": {
+      "description": "Choosing what to build, connect or leave as it is.",
+      "handledBy": [
+        "consultant"
+      ],
+      "zoomsInto": [
+        "gapAnalysing",
+        "moduleSelecting",
+        "phasing"
+      ]
+    },
+    "gapAnalysing": {
+      "handledBy": [
+        "consultant"
+      ],
+      "requires": [
+        "moduleCatalogue",
+        "modellingTool",
+        {
+          "object": "asIsModel",
+          "state": "reviewed"
+        },
+        "companyMap"
+      ],
+      "yields": [
+        "gapList"
+      ]
+    },
+    "moduleSelecting": {
+      "handledBy": [
+        "consultant",
+        "companyStaff"
+      ],
+      "requires": [
+        "moduleCatalogue",
+        "gapList",
+        "contract"
+      ],
+      "yields": [
+        "toBeModel"
+      ]
+    },
+    "phasing": {
+      "handledBy": [
+        "consultant",
+        "companyStaff"
+      ],
+      "requires": [
+        "toBeModel"
+      ],
+      "yields": [
+        {
+          "object": "deployment",
+          "state": "designed"
+        }
+      ]
+    },
+    "building": {
+      "description": "Writing or configuring the implementations and adapters the deployment needs.",
+      "handledBy": [
+        "consultant"
+      ],
+      "requires": [
+        "buildToolchain",
+        "aiAgent",
+        "contract",
+        "companySystems"
+      ],
+      "yields": [
+        {
+          "object": "moduleImplementation",
+          "state": "built"
+        }
+      ],
+      "changes": [
+        {
+          "object": "deployment",
+          "from": "designed",
+          "to": "built"
+        }
+      ]
+    },
+    "verifying": {
+      "description": "Checking every implementation against the contract of its role.",
+      "requires": [
+        "conformanceSuite",
+        "contract"
+      ],
+      "yields": [
+        "conformanceReport"
+      ],
+      "changes": [
+        {
+          "object": "moduleImplementation",
+          "from": "built",
+          "to": "conformant"
+        },
+        {
+          "object": "deployment",
+          "from": "built",
+          "to": "verified"
+        }
+      ]
+    },
+    "goingLive": {
+      "handledBy": [
+        "companyStaff"
+      ],
+      "conditions": [
+        {
+          "object": "conformanceReport",
+          "state": "passed"
+        }
+      ],
+      "changes": [
+        {
+          "object": "deployment",
+          "from": "verified",
+          "to": "live"
+        }
+      ]
+    },
+    "monitoring": {
+      "requires": [
+        "monitor",
+        {
+          "object": "deployment",
+          "state": "live"
+        }
+      ],
+      "affects": [
+        "observations"
+      ],
+      "yields": [
+        "deviation"
+      ],
+      "invokes": [
+        "designing"
+      ],
+      "note": "A deviation starts the next round of design; the loop is how the system keeps up with the company."
+    }
+  },
+  "views": {
+    "lifecycle": {
+      "title": "Map, design, build, verify, monitor",
+      "things": [
+        "mapping",
+        "designing",
+        "building",
+        "verifying",
+        "goingLive",
+        "monitoring",
+        "asIsModel",
+        "toBeModel",
+        "deployment",
+        "conformanceReport",
+        "deviation",
+        "discovering"
+      ]
+    }
+  },
+  "stories": {
+    "mapCompany": {
+      "title": "Map how a company works today",
+      "story": "As a consultant I want to turn interviews into a model the company recognises, so that the design starts from how work is really done.",
+      "lanes": [
+        "consultant",
+        "companyStaff",
+        "interviewKit",
+        "aiAgent",
+        "modellingTool"
+      ],
+      "steps": [
+        {
+          "lane": "consultant",
+          "does": "Plans interviews by area of the enterprise map.",
+          "process": "interviewing"
+        },
+        {
+          "lane": "companyStaff",
+          "does": "Describe and show their work.",
+          "process": "interviewing",
+          "handsOver": {
+            "object": "interviewNotes",
+            "to": "interviewKit"
+          }
+        },
+        {
+          "lane": "interviewKit",
+          "does": "Keeps the notes with who said what and when.",
+          "process": "interviewing",
+          "handsOver": {
+            "object": "interviewNotes",
+            "to": "aiAgent"
+          }
+        },
+        {
+          "lane": "aiAgent",
+          "does": "Drafts processes, responsibilities and systems from the notes.",
+          "process": "modelDrafting",
+          "handsOver": {
+            "object": "asIsModel",
+            "state": "draft",
+            "to": "consultant"
+          },
+          "problem": "A draft may invent what nobody said. Every element must trace back to a note."
+        },
+        {
+          "lane": "consultant",
+          "does": "Corrects the draft against the notes.",
+          "process": "modelDrafting",
+          "handsOver": {
+            "object": "asIsModel",
+            "state": "draft",
+            "to": "modellingTool"
+          }
+        },
+        {
+          "lane": "modellingTool",
+          "does": "Validates the draft and draws its processes and stories for review.",
+          "process": "reviewing",
+          "handsOver": {
+            "object": "asIsModel",
+            "state": "draft",
+            "to": "companyStaff"
+          }
+        },
+        {
+          "lane": "companyStaff",
+          "does": "Recognise their work in the model or correct it.",
+          "process": "reviewing",
+          "handsOver": {
+            "object": "asIsModel",
+            "state": "reviewed",
+            "to": "consultant"
+          },
+          "waits": "days"
+        }
+      ],
+      "doneWhen": [
+        "Every process in the model has at least one person who said it is right."
+      ]
+    },
+    "designDeployment": {
+      "title": "Design the smallest useful deployment",
+      "story": "As a consultant I want to choose modules for the gaps that cost the company most, so that the first phase is cheap to start and useful on its own.",
+      "lanes": [
+        "consultant",
+        "companyStaff",
+        "moduleCatalogue"
+      ],
+      "steps": [
+        {
+          "lane": "consultant",
+          "does": "Compares the reviewed model with the roles in the catalogue.",
+          "process": "gapAnalysing",
+          "handsOver": {
+            "object": "gapList",
+            "to": "companyStaff"
+          }
+        },
+        {
+          "lane": "moduleCatalogue",
+          "does": "Shows the roles, their contracts and the implementations available for each.",
+          "process": "moduleSelecting",
+          "handsOver": {
+            "object": "contract",
+            "to": "consultant"
+          }
+        },
+        {
+          "lane": "companyStaff",
+          "does": "Rank the gaps by what they cost.",
+          "process": "moduleSelecting"
+        },
+        {
+          "lane": "consultant",
+          "does": "Proposes which roles to fill and with what; systems that stay keep their roles behind adapters.",
+          "process": "moduleSelecting",
+          "handsOver": {
+            "object": "toBeModel",
+            "to": "companyStaff"
+          }
+        },
+        {
+          "lane": "companyStaff",
+          "does": "Agree the phases.",
+          "process": "phasing",
+          "handsOver": {
+            "object": "deployment",
+            "state": "designed",
+            "to": "consultant"
+          },
+          "problem": "A first phase that needs everything at once is not a first phase."
+        }
+      ],
+      "doneWhen": [
+        "The first phase can go live without any later phase."
+      ]
+    },
+    "verifyAndRun": {
+      "title": "Verify a deployment and keep watching it",
+      "story": "As a consultant I want every implementation checked against its contract and the running deployment watched, so that a replaced system or a changed process is noticed before it costs anything.",
+      "lanes": [
+        "consultant",
+        "conformanceSuite",
+        "companyStaff",
+        "monitor"
+      ],
+      "steps": [
+        {
+          "lane": "consultant",
+          "does": "Builds the implementations and adapters of the phase.",
+          "process": "building",
+          "handsOver": {
+            "object": "moduleImplementation",
+            "state": "built",
+            "to": "conformanceSuite"
+          }
+        },
+        {
+          "lane": "conformanceSuite",
+          "does": "Runs the contract checks for every implementation.",
+          "process": "verifying",
+          "handsOver": {
+            "object": "conformanceReport",
+            "state": "passed",
+            "to": "companyStaff"
+          }
+        },
+        {
+          "lane": "companyStaff",
+          "does": "Take the phase into use.",
+          "process": "goingLive",
+          "handsOver": {
+            "object": "deployment",
+            "state": "live",
+            "to": "monitor"
+          }
+        },
+        {
+          "lane": "monitor",
+          "does": "Watches what each contract promises and reports deviations.",
+          "process": "monitoring",
+          "handsOver": {
+            "object": "deviation",
+            "to": "consultant"
+          },
+          "problem": "A process that changed in the company shows up only as a deviation if a contract covers it."
+        }
+      ],
+      "doneWhen": [
+        "Replacing a company system by another of the same role passes the same conformance checks."
+      ]
+    }
+  }
+}
