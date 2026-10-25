@@ -1,0 +1,11 @@
+# OPM / Makigami Studio: standalone web application of object-ontology.
+opm.phenome.object.pl {
+	root * /var/www/phenome-opm/current
+	encode gzip
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'"
+		X-Content-Type-Options nosniff
+	}
+	try_files {path} {path}/ /index.html
+	file_server
+}
