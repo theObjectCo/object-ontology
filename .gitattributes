@@ -1,0 +1,2 @@
+# Generated example documents are compared byte for byte in CI and locally.
+examples/**/model.md text eol=lf
