@@ -352,6 +352,11 @@ opm_opl  { path, ids: ["invoicing"] }                               -> Invoicing
 
 ## Development
 
+CI runs `npm ci`, `npm run typecheck`, `npm test`, then
+`node tools/check-examples.mjs`. The last check validates and renders every
+example through the public CLI and compares any committed generated document
+byte for byte. Run it after building when changing models or the renderer.
+
 `npm test` builds the package and runs the tests in `test/`. `npm run typecheck` checks the extension and the webview, which have separate TypeScript configurations. The core in `src/core/` has no dependency on VS Code, so the command line, the extension and the webview share the validator, the OPL text and the edit engine (`src/core/edit.ts`), which turns each editor operation into a minimal change of the JSON text.
 
 `npm run shots` runs the diagram editor in headless Chrome with a stand-in for the VS Code API (`test/harness/`), goes through the main interactions and saves screenshots in `dist/shots`. It needs Chrome at the default Windows path or in the `CHROME` environment variable.
