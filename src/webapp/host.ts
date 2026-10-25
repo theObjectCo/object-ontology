@@ -9,6 +9,22 @@ import { Model, objects } from "../core/model";
 import { storyPlace } from "../core/stories";
 import { validate } from "../core/validate";
 import type { HostMessage, WebviewMessage } from "../shared/protocol";
+import {
+  connectLocalSyncedFolder,
+  handleOAuthPopupCallbackIfPresent,
+  listCloudFolderFiles,
+  loadCloudConfig,
+  loadCloudSession,
+  loginWithGoogleDrive,
+  loginWithMicrosoftEntra,
+  readFileFromCloudFolder,
+  sanitizeFolderName,
+  saveCloudConfig,
+  saveCloudSession,
+  saveFileToCloudFolder,
+  type CloudFileEntry,
+  type CloudUserSession,
+} from "./cloudDrive";
 
 import phenomeModel from "./presets/phenome.opm.json";
 import configuratorModel from "./presets/configurator-to-order.opm.json";
@@ -537,6 +553,258 @@ function updateHeaderUi() {
   if (saveBtn) saveBtn.textContent = session.lang === "pl" ? "Zapisz .opm.json" : "Save .opm.json";
   const mdBtn = document.getElementById("opm-webapp-btn-md");
   if (mdBtn) mdBtn.textContent = session.lang === "pl" ? "Eksportuj .md" : "Export .md";
+
+  const cloudSession = loadCloudSession();
+  const cloudBtn = document.getElementById("opm-webapp-btn-cloud");
+  if (cloudBtn) {
+    const providerTag = cloudSession
+      ? cloudSession.provider === "microsoft"
+        ? "OneDrive"
+        : cloudSession.provider === "google"
+          ? "GDrive"
+          : "Dysk"
+      : session.lang === "pl" ? "Chmura" : "Cloud";
+    cloudBtn.textContent = cloudSession ? `☁ ${providerTag}: /${cloudSession.folderName}` : `☁ ${providerTag}`;
+    cloudBtn.classList.toggle("active", !!cloudSession);
+  }
+  const cloudSaveBtn = document.getElementById("opm-webapp-btn-cloud-save") as HTMLButtonElement | null;
+  if (cloudSaveBtn) {
+    cloudSaveBtn.style.display = cloudSession ? "inline-flex" : "none";
+    cloudSaveBtn.textContent = session.lang === "pl" ? "☁ Zapisz w chmurze" : "☁ Save to Cloud";
+  }
+}
+
+let cloudFilesCache: CloudFileEntry[] = [];
+
+async function refreshCloudFilesList() {
+  const listEl = document.getElementById("opm-wa-cloud-files");
+  const statusEl = document.getElementById("opm-wa-cloud-status");
+  const cs = loadCloudSession();
+  if (!listEl) return;
+  if (!cs) {
+    listEl.innerHTML = `<div class="opm-wa-cloud-empty">${
+      session.lang === "pl"
+        ? "Zaloguj się kontem Microsoft (Entra / OneDrive), Google (Google Drive) lub wskaż zsynchronizowany folder lokalny."
+        : "Sign in with Microsoft (Entra / OneDrive), Google (Google Drive), or pick a synced local folder."
+    }</div>`;
+    return;
+  }
+  listEl.innerHTML = `<div class="opm-wa-cloud-empty">…</div>`;
+  try {
+    cloudFilesCache = await listCloudFolderFiles(cs);
+    if (!cloudFilesCache.length) {
+      listEl.innerHTML = `<div class="opm-wa-cloud-empty">${
+        session.lang === "pl"
+          ? `Folder /${cs.folderName} jest pusty. Kliknij „Zapisz obecny model .opm.json w /${cs.folderName}”.`
+          : `Folder /${cs.folderName} is empty. Click "Save current .opm.json to /${cs.folderName}".`
+      }</div>`;
+      return;
+    }
+    listEl.innerHTML = cloudFilesCache
+      .map(
+        (f, idx) => `
+        <div class="opm-wa-cloud-row">
+          <div>
+            <strong>${f.name}</strong>
+            <small>${Math.max(1, Math.round(f.size / 1024))} KB ${f.lastModified ? "• " + f.lastModified.slice(0, 16).replace("T", " ") : ""}</small>
+          </div>
+          <div class="opm-wa-cloud-row-actions">
+            ${f.name.endsWith(".json") ? `<button type="button" class="opm-wa-btn opm-wa-btn-primary" data-cloud-load="${idx}">${session.lang === "pl" ? "Wczytaj" : "Open"}</button>` : ""}
+            ${f.webUrl ? `<a class="opm-wa-btn" href="${f.webUrl}" target="_blank" rel="noopener noreferrer">↗</a>` : ""}
+          </div>
+        </div>
+      `,
+      )
+      .join("");
+    listEl.querySelectorAll<HTMLButtonElement>("[data-cloud-load]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const idx = Number(btn.dataset.cloudLoad);
+        const entry = cloudFilesCache[idx];
+        const curSession = loadCloudSession();
+        if (!entry || !curSession) return;
+        try {
+          if (statusEl) statusEl.textContent = `Wczytywanie ${entry.name}…`;
+          const content = await readFileFromCloudFolder(curSession, entry);
+          JSON.parse(content);
+          fileHandle = null;
+          session.presetId = "custom";
+          session.fileName = entry.name.endsWith(".opm.json") ? entry.name : `${entry.name.replace(/\.json$/i, "")}.opm.json`;
+          undoStack.length = 0;
+          redoStack.length = 0;
+          session.text = content;
+          version++;
+          broadcastModel();
+          showToast(session.lang === "pl" ? `Wczytano z chmury: ${entry.name}` : `Loaded from cloud: ${entry.name}`);
+          toggleCloudModal(false);
+        } catch (err) {
+          if (statusEl) statusEl.textContent = err instanceof Error ? err.message : String(err);
+        }
+      });
+    });
+  } catch (err) {
+    listEl.innerHTML = `<div class="opm-wa-cloud-empty">${err instanceof Error ? err.message : String(err)}</div>`;
+  }
+}
+
+function toggleCloudModal(force?: boolean) {
+  let modal = document.getElementById("opm-webapp-cloud-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "opm-webapp-cloud-modal";
+    modal.className = "opm-wa-modal-backdrop";
+    document.body.appendChild(modal);
+  }
+  const open = force !== undefined ? force : !modal.classList.contains("open");
+  if (!open) {
+    modal.classList.remove("open");
+    return;
+  }
+  const cfg = loadCloudConfig();
+  const cs: CloudUserSession | null = loadCloudSession();
+  modal.innerHTML = `
+    <div class="opm-wa-modal" role="dialog" aria-modal="true">
+      <div class="opm-wa-modal-head">
+        <div>
+          <strong>☁ Chmura Konsultanta (OneDrive / Google Drive) — 100% Client-Side</strong>
+          <div class="opm-wa-modal-sub">Wspólny folder z map.phenome.object.pl (domyślnie <code>/${cfg.folderName}</code>)</div>
+        </div>
+        <button type="button" id="opm-wa-cloud-close" class="opm-wa-btn">✕</button>
+      </div>
+      <div class="opm-wa-modal-body">
+        <div class="opm-wa-cloud-grid">
+          <label>
+            <span>Nazwa folderu na OneDrive / Google Drive</span>
+            <input id="opm-wa-cloud-folder" class="opm-wa-input" value="${cfg.folderName}" placeholder="phenome" />
+          </label>
+          <label>
+            <span>Microsoft Entra Client ID (opcjonalnie SPA)</span>
+            <input id="opm-wa-cloud-entra" class="opm-wa-input" value="${cfg.entraClientId}" placeholder="00000000-0000-0000-0000-000000000000" />
+          </label>
+          <label>
+            <span>Google OAuth Client ID (opcjonalnie Web)</span>
+            <input id="opm-wa-cloud-google" class="opm-wa-input" value="${cfg.googleClientId}" placeholder="1234567890-abc.apps.googleusercontent.com" />
+          </label>
+        </div>
+
+        <div class="opm-wa-cloud-providers">
+          <button type="button" id="opm-wa-login-ms" class="opm-wa-btn opm-wa-btn-primary">⊞ Zaloguj Microsoft (OneDrive)</button>
+          <button type="button" id="opm-wa-login-google" class="opm-wa-btn opm-wa-btn-primary">◉ Zaloguj Google (Google Drive)</button>
+          <button type="button" id="opm-wa-login-local" class="opm-wa-btn">📁 Wskaż folder lokalny OneDrive / GDrive</button>
+          ${cs ? `<button type="button" id="opm-wa-cloud-logout" class="opm-wa-btn">Wyloguj (${cs.userName})</button>` : ""}
+        </div>
+
+        <div id="opm-wa-cloud-status" class="opm-wa-cloud-status">
+          ${cs ? `Połączono: ${cs.userName} • Folder: /${cs.folderName}` : "Nie połączono z dyskiem chmurowym."}
+        </div>
+
+        ${
+          cs
+            ? `<div class="opm-wa-cloud-save-bar">
+                <button type="button" id="opm-wa-save-opm-cloud" class="opm-wa-btn opm-wa-btn-primary">☁ Zapisz ${session.fileName} w /${cs.folderName}</button>
+                <button type="button" id="opm-wa-save-md-cloud" class="opm-wa-btn">☁ Zapisz dokumentację .md w /${cs.folderName}</button>
+                <button type="button" id="opm-wa-refresh-cloud" class="opm-wa-btn">↻ Odśwież listę</button>
+              </div>`
+            : ""
+        }
+
+        <div id="opm-wa-cloud-files" class="opm-wa-cloud-files"></div>
+      </div>
+    </div>
+  `;
+  modal.classList.add("open");
+
+  const readCfgFromInputs = () => {
+    const folderName = sanitizeFolderName((document.getElementById("opm-wa-cloud-folder") as HTMLInputElement)?.value || "phenome");
+    const entraClientId = (document.getElementById("opm-wa-cloud-entra") as HTMLInputElement)?.value || "";
+    const googleClientId = (document.getElementById("opm-wa-cloud-google") as HTMLInputElement)?.value || "";
+    return saveCloudConfig({ ...cfg, folderName, entraClientId, googleClientId });
+  };
+
+  document.getElementById("opm-wa-cloud-close")?.addEventListener("click", () => toggleCloudModal(false));
+  modal.onclick = (ev) => {
+    if (ev.target === modal) toggleCloudModal(false);
+  };
+
+  document.getElementById("opm-wa-login-ms")?.addEventListener("click", async () => {
+    const statusEl = document.getElementById("opm-wa-cloud-status");
+    try {
+      const nextCfg = readCfgFromInputs();
+      if (statusEl) statusEl.textContent = "Logowanie Microsoft Entra ID…";
+      await loginWithMicrosoftEntra(nextCfg);
+      updateHeaderUi();
+      toggleCloudModal(true);
+    } catch (err) {
+      if (statusEl) statusEl.textContent = err instanceof Error ? err.message : String(err);
+    }
+  });
+
+  document.getElementById("opm-wa-login-google")?.addEventListener("click", async () => {
+    const statusEl = document.getElementById("opm-wa-cloud-status");
+    try {
+      const nextCfg = readCfgFromInputs();
+      if (statusEl) statusEl.textContent = "Logowanie Google Drive…";
+      await loginWithGoogleDrive(nextCfg);
+      updateHeaderUi();
+      toggleCloudModal(true);
+    } catch (err) {
+      if (statusEl) statusEl.textContent = err instanceof Error ? err.message : String(err);
+    }
+  });
+
+  document.getElementById("opm-wa-login-local")?.addEventListener("click", async () => {
+    const statusEl = document.getElementById("opm-wa-cloud-status");
+    try {
+      const nextCfg = readCfgFromInputs();
+      await connectLocalSyncedFolder(nextCfg.folderName);
+      updateHeaderUi();
+      toggleCloudModal(true);
+    } catch (err) {
+      if (statusEl) statusEl.textContent = err instanceof Error ? err.message : String(err);
+    }
+  });
+
+  document.getElementById("opm-wa-cloud-logout")?.addEventListener("click", () => {
+    saveCloudSession(null);
+    updateHeaderUi();
+    toggleCloudModal(true);
+  });
+
+  document.getElementById("opm-wa-save-opm-cloud")?.addEventListener("click", async () => {
+    const cur = loadCloudSession();
+    const statusEl = document.getElementById("opm-wa-cloud-status");
+    if (!cur) return;
+    try {
+      const nextCfg = readCfgFromInputs();
+      cur.folderName = nextCfg.folderName;
+      saveCloudSession(cur);
+      const saved = await saveFileToCloudFolder(cur, session.fileName || "model.opm.json", session.text, "application/json");
+      if (statusEl) statusEl.textContent = `✓ Zapisano ${saved.name} w /${cur.folderName}`;
+      showToast(`☁ Zapisano ${saved.name} w /${cur.folderName}`);
+      await refreshCloudFilesList();
+    } catch (err) {
+      if (statusEl) statusEl.textContent = err instanceof Error ? err.message : String(err);
+    }
+  });
+
+  document.getElementById("opm-wa-save-md-cloud")?.addEventListener("click", async () => {
+    const cur = loadCloudSession();
+    const statusEl = document.getElementById("opm-wa-cloud-status");
+    const model = parseCurrentModel();
+    if (!cur || !model) return;
+    try {
+      const md = documentWithMethods(model, METHODS);
+      const mdName = (session.fileName || "model.opm.json").replace(/\.opm\.json$/i, "") + ".md";
+      const saved = await saveFileToCloudFolder(cur, mdName, md, "text/markdown");
+      if (statusEl) statusEl.textContent = `✓ Zapisano ${saved.name} w /${cur.folderName}`;
+      showToast(`☁ Zapisano ${saved.name} w /${cur.folderName}`);
+      await refreshCloudFilesList();
+    } catch (err) {
+      if (statusEl) statusEl.textContent = err instanceof Error ? err.message : String(err);
+    }
+  });
+
+  document.getElementById("opm-wa-refresh-cloud")?.addEventListener("click", () => void refreshCloudFilesList());
+  void refreshCloudFilesList();
 }
 
 function mountWebAppChrome() {
@@ -561,6 +829,8 @@ function mountWebAppChrome() {
       <span class="opm-wa-sep"></span>
       <button id="opm-webapp-btn-open" class="opm-wa-btn"></button>
       <button id="opm-webapp-btn-save" class="opm-wa-btn opm-wa-btn-primary"></button>
+      <button id="opm-webapp-btn-cloud-save" class="opm-wa-btn opm-wa-btn-primary" style="display:none"></button>
+      <button id="opm-webapp-btn-cloud" class="opm-wa-btn" title="OneDrive (Microsoft Entra) / Google Drive"></button>
       <button id="opm-webapp-btn-md" class="opm-wa-btn"></button>
       <button id="opm-webapp-btn-json" class="opm-wa-btn" title="Live .opm.json source editor">{ } JSON</button>
       <span class="opm-wa-sep"></span>
@@ -597,6 +867,20 @@ function mountWebAppChrome() {
   document.getElementById("opm-webapp-btn-redo")?.addEventListener("click", redo);
   document.getElementById("opm-webapp-btn-open")?.addEventListener("click", openFileFromDisk);
   document.getElementById("opm-webapp-btn-save")?.addEventListener("click", saveModelToDisk);
+  document.getElementById("opm-webapp-btn-cloud")?.addEventListener("click", () => toggleCloudModal());
+  document.getElementById("opm-webapp-btn-cloud-save")?.addEventListener("click", async () => {
+    const cs = loadCloudSession();
+    if (!cs) {
+      toggleCloudModal(true);
+      return;
+    }
+    try {
+      const saved = await saveFileToCloudFolder(cs, session.fileName || "model.opm.json", session.text, "application/json");
+      showToast(`☁ Zapisano ${saved.name} w /${cs.folderName}`);
+    } catch {
+      toggleCloudModal(true);
+    }
+  });
   document.getElementById("opm-webapp-btn-md")?.addEventListener("click", exportMarkdown);
   document.getElementById("opm-webapp-btn-json")?.addEventListener("click", () => toggleJsonPane());
 
@@ -679,8 +963,11 @@ function mountWebAppChrome() {
   updateHeaderUi();
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", mountWebAppChrome);
-} else {
-  mountWebAppChrome();
+if (!handleOAuthPopupCallbackIfPresent()) {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountWebAppChrome);
+  } else {
+    mountWebAppChrome();
+  }
 }
+

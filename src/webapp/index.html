@@ -260,6 +260,116 @@
   #opm-webapp-toast.visible {
     opacity: 1;
   }
+
+  .opm-wa-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 12, 24, 0.72);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 200;
+  }
+  .opm-wa-modal-backdrop.open {
+    display: flex;
+  }
+  .opm-wa-modal {
+    width: 100%;
+    max-width: 720px;
+    max-height: 88vh;
+    overflow-y: auto;
+    border-radius: 6px;
+    background: var(--vscode-editorWidget-background);
+    border: 1px solid var(--vscode-editorWidget-border);
+    box-shadow: 0 18px 48px var(--vscode-widget-shadow);
+    color: var(--vscode-foreground);
+  }
+  .opm-wa-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--vscode-editorWidget-border);
+  }
+  .opm-wa-modal-sub {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    margin-top: 2px;
+  }
+  .opm-wa-modal-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .opm-wa-cloud-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .opm-wa-cloud-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+  }
+  .opm-wa-input {
+    background: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 3px;
+    padding: 5px 8px;
+    font: inherit;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 12px;
+  }
+  .opm-wa-cloud-providers,
+  .opm-wa-cloud-save-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .opm-wa-cloud-status {
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-editorWidget-border);
+  }
+  .opm-wa-cloud-files {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .opm-wa-cloud-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 4px;
+    background: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-editorWidget-border);
+  }
+  .opm-wa-cloud-row small {
+    display: block;
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+  }
+  .opm-wa-cloud-row-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .opm-wa-cloud-empty {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    padding: 8px 2px;
+  }
 </style>
 </head>
 <body class="vscode-dark">
@@ -280,3 +390,4 @@
   <script src="./webview.js"></script>
 </body>
 </html>
+
