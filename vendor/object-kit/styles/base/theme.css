@@ -1,0 +1,25 @@
+/* Light and dark theme. tokens.css declares the light values on :root and the
+   dark ones under [data-theme="dark"], re-pointing the same names, so no
+   component carries code per theme. theme/themeInit.js puts the attribute on
+   <html> before the first paint; without it a page stays light, which is how
+   object.pl, the print templates and the PDF service see it.
+
+   data-theme="light" on any other element keeps the light theme inside a
+   dark page: print and PDF previews, the brand field, e-mail signatures. Such
+   an element starts from the theme's canvas, white text on teal; a light
+   sheet inside it is a .paper of its own or sets its colours from the paper
+   tokens (--paper, --text-dark, --paper-line), as the letterhead does. */
+:root,
+[data-theme="light"] {
+    color-scheme: light;
+}
+
+[data-theme="dark"] {
+    color-scheme: dark;
+}
+
+/* An element with its own theme does not inherit the page's text colour.
+   Zero specificity: any class that sets a colour wins, wherever it loads. */
+:where([data-theme]) {
+    color: var(--text-main);
+}

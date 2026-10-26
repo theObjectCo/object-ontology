@@ -17,6 +17,22 @@ export async function openBrowserApp(query = '') {
   });
   await new Promise(r => server.listen(0, '127.0.0.1', r));
   let browser;
+  const close = async () => {
+    let timer;
+    try {
+      if (browser) await Promise.race([
+        browser.close(),
+        new Promise((_, reject) => { timer = setTimeout(() => {
+          browser.process()?.kill();
+          reject(new Error('Test browser did not exit within 10 seconds'));
+        }, 10_000); }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+      server.closeAllConnections();
+      await new Promise(r => server.close(r));
+    }
+  };
   try {
     browser = await puppeteer.launch({
       executablePath: process.env.CHROME || (process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : '/usr/bin/google-chrome'),
@@ -29,13 +45,9 @@ export async function openBrowserApp(query = '') {
     await page.setRequestInterception(true);
     page.on('request', req => req.url().startsWith('http://127.0.0.1:') ? req.continue() : req.abort());
     await page.goto(`http://127.0.0.1:${server.address().port}/${query}`);
-    return { page, errors, close: async () => {
-      await browser.close();
-      await new Promise(r => server.close(r));
-    } };
+    return { page, errors, close };
   } catch (error) {
-    if (browser) await browser.close();
-    await new Promise(r => server.close(r));
+    await close();
     throw error;
   }
 }

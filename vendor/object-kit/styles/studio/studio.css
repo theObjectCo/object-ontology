@@ -1,0 +1,459 @@
+/* ==========================================================================
+   Unified Studio Shell (@kit/studio)
+   Shared 3D / Configurator / Inspector shell for:
+   - demo-satellite.fraxin.object.pl (Fraxin Olive)
+   - app.tila.object.pl (Tila Terracotta & Saffron)
+   - inspector.phenome.object.pl (Phenome Navy & Saffron)
+
+   Apps differ ONLY by:
+   1. Brand color palette tokens (--bg-base, --bg-panel, --border-light, --color-primary, etc.)
+   2. Brand logo / wordmark in .v2-header-logo
+   3. Tool slots in .v2-header, .v2-icon-rail, .v2-left-dock, and .floating-details-panel
+
+   Unified visual rules:
+   - Every floating island (.v2-header, .v2-icon-rail, .fx-float-panel,
+     .floating-details-panel, .cad-viewport-status-bar) has a 1px hairline
+     border: `1px solid var(--border-light)` and sharp 0px corners.
+   - Docked panels inside `.v2-left-dock` (.fx-float-panel.docked) keep their
+     1px border (`1px solid var(--border-light)`) with `box-shadow: none`.
+   - Rail icons (.v2-rail-btn, 32x32) and header toolbar icons
+     (.v2-header-tools .btn-icon, 30x30) are borderless by default, with a
+     tinted hover state and an inset 2px left indicator bar when active on the rail.
+   - View pills (.v2-view-pill) and standalone action buttons (.btn-icon outside
+     .v2-header-tools) carry `1px solid var(--border-light)`.
+   - Desktop header (.v2-header) is always a single 38px row; it wraps to a
+     two-row 84px grid only below 980px (`@media (max-width: 980px)`).
+   ========================================================================== */
+
+:root {
+  --v2-header-h: 38px;
+  --v2-rail-w: 44px;
+  --v2-status-h: 24px;
+  --v2-gap: 10px;
+  --v2-top: calc(var(--v2-header-h) + var(--v2-gap) * 2);
+  --v2-bottom: var(--v2-gap);
+  --v2-left: calc(var(--v2-rail-w) + var(--v2-gap) * 2);
+  --v2-dock-w: 320px;
+  --v2-details-w: 340px;
+  --v2-float-shadow: 0 6px 22px rgba(0, 0, 0, 0.28);
+
+  --z-rail: 80;
+  --z-dock: 70;
+  --z-float-panel: 100;
+  --z-inspector: 105;
+  --z-header: 110;
+}
+
+.v2-studio-app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--bg-base);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.v2-studio-app.has-status-bar {
+  --v2-bottom: calc(var(--v2-status-h) + var(--v2-gap) * 2);
+}
+
+.v2-viewport-area {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+/* ---- Floating Header (38px single row on desktop) --------------------- */
+.v2-header {
+  position: fixed;
+  top: var(--v2-gap);
+  left: var(--v2-gap);
+  right: var(--v2-gap);
+  height: var(--v2-header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px 0 16px;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--v2-float-shadow);
+  z-index: var(--z-header);
+}
+
+.v2-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.v2-header-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Major Mono Display', var(--font-mono);
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  text-decoration: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.v2-header-breadcrumb {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.v2-header-breadcrumb .sep {
+  opacity: 0.4;
+}
+
+.v2-header-breadcrumb .current {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.v2-header-center,
+.v2-header-right,
+.view-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.v2-header-tools {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.v2-header-tools > .sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-light);
+  margin: 0 4px;
+}
+
+/* ---- Unified Buttons & View Pills ------------------------------------- */
+/* Standalone action button: 1px border */
+.btn-icon {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  border-radius: 0;
+  color: var(--text-main);
+  padding: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font: inherit;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.btn-icon:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border-color: var(--border-focus, var(--color-primary));
+}
+
+.btn-icon:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.btn-icon.active,
+.btn-icon.primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary, var(--text-dark));
+  border-color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Toolbar icon inside header-tools: borderless 30x30 */
+.v2-header-tools .btn-icon {
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+}
+
+.v2-header-tools .btn-icon:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border-color: transparent;
+  color: var(--text-main);
+}
+
+.v2-header-tools .btn-icon.active {
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+  border-color: transparent;
+  color: var(--color-primary);
+}
+
+/* Segmented / View Pill: 1px border, collapsed shared edge */
+.v2-view-pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.v2-view-pill + .v2-view-pill {
+  border-left: none;
+}
+
+.v2-view-pill:hover:not(.active) {
+  color: var(--text-main);
+  border-color: var(--color-primary);
+}
+
+.v2-view-pill.active {
+  background: var(--color-primary);
+  color: var(--color-on-primary, var(--text-dark));
+  border-color: var(--color-primary);
+}
+
+/* ---- Floating Left Icon Rail (44px wide, 32x32 borderless buttons) ---- */
+.v2-icon-rail {
+  position: fixed;
+  top: var(--v2-top);
+  left: var(--v2-gap);
+  bottom: var(--v2-bottom);
+  width: var(--v2-rail-w);
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--v2-float-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  z-index: var(--z-rail);
+  user-select: none;
+}
+
+.v2-rail-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.v2-rail-divider {
+  width: 22px;
+  height: 1px;
+  background: var(--border-light);
+  margin: 2px 0;
+}
+
+.v2-rail-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.v2-rail-btn:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.v2-rail-btn.active {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-primary);
+}
+
+/* ---- Left Dock & Floating/Docked Panels ------------------------------- */
+.v2-left-dock {
+  position: fixed;
+  top: var(--v2-top);
+  left: var(--v2-left);
+  width: var(--v2-dock-w);
+  bottom: var(--v2-bottom);
+  display: flex;
+  flex-direction: column;
+  gap: var(--v2-gap);
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: var(--z-dock);
+  pointer-events: none;
+}
+
+.fx-float-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-light);
+  border-radius: 0;
+  box-shadow: var(--v2-float-shadow);
+  overflow: hidden;
+  pointer-events: auto;
+  min-height: 0;
+}
+
+.fx-float-panel.docked {
+  width: 100%;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+
+.floating-details-panel {
+  position: fixed;
+  top: var(--v2-top);
+  right: var(--v2-gap);
+  bottom: var(--v2-bottom);
+  width: var(--v2-details-w);
+  max-width: 90vw;
+  z-index: var(--z-inspector);
+}
+
+.v2-panel-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.v2-panel-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.v2-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.v2-panel-close {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.v2-panel-close:hover {
+  color: var(--text-main);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.v2-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* ---- Bottom Status Bar ------------------------------------------------ */
+.cad-viewport-status-bar {
+  position: fixed;
+  left: var(--v2-gap);
+  right: var(--v2-gap);
+  bottom: var(--v2-gap);
+  height: var(--v2-status-h);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-light);
+  padding: 0 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  z-index: var(--z-rail);
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ---- Responsive Breakpoints (< 980px two-row header, < 760px phone) --- */
+@media (max-width: 1180px) {
+  :root {
+    --v2-dock-w: 280px;
+    --v2-details-w: 300px;
+  }
+}
+
+@media (max-width: 980px) {
+  .v2-studio-app {
+    --v2-header-h: 84px;
+    --v2-top: calc(var(--v2-header-h) + var(--v2-gap) * 2);
+  }
+  .v2-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 36px 40px;
+    gap: 0 8px;
+  }
+  .v2-header-left {
+    grid-area: 1 / 1;
+  }
+  .v2-header-right {
+    grid-area: 1 / 2;
+    justify-self: end;
+  }
+  .v2-header-center,
+  .view-controls {
+    grid-area: 2 / 1 / 3 / -1;
+    justify-content: flex-end;
+  }
+}
