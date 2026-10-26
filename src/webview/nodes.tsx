@@ -22,9 +22,18 @@ export interface NodeData extends Record<string, unknown> {
   hasZoom?: boolean;
   empty?: boolean;
   emptyHint?: string;
+  singleSelected?: boolean;
   onLabel?: (id: string, label: string | null) => void;
   onStartEdit?: (id: string) => void;
   onOpenZoom?: (id: string) => void;
+  onAddState?: (id: string) => void;
+  onRenameState?: (id: string, oldState: string, newState: string) => void;
+  onDeleteState?: (id: string, state: string) => void;
+  onToggleRole?: (id: string) => void;
+  onTogglePhysical?: (id: string) => void;
+  onToggleEnv?: (id: string) => void;
+  onOpenInspector?: (id: string) => void;
+  onDeleteNode?: (id: string) => void;
 }
 
 const SIDES = [Position.Top, Position.Right, Position.Bottom, Position.Left];
@@ -59,6 +68,41 @@ function LabelEditor({ data, x, y, w }: { data: NodeData; x: number; y: number; 
   );
 }
 
+function StateInlineEditor({
+  state,
+  rect,
+  onCommit,
+  onCancel,
+}: {
+  state: string;
+  rect: Rect;
+  onCommit: (next: string) => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [value, setValue] = useState(state);
+  useEffect(() => {
+    ref.current?.focus();
+    ref.current?.select();
+  }, []);
+  return (
+    <input
+      ref={ref}
+      className="opm-state-inline-input nodrag"
+      style={{ left: rect.x - 2, top: rect.y - 1, width: Math.max(rect.w + 4, 68), height: rect.h + 2 }}
+      value={value}
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => onCommit(value.trim())}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === "Enter") onCommit(value.trim());
+        if (e.key === "Escape") onCancel();
+      }}
+    />
+  );
+}
+
 function Selection({ w, h, ellipse }: { w: number; h: number; ellipse?: boolean }) {
   const pad = 6;
   return (
@@ -86,8 +130,21 @@ export function ObjectNode({ data, selected }: NodeProps) {
   const d = data as NodeData;
   const hasStates = !!d.states?.length;
   const labelY = hasStates ? 21 : d.h / 2 + 4.5;
+  const [editingState, setEditingState] = useState<string | null>(null);
+
   return (
     <div className={classes(d, "opm-object", selected)} style={{ width: d.w, height: d.h }} title={d.tooltip} data-thing={d.id}>
+      {selected && d.singleSelected && !d.editing && (
+        <div className="opm-node-hud nodrag" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+          <button type="button" title="Rename (Double-click)" onClick={() => d.onStartEdit?.(d.id)}>✎</button>
+          <button type="button" title="Add state (S)" onClick={() => d.onAddState?.(d.id)}>+ Stan</button>
+          <button type="button" className={d.module ? "active" : ""} title="Toggle IT Module (thick border)" onClick={() => d.onToggleRole?.(d.id)}>Moduł</button>
+          <button type="button" className={d.physical ? "active" : ""} title="Toggle Physical / Actor (shaded)" onClick={() => d.onTogglePhysical?.(d.id)}>Fiz.</button>
+          <button type="button" className={d.environmental ? "active" : ""} title="Toggle Environmental (dashed)" onClick={() => d.onToggleEnv?.(d.id)}>Zewn.</button>
+          <button type="button" title="Inspector / Properties (F2)" onClick={() => d.onOpenInspector?.(d.id)}>⚙</button>
+          <button type="button" title="Delete (Del)" onClick={() => d.onDeleteNode?.(d.id)}>🗑</button>
+        </div>
+      )}
       <svg width={d.w} height={d.h} className="opm-shape">
         {d.physical && <rect className="opm-shadow" x={6} y={6} width={d.w} height={d.h} />}
         <rect className="opm-outline" x={1} y={1} width={d.w - 2} height={d.h - 2} strokeWidth={d.module ? 4 : 2} />
@@ -106,13 +163,36 @@ export function ObjectNode({ data, selected }: NodeProps) {
         {selected && <Selection w={d.w} h={d.h} />}
       </svg>
       {d.editing && <LabelEditor data={d} x={8} y={hasStates ? 8 : d.h / 2 - 11} w={d.w - 16} />}
+      {editingState && d.stateRects?.[editingState] && (
+        <StateInlineEditor
+          state={editingState}
+          rect={d.stateRects[editingState]}
+          onCommit={(next) => {
+            const prev = editingState;
+            setEditingState(null);
+            if (!next) d.onDeleteState?.(d.id, prev);
+            else if (next !== prev) d.onRenameState?.(d.id, prev, next);
+          }}
+          onCancel={() => setEditingState(null)}
+        />
+      )}
       <SideHandles />
       {d.states?.map((s) => {
         const r = d.stateRects![s];
         return (
-          // the whole state box is a handle: a link drawn from it starts at the state
-          <Handle key={s} id={`state:${s}`} type="source" position={Position.Bottom} className="opm-state-handle"
-                  style={{ left: r.x, top: r.y, width: r.w, height: r.h, bottom: "auto", transform: "none" }} />
+          // the whole state box is a handle: a link drawn from it starts at the state; double-clicking edits the state inline
+          <Handle
+            key={s}
+            id={`state:${s}`}
+            type="source"
+            position={Position.Bottom}
+            className="opm-state-handle"
+            style={{ left: r.x, top: r.y, width: r.w, height: r.h, bottom: "auto", transform: "none" }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setEditingState(s);
+            }}
+          />
         );
       })}
     </div>
@@ -124,6 +204,16 @@ export function ProcessNode({ data, selected }: NodeProps) {
   return (
     <div className={classes(d, "opm-process", selected)} style={{ width: d.w, height: d.h }} title={d.tooltip} data-thing={d.id}
          onDoubleClick={(e) => { e.stopPropagation(); d.onOpenZoom?.(d.id); }}>
+      {selected && d.singleSelected && !d.editing && (
+        <div className="opm-node-hud nodrag" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+          <button type="button" title="Rename (Double-click text)" onClick={() => d.onStartEdit?.(d.id)}>✎</button>
+          <button type="button" title="In-zoom subprocesses (Enter / Double-click)" onClick={() => d.onOpenZoom?.(d.id)}>🔍 Zoom</button>
+          <button type="button" className={d.physical ? "active" : ""} title="Toggle Physical (shaded)" onClick={() => d.onTogglePhysical?.(d.id)}>Fiz.</button>
+          <button type="button" className={d.environmental ? "active" : ""} title="Toggle Environmental (dashed)" onClick={() => d.onToggleEnv?.(d.id)}>Zewn.</button>
+          <button type="button" title="Inspector / Capabilities (F2)" onClick={() => d.onOpenInspector?.(d.id)}>⚙</button>
+          <button type="button" title="Delete (Del)" onClick={() => d.onDeleteNode?.(d.id)}>🗑</button>
+        </div>
+      )}
       <svg width={d.w} height={d.h} className="opm-shape">
         {d.physical && <ellipse className="opm-shadow" cx={d.w / 2 + 6} cy={d.h / 2 + 6} rx={d.w / 2 - 1} ry={d.h / 2 - 1} />}
         <ellipse className="opm-outline" cx={d.w / 2} cy={d.h / 2} rx={d.w / 2 - 1} ry={d.h / 2 - 1} strokeWidth={d.hasZoom ? 3.5 : 2} />

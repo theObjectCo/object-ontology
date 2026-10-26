@@ -154,6 +154,7 @@ export function validate(model: Model, options: ValidateOptions = {}): Diagnosti
   }
 
   for (const [id, o] of Object.entries(objs)) checkSchema(model, id, o, options, report);
+  checkCapabilities(model, report);
   checkStories(model, report);
   checkLayout(model, report);
   return out;
@@ -193,6 +194,49 @@ function elementOf(path: Path): string | undefined {
 }
 
 type Report = (s: Severity, c: string, m: string, p: Path, e?: string) => void;
+
+/** P28 capability, authority and deployment checks. */
+function checkCapabilities(model: Model, report: Report): void {
+  const objs = objects(model);
+  const procs = processes(model);
+  const L = (id: string) => label(model, id);
+  const authorityOwner = new Map<string, string>();
+
+  for (const [id, o] of Object.entries(objs)) {
+    const isPerformer = o.role === "module" || essence(o) === "physical";
+    if (!isPerformer && (o.capabilities?.length || o.owns?.length || o.deploymentName)) {
+      report("warning", "p28-not-performer",
+        `${L(id)} declares capabilities, owns or deploymentName, which belong on a module or an agent (physical object).`,
+        ["objects", id]);
+    }
+    (o.owns ?? []).forEach((auth, i) => {
+      const earlier = authorityOwner.get(auth);
+      if (earlier && earlier !== id) {
+        report("warning", "duplicate-authority",
+          `Both ${L(earlier)} and ${L(id)} claim authority "${auth}" in owns (Rule 1: one owner per fact).`,
+          ["objects", id, "owns", i], id);
+      } else {
+        authorityOwner.set(auth, id);
+      }
+    });
+  }
+
+  for (const [pid, p] of Object.entries(procs)) {
+    if (!p.capability) continue;
+    const performers = [
+      ...(p.requires ?? []).map(refObject).filter((oid) => objs[oid]?.role === "module"),
+      ...refIds(p.handledBy).filter((oid) => objs[oid] && essence(objs[oid]) === "physical"),
+    ];
+    for (const oid of performers) {
+      const o = objs[oid];
+      if (o?.capabilities?.length && !o.capabilities.includes(p.capability)) {
+        report("warning", "missing-capability",
+          `${L(oid)} performs ${L(pid)} (${p.capability}), but its capabilities list does not include "${p.capability}".`,
+          ["objects", oid, "capabilities"], oid);
+      }
+    }
+  }
+}
 
 /** User stories: lanes are agents or modules of the model, steps name its processes and objects. */
 function checkStories(model: Model, report: Report): void {

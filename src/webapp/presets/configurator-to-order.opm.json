@@ -1,0 +1,1546 @@
+{
+  "name": "Phenome: the big picture",
+  "description": "A configurable product is defined once. The same definition gives the customer a preview, is frozen into a snapshot that is priced and ordered, and produces the files production works from. The model names protocols and the requirements on them, never a product, tool or technology. Each module is a unit of code of its own; modules exchange only the objects drawn between them, and every such object is a protocol with a contract. How a module meets these requirements is stated by its implementation, not here. Every requirement has an identifier (such as SNP-2); an implementation of the engine is conformant when each identifier is covered by a passing conformance test that names it. Handbook references: modules M01 to M32, boundaries B01 to B24.",
+  "objects": {
+    "author": {
+      "essence": "physical",
+      "description": "An engineer who writes or prototypes a configurator."
+    },
+    "designer": {
+      "essence": "physical",
+      "description": "A person who builds a configurator in conversation with an AI agent.",
+      "note": "Open decision D1: who this person is. The answer decides whether drafts may run on shared infrastructure and whether the agent may write code or only a graph."
+    },
+    "customer": {
+      "essence": "physical",
+      "affiliation": "environmental",
+      "description": "A person who configures and buys a product."
+    },
+    "salesPerson": {
+      "essence": "physical",
+      "description": "A person in the business who checks an imported order and releases it to production."
+    },
+    "geometryKernel": {
+      "role": "module",
+      "description": "Computes geometry for a definition. Must give the same result for the same inputs wherever it runs, on the customer's side and on the authoritative side.",
+      "note": "**Requirements.**\n\n- KRN-1: The same inputs give the same result on the customer's side and on the authoritative side."
+    },
+    "nurbsBackend": {
+      "role": "module",
+      "affiliation": "environmental",
+      "label": "NURBS backend",
+      "description": "Computes on NURBS curves, surfaces and solids for the kernel. Takes and returns plain data, so the kernel's own types do not depend on it.",
+      "note": "Open decision D7: whether it is available on the customer's side or on the authoritative side only."
+    },
+    "fieldEngine": {
+      "role": "module",
+      "description": "Evaluates signed distance fields and returns meshes and point sets.",
+      "note": "Open decision D6: a second engine beside the kernel, or a prototype to retire."
+    },
+    "authoringLibraries": {
+      "role": "module",
+      "description": "The model tree and parts model, the operation catalogue, dataflow graphs and sketching: everything a definition is written against."
+    },
+    "inspector": {
+      "role": "module",
+      "description": "Builds a definition, runs it and answers its whole state; exports the published UI schema. Its answer to a failed build carries the full diagnostic text.",
+      "note": "**Requirements.**\n\n- INS-1: A failed build is answered with the full diagnostic text.\n\nHandbook boundary B03."
+    },
+    "authoringWindow": {
+      "role": "module",
+      "description": "Shows an author the tree, the knobs and the scene of a definition through the inspector. Not tied to any visual editor."
+    },
+    "visualEditor": {
+      "role": "module",
+      "affiliation": "environmental",
+      "description": "A node-based visual programming editor with its own geometry runtime."
+    },
+    "canvasLink": {
+      "role": "module",
+      "description": "Provides provider-neutral agent access through MCP to 2D and 3D content applications. Application adapters expose sessions, documents, capabilities and explicit targets, retain application-specific tools and coordinate conflicting writes across clients."
+    },
+    "canvasOperations": {
+      "role": "module",
+      "description": "Offers the kernel's operations as components in the visual editor and converts geometry between the editor's types and the kernel's at that edge only."
+    },
+    "surfaceAnalysis": {
+      "role": "module",
+      "description": "Measures continuity across the boundaries between surfaces and reports numbers; the judgement stays with the author."
+    },
+    "configuratorComponents": {
+      "role": "module",
+      "description": "Lets a canvas declare itself a definition: parameters, node tree, BOM rows, artifacts and displayed values, answered through the same UI-generator protocol as a code definition."
+    },
+    "agentKit": {
+      "role": "module",
+      "description": "Everything an AI agent needs to produce a definition: the rules of a definition as a knowledge file in every new project, the inspector's operations as agent tools (new, catalogue, run, set, apply, UI schema), and a context pack for assistants without tools. Must not assume any particular agent.",
+      "note": "An organisation may restrict which agents may see its clients' data; that rule belongs to the organisation, not to the kit."
+    },
+    "agentApp": {
+      "role": "module",
+      "description": "A conversation with an AI agent beside a view of the result, for people who do not work with a coding agent."
+    },
+    "aiAgent": {
+      "role": "module",
+      "affiliation": "environmental",
+      "label": "AI agent",
+      "description": "A language model that writes the definition's code, graph or canvas."
+    },
+    "previewGenerator": {
+      "role": "module",
+      "description": "Runs a definition on the customer's side and draws the scene. Its results are never authoritative: nothing priced or ordered rests on them.",
+      "note": "**Requirements.**\n\n- PRV-1: Nothing priced or ordered rests on a preview result."
+    },
+    "generatorService": {
+      "role": "module",
+      "description": "The authoritative generator: many sessions, revisions, the freeze, limits on time and memory per run.",
+      "note": "Open decision D4: one service for all clients or one per client."
+    },
+    "canvasRunner": {
+      "role": "module",
+      "affiliation": "environmental",
+      "description": "Runs canvas definitions on the authoritative side.",
+      "note": "Needed only if canvas definitions are sold to customers (open decision D5)."
+    },
+    "customerUi": {
+      "role": "module",
+      "label": "Customer UI",
+      "description": "The configurator a customer sees. Built only from the published UI schema and the scene; embeddable in a web page and in a shop.",
+      "note": "Handbook M04."
+    },
+    "shop": {
+      "role": "module",
+      "affiliation": "environmental",
+      "description": "Product pages, cart and checkout. Owns the payment transaction (handbook M13).",
+      "note": "Open decision D2: the shop or the ERP owns the catalogue (handbook M03)."
+    },
+    "pricingModule": {
+      "role": "module",
+      "description": "Prices a valid snapshot. Never computes geometry.",
+      "note": "**Requirements.**\n\n- PRM-1: The pricing module never computes geometry.\n\nHandbook M10, M11."
+    },
+    "artifactStore": {
+      "role": "module",
+      "label": "Snapshot and artifact store",
+      "description": "Keeps snapshots and the files they reference, addressed by content hash, and never changes a stored item.",
+      "note": "**Requirements.**\n\n- ART-1: A stored item is addressed by content hash and never changed.\n\nHandbook M09."
+    },
+    "productionExport": {
+      "role": "module",
+      "description": "Writes the production files of a snapshot from its part tree: the exchange model with the assembly tree and exact solids, the BOM, drawings, cut lists, and the archive with its manifest.",
+      "note": "Meets PRD-1 to PRD-5 of the production files."
+    },
+    "erp": {
+      "role": "module",
+      "affiliation": "environmental",
+      "label": "ERP",
+      "description": "Owns sale orders and accounting. Imports an order request as a confirmed sale order.",
+      "note": "Handbook B09, M14."
+    },
+    "definition": {
+      "states": [
+        "draft",
+        "verified",
+        "published"
+      ],
+      "description": "A configurator at a version, with its published UI schema.",
+      "consistsOf": [
+        "uiSchema"
+      ],
+      "note": "**Requirements.**\n\n- DEF-1: A definition is verified when the inspector builds it, runs it once without error and exports its UI schema; this check is what compatible with Phenome means, whoever or whatever wrote it.\n- DEF-2: A factory reads nothing but its inputs.\n- DEF-3: Inputs are plain values: numbers, booleans, strings, enumerations.\n- DEF-4: A published definition is never changed, only superseded by a new version."
+    },
+    "codeDefinition": {
+      "isA": "definition",
+      "description": "A definition written as code: one model with its factories and nodes."
+    },
+    "canvasDefinition": {
+      "isA": "definition",
+      "description": "A definition drawn on a canvas and marked up with the configurator components."
+    },
+    "uiSchema": {
+      "label": "UI schema",
+      "description": "The published inputs and displays of a definition, pruned to what is published.",
+      "note": "**Requirements.**\n\n- UI-1: Every node and input has an identifier that survives structural change; an index or a position is not an identifier.\n- UI-2: The schema carries no human-readable text; labels and translations belong to the UI.\n- UI-3: The schema holds only what the definition publishes."
+    },
+    "canvas": {
+      "description": "A prototype drawn in the visual editor."
+    },
+    "recipe": {
+      "description": "A canvas written out as data: components, wires, typed-in values, sliders with bounds."
+    },
+    "continuityReport": {
+      "description": "Continuity measured along each boundary between two surfaces: position, tangent and curvature deviations."
+    },
+    "conversation": {
+      "description": "What the person and the AI agent said, with the drafts the agent produced."
+    },
+    "configuratorBrief": {
+      "states": [
+        "draft",
+        "approved"
+      ],
+      "description": "What the configurator must do, in the words of the person who wants it: product and purpose, users, inputs with ranges and defaults, rules, manufacturing limits, price owner and price drivers, production outputs, presentation, host and connected systems, languages, success measures, assumptions.",
+      "note": "**Requirements.**\n\n- BRF-1: Before writing a definition with a person, the agent interviews them and writes a brief; most people do not know what a good configurator needs, so the agent leads with questions.\n- BRF-2: Questions come one at a time, in plain words, with a proposed default; the whole interview for a simple product stays under fifteen minutes.\n- BRF-3: Every published input of the definition traces back to an entry of the approved brief; assumptions are listed for the person to confirm.\n- BRF-4: Writing the definition starts only after the person approved the brief; later changes go into the brief first."
+    },
+    "configuration": {
+      "description": "The values a customer chose, at a session revision.",
+      "exhibits": [
+        "revision"
+      ],
+      "note": "**Requirements.**\n\n- CFG-1: A configuration addresses inputs by the UI schema's identifiers.\n- CFG-2: Every change raises the revision; a result computed for an older revision never overwrites a newer one.\n- CFG-3: Entries whose identifiers no longer resolve are reported, never applied to another input.\n\nHandbook M04, B03."
+    },
+    "revision": {},
+    "scene": {
+      "description": "What the view draws: meshes and their placements.",
+      "note": "**Requirements.**\n\n- SCN-1: Every placement maps back to the node it came from.\n- SCN-2: Nodes with identical inputs to one factory share one mesh."
+    },
+    "snapshot": {
+      "states": [
+        "valid",
+        "expired"
+      ],
+      "description": "One frozen revision: definition and engine versions, inputs, BOM, cost drivers and artifact references.",
+      "consistsOf": [
+        "bom",
+        "costDrivers"
+      ],
+      "exhibits": [
+        "hash"
+      ],
+      "note": "**Requirements.**\n\n- SNP-1: Only the authoritative generator produces a snapshot.\n- SNP-2: A snapshot is immutable once written.\n- SNP-3: A snapshot carries every version it depends on, so it can be recomputed and checked.\n- SNP-4: The same configuration of the same definition version gives the same snapshot hash.\n\nEverything after the configurator depends on it. Handbook B05, B09."
+    },
+    "bom": {
+      "label": "BOM"
+    },
+    "costDrivers": {},
+    "hash": {
+      "description": "A content hash of the snapshot."
+    },
+    "productionFiles": {
+      "description": "Files referenced from the snapshot by content hash: cut list, drawings, production data, later machine programs.",
+      "note": "**Requirements.**\n\n- PRD-1: Production receives one archive per order, named with the order number and the date, with a manifest listing every file and its content hash.\n- PRD-2: The archive contains a STEP model with the assembly tree and exact B-rep solids, one product per part.\n- PRD-3: The archive contains a BOM as PDF and as data, and the BOM agrees with the STEP tree.\n- PRD-4: The archive contains the configuration it was computed from.\n- PRD-5: The same snapshot gives the same archive bytes."
+    },
+    "priceResult": {
+      "states": [
+        "complete",
+        "partial"
+      ],
+      "description": "A price for one snapshot, with its validity and the gaps it could not fill.",
+      "note": "**Requirements.**\n\n- PRC-1: A price result names the snapshot it priced.\n- PRC-2: A price result expires no later than its snapshot.\n- PRC-3: The price comes from the owner of prices through the pricing contract, with the time it was computed."
+    },
+    "shopOrder": {
+      "states": [
+        "open",
+        "paid"
+      ],
+      "description": "An order in the shop with one custom line per configured product.",
+      "note": "**Requirements.**\n\n- SHP-1: Each line carries the snapshot reference and the price from the pricing module; the shop sets no price of its own for a configured product."
+    },
+    "orderRequest": {
+      "description": "A frozen snapshot with its price, sent to the ERP for import.",
+      "note": "**Requirements.**\n\n- ORD-1: The idempotency key of an order request is the channel together with the channel's own order line reference; the same key returns the existing order. The snapshot hash identifies the configuration, not the order: two orders of the same configuration are two orders.\n- ORD-2: The same key with a different payload (another snapshot, another quantity or price) is a conflict.\n- ORD-3: A channel's order number is kept as an external reference and never becomes the ERP's own identifier.\n- ORD-4: The import checks the total against the price owner and refuses a mismatch."
+    },
+    "saleOrder": {
+      "description": "The confirmed sale order in the ERP.",
+      "tagged": [
+        {
+          "object": "productionFiles",
+          "tag": "carries"
+        }
+      ],
+      "states": [
+        "confirmed",
+        "released"
+      ]
+    },
+    "topologyOptimisation": {
+      "description": "Distributes material in a design domain under loads and supports so that a goal such as stiffness is best for a given amount of material, and returns the material layout as a density field.",
+      "note": "Added by the owner on 2026-10-20 as a module of its own, not part of the Field Engine. The first implementation is a GPU prototype; fluid problems (CFD) may join later. Licences of everything it ships must allow publishing.",
+      "role": "module"
+    },
+    "designDomain": {
+      "description": "The space material may occupy, with its supports, loads, material and the allowed amount of material."
+    },
+    "materialLayout": {
+      "description": "The optimised distribution of material in the design domain as a density field, with the value of the goal it reaches."
+    },
+    "furniture": {
+      "description": "Parametric furniture parts a definition is assembled from: boards with their material, edge banding, grain and machining, and the assemblies built of them, such as a cabinet carcass, a drawer or a door, each part with inputs of its own and a stable identifier.",
+      "note": "Added by the owner on 2026-10-23 as a module of its own (decision P22). It starts from a single board of a kitchen cabinet; the construction rules come from the kitchen and furniture kits written for the interiors portal. Its cut list reaches production through the production export.",
+      "role": "module"
+    }
+  },
+  "processes": {
+    "authoring": {
+      "description": "Writing a definition as code and checking it.",
+      "handledBy": [
+        "author"
+      ],
+      "zoomsInto": [
+        "modelWriting",
+        "verifying",
+        "publishing"
+      ]
+    },
+    "modelWriting": {
+      "handledBy": [
+        "author"
+      ],
+      "requires": [
+        "authoringWindow",
+        "authoringLibraries",
+        "geometryKernel",
+        "furniture"
+      ],
+      "yields": [
+        {
+          "object": "codeDefinition"
+        },
+        {
+          "object": "definition",
+          "state": "draft"
+        }
+      ]
+    },
+    "verifying": {
+      "requires": [
+        "inspector"
+      ],
+      "changes": [
+        {
+          "object": "definition",
+          "from": "draft",
+          "to": "verified"
+        }
+      ]
+    },
+    "publishing": {
+      "requires": [
+        "inspector"
+      ],
+      "changes": [
+        {
+          "object": "definition",
+          "from": "verified",
+          "to": "published"
+        }
+      ],
+      "yields": [
+        "uiSchema"
+      ]
+    },
+    "prototyping": {
+      "description": "Sketching in the visual editor and translating the sketch to code.",
+      "handledBy": [
+        "author"
+      ],
+      "zoomsInto": [
+        "sketching",
+        "transcribing",
+        "emitting"
+      ]
+    },
+    "sketching": {
+      "handledBy": [
+        "author"
+      ],
+      "requires": [
+        "visualEditor",
+        "canvasOperations",
+        "geometryKernel",
+        "authoringLibraries"
+      ],
+      "yields": [
+        "canvas"
+      ]
+    },
+    "transcribing": {
+      "requires": [
+        "canvasLink",
+        "canvas"
+      ],
+      "yields": [
+        "recipe"
+      ]
+    },
+    "emitting": {
+      "requires": [
+        "authoringLibraries"
+      ],
+      "consumes": [
+        "recipe"
+      ],
+      "yields": [
+        {
+          "object": "definition",
+          "state": "draft"
+        }
+      ],
+      "note": "The part of the canvas made of catalogue operations translates mechanically; the rest is translated by hand or by an agent."
+    },
+    "surfaceChecking": {
+      "description": "Checking the continuity of freeform surfaces on the canvas.",
+      "handledBy": [
+        "author"
+      ],
+      "requires": [
+        "visualEditor",
+        "surfaceAnalysis",
+        "canvas"
+      ],
+      "yields": [
+        "continuityReport"
+      ]
+    },
+    "briefing": {
+      "description": "Interviewing the person about the product before anything is built.",
+      "handledBy": [
+        "designer"
+      ],
+      "requires": [
+        "agentKit",
+        "aiAgent"
+      ],
+      "affects": [
+        "conversation"
+      ],
+      "yields": [
+        {
+          "object": "configuratorBrief",
+          "state": "draft"
+        }
+      ]
+    },
+    "briefApproving": {
+      "handledBy": [
+        "designer"
+      ],
+      "changes": [
+        {
+          "object": "configuratorBrief",
+          "from": "draft",
+          "to": "approved"
+        }
+      ]
+    },
+    "agentAuthoring": {
+      "description": "Building a definition with an AI agent through the agent kit.",
+      "handledBy": [
+        "designer"
+      ],
+      "requires": [
+        "agentKit",
+        "aiAgent",
+        "inspector",
+        "authoringLibraries",
+        {
+          "object": "configuratorBrief",
+          "state": "approved"
+        }
+      ],
+      "affects": [
+        "conversation"
+      ],
+      "yields": [
+        {
+          "object": "definition",
+          "state": "draft"
+        }
+      ],
+      "note": "The result passes the same verification as hand-written code. Open: the agent writes code or a dataflow graph."
+    },
+    "agentAppConversing": {
+      "description": "The same work inside the agent app.",
+      "handledBy": [
+        "designer"
+      ],
+      "requires": [
+        "agentApp",
+        "agentKit"
+      ],
+      "affects": [
+        "conversation"
+      ]
+    },
+    "canvasMarkup": {
+      "description": "Turning a canvas into a definition with the configurator components, without translation to code.",
+      "handledBy": [
+        "author"
+      ],
+      "requires": [
+        "visualEditor",
+        "configuratorComponents",
+        "canvasLink"
+      ],
+      "yields": [
+        {
+          "object": "canvasDefinition"
+        },
+        {
+          "object": "definition",
+          "state": "draft"
+        }
+      ],
+      "note": "An AI agent can build the canvas too, through the canvas link."
+    },
+    "configuring": {
+      "handledBy": [
+        "customer"
+      ],
+      "requires": [
+        "customerUi",
+        "previewGenerator",
+        "geometryKernel",
+        {
+          "object": "definition",
+          "state": "published"
+        },
+        "authoringLibraries"
+      ],
+      "affects": [
+        "configuration"
+      ],
+      "yields": [
+        "scene"
+      ],
+      "note": "A canvas definition has no preview on the customer's side; every change of a value goes to the authoritative side."
+    },
+    "freezing": {
+      "description": "The authoritative run that turns a configuration into a snapshot.",
+      "requires": [
+        "generatorService",
+        "configuration",
+        {
+          "object": "definition",
+          "state": "published"
+        }
+      ],
+      "zoomsInto": [
+        "modelRunning",
+        "artifactWriting",
+        "snapshotWriting"
+      ]
+    },
+    "modelRunning": {
+      "requires": [
+        "generatorService",
+        "geometryKernel",
+        "nurbsBackend",
+        "fieldEngine",
+        "canvasRunner",
+        "configuration",
+        "authoringLibraries"
+      ],
+      "yields": [
+        "bom",
+        "costDrivers"
+      ],
+      "note": "The NURBS backend only for NURBS geometry, the field engine only for distance-field geometry, the canvas runner only for canvas definitions."
+    },
+    "artifactWriting": {
+      "requires": [
+        "productionExport",
+        "artifactStore",
+        "geometryKernel",
+        "authoringLibraries"
+      ],
+      "yields": [
+        "productionFiles"
+      ]
+    },
+    "snapshotWriting": {
+      "requires": [
+        "generatorService",
+        "artifactStore"
+      ],
+      "yields": [
+        {
+          "object": "snapshot",
+          "state": "valid"
+        }
+      ]
+    },
+    "expiring": {
+      "requires": [
+        "artifactStore"
+      ],
+      "changes": [
+        {
+          "object": "snapshot",
+          "from": "valid",
+          "to": "expired"
+        }
+      ],
+      "note": "A snapshot expires with the shortest validity among its dependencies: prices, stock, tariffs."
+    },
+    "pricing": {
+      "requires": [
+        "pricingModule",
+        "snapshot"
+      ],
+      "conditions": [
+        {
+          "object": "snapshot",
+          "state": "valid"
+        }
+      ],
+      "yields": [
+        "priceResult"
+      ]
+    },
+    "ordering": {
+      "description": "Ordering from the product's own web page.",
+      "handledBy": [
+        "customer"
+      ],
+      "requires": [
+        "customerUi",
+        "priceResult",
+        "snapshot"
+      ],
+      "yields": [
+        "orderRequest"
+      ]
+    },
+    "checkingOut": {
+      "description": "Ordering and paying in the shop.",
+      "handledBy": [
+        "customer"
+      ],
+      "requires": [
+        "shop",
+        "priceResult",
+        "snapshot"
+      ],
+      "yields": [
+        {
+          "object": "shopOrder",
+          "state": "paid"
+        },
+        "orderRequest"
+      ],
+      "note": "After payment the shop sends the order request to the ERP."
+    },
+    "orderImporting": {
+      "requires": [
+        "erp",
+        "snapshot"
+      ],
+      "consumes": [
+        "orderRequest"
+      ],
+      "yields": [
+        {
+          "object": "saleOrder",
+          "state": "confirmed"
+        }
+      ]
+    },
+    "releasing": {
+      "description": "Checking an imported order and its files and releasing it to production.",
+      "handledBy": [
+        "salesPerson"
+      ],
+      "requires": [
+        "erp",
+        "productionFiles"
+      ],
+      "changes": [
+        {
+          "object": "saleOrder",
+          "from": "confirmed",
+          "to": "released"
+        }
+      ],
+      "note": "Production itself stays outside the model until the handbook's production boundaries (B14 onwards) are worked on."
+    },
+    "topologyOptimising": {
+      "description": "Finding where material should be in a part before its geometry is modelled, from the loads and supports the author sets.",
+      "handledBy": ["author"],
+      "requires": ["topologyOptimisation", "designDomain"],
+      "yields": ["materialLayout"]
+    }
+  },
+  "views": {
+    "salesFlow": {
+      "title": "From configuration to sale order",
+      "things": [
+        "configuring",
+        "freezing",
+        "pricing",
+        "ordering",
+        "checkingOut",
+        "orderImporting",
+        "configuration",
+        "snapshot",
+        "priceResult",
+        "shopOrder",
+        "orderRequest",
+        "saleOrder",
+        "customer",
+        "releasing",
+        "salesPerson"
+      ]
+    },
+    "engines": {
+      "title": "Where geometry is computed",
+      "things": [
+        "configuring",
+        "modelRunning",
+        "previewGenerator",
+        "generatorService",
+        "geometryKernel",
+        "nurbsBackend",
+        "fieldEngine",
+        "canvasRunner"
+      ]
+    },
+    "authoringPaths": {
+      "title": "Four ways to a definition",
+      "things": [
+        "authoring",
+        "prototyping",
+        "agentAuthoring",
+        "canvasMarkup",
+        "definition",
+        "codeDefinition",
+        "canvasDefinition",
+        "author",
+        "designer",
+        "agentKit",
+        "agentApp",
+        "aiAgent",
+        "briefing",
+        "configuratorBrief"
+      ]
+    }
+  },
+  "stories": {
+    "writeDefinitionAsCode": {
+      "title": "Write a configurator as code and publish it",
+      "story": "As an author I want to write a configurator as code and publish it, so that customers can configure the product.",
+      "lanes": [
+        "author",
+        "authoringWindow",
+        "inspector"
+      ],
+      "steps": [
+        {
+          "lane": "author",
+          "does": "Creates a definition from the template and writes the model, its factories and its inputs.",
+          "process": "modelWriting",
+          "handsOver": {
+            "object": "definition",
+            "state": "draft",
+            "to": "inspector"
+          }
+        },
+        {
+          "lane": "inspector",
+          "does": "Builds the definition and runs it once. A failed build comes back with the full diagnostic text.",
+          "process": "verifying",
+          "handsOver": {
+            "object": "definition",
+            "state": "verified",
+            "to": "authoringWindow"
+          },
+          "waits": "seconds"
+        },
+        {
+          "lane": "authoringWindow",
+          "does": "Shows the tree, the knobs and the scene. The author turns knobs and reads the displayed values.",
+          "process": "modelWriting"
+        },
+        {
+          "lane": "author",
+          "does": "Fixes what the numbers show and repeats until the displayed values are right.",
+          "process": "modelWriting",
+          "problem": "If node identifiers depend on position, a structural change moves saved values onto other nodes."
+        },
+        {
+          "lane": "inspector",
+          "does": "Exports the published UI schema and marks the definition published.",
+          "process": "publishing",
+          "handsOver": {
+            "object": "uiSchema",
+            "to": "author"
+          }
+        }
+      ],
+      "doneWhen": [
+        "The definition builds, runs once without error and exports a UI schema.",
+        "Every published input has an identifier that survives a structural change."
+      ]
+    },
+    "prototypeOnCanvas": {
+      "title": "Prototype on a canvas and translate the sketch to code",
+      "story": "As an author I want to sketch a product on a canvas and get code from the sketch, so that a prototype becomes a definition without retyping it.",
+      "lanes": [
+        "author",
+        "visualEditor",
+        "canvasLink",
+        "authoringLibraries",
+        "inspector"
+      ],
+      "steps": [
+        {
+          "lane": "author",
+          "does": "Sketches the product on the canvas, with sliders for the values a customer will change.",
+          "process": "sketching",
+          "handsOver": {
+            "object": "canvas",
+            "to": "canvasLink"
+          }
+        },
+        {
+          "lane": "visualEditor",
+          "does": "Computes the sketch live while the author works.",
+          "process": "sketching"
+        },
+        {
+          "lane": "canvasLink",
+          "does": "Writes the canvas out as a recipe: components, wires, values, slider bounds.",
+          "process": "transcribing",
+          "handsOver": {
+            "object": "recipe",
+            "to": "authoringLibraries"
+          }
+        },
+        {
+          "lane": "authoringLibraries",
+          "does": "Translates the part of the recipe made of catalogue operations into code.",
+          "process": "emitting",
+          "handsOver": {
+            "object": "definition",
+            "state": "draft",
+            "to": "author"
+          }
+        },
+        {
+          "lane": "author",
+          "does": "Translates the rest by hand or with an agent.",
+          "process": "prototyping",
+          "handsOver": {
+            "object": "definition",
+            "state": "draft",
+            "to": "inspector"
+          },
+          "problem": "A component with no catalogue operation has no translation. Each one is a request for a new kernel operation."
+        },
+        {
+          "lane": "inspector",
+          "does": "Verifies the definition.",
+          "process": "verifying",
+          "handsOver": {
+            "object": "definition",
+            "state": "verified",
+            "to": "author"
+          }
+        }
+      ],
+      "doneWhen": [
+        "Every slider of the sketch is an input of the definition, with the slider's bounds.",
+        "The translated definition passes verification."
+      ]
+    },
+    "markUpCanvas": {
+      "title": "Turn a canvas into a configurator without code",
+      "story": "As an author I want to declare a canvas a configurator with components, so that a product drawn in the visual editor can be sold without translating it to code.",
+      "lanes": [
+        "author",
+        "visualEditor",
+        "configuratorComponents",
+        "inspector"
+      ],
+      "steps": [
+        {
+          "lane": "author",
+          "does": "Draws the product on the canvas.",
+          "process": "canvasMarkup"
+        },
+        {
+          "lane": "configuratorComponents",
+          "does": "Declare the canvas's parameters, node tree, BOM rows, artifacts and displayed values.",
+          "process": "canvasMarkup",
+          "handsOver": {
+            "object": "canvasDefinition",
+            "to": "author"
+          }
+        },
+        {
+          "lane": "visualEditor",
+          "does": "Runs the canvas with the declared parameters.",
+          "process": "canvasMarkup"
+        },
+        {
+          "lane": "author",
+          "does": "Hands the definition over for verification.",
+          "process": "canvasMarkup",
+          "handsOver": {
+            "object": "definition",
+            "state": "draft",
+            "to": "inspector"
+          }
+        },
+        {
+          "lane": "inspector",
+          "does": "Verifies the definition.",
+          "process": "verifying",
+          "handsOver": {
+            "object": "definition",
+            "state": "verified",
+            "to": "author"
+          },
+          "problem": "Model gap: verification is drawn for code definitions only. A canvas definition needs a verification path of its own."
+        }
+      ],
+      "doneWhen": [
+        "A channel cannot tell a canvas definition from a code definition by its answers."
+      ]
+    },
+    "buildWithOwnAgent": {
+      "title": "Build a configurator with any AI agent",
+      "story": "As a designer I want to describe a product to the AI agent I already use and get a working configurator, so that I do not have to learn the model's code.",
+      "lanes": [
+        "designer",
+        "aiAgent",
+        "agentKit",
+        "inspector"
+      ],
+      "steps": [
+        {
+          "lane": "designer",
+          "does": "Creates a project with the kit and says what product it is for.",
+          "process": "briefing",
+          "handsOver": {
+            "object": "conversation",
+            "to": "aiAgent"
+          }
+        },
+        {
+          "lane": "aiAgent",
+          "does": "Interviews the designer one question at a time: who uses it, what changes between variants, ranges, rules, price owner, production files, where it lives.",
+          "process": "briefing",
+          "handsOver": {
+            "object": "configuratorBrief",
+            "state": "draft",
+            "to": "designer"
+          },
+          "waits": "ten to fifteen minutes",
+          "problem": "Most people have never specified a configurator; without the interview the agent builds what it guesses."
+        },
+        {
+          "lane": "designer",
+          "does": "Reads the brief, corrects it and approves it.",
+          "process": "briefApproving",
+          "handsOver": {
+            "object": "configuratorBrief",
+            "state": "approved",
+            "to": "aiAgent"
+          }
+        },
+        {
+          "lane": "agentKit",
+          "does": "Gives the agent the rules of a definition, the catalogue of operations and the inspector's tools.",
+          "process": "agentAuthoring"
+        },
+        {
+          "lane": "aiAgent",
+          "does": "Writes the definition and asks the inspector to build and run it.",
+          "process": "agentAuthoring",
+          "handsOver": {
+            "object": "definition",
+            "state": "draft",
+            "to": "inspector"
+          }
+        },
+        {
+          "lane": "inspector",
+          "does": "Answers the whole state, or the full diagnostic text when the build fails.",
+          "process": "verifying",
+          "handsOver": {
+            "object": "definition",
+            "state": "verified",
+            "to": "aiAgent"
+          },
+          "waits": "seconds per round"
+        },
+        {
+          "lane": "aiAgent",
+          "does": "Turns knobs through the kit's tools and checks displayed values, child counts and shared meshes.",
+          "process": "agentAuthoring",
+          "problem": "The agent reads numbers, not the picture. Whether the product looks right is the designer's check."
+        },
+        {
+          "lane": "designer",
+          "does": "Looks at the result and asks for changes until it is right.",
+          "process": "agentAuthoring",
+          "handsOver": {
+            "object": "conversation",
+            "to": "aiAgent"
+          },
+          "problem": "An organisation may forbid some agents for its clients' data. The kit cannot enforce that."
+        }
+      ],
+      "doneWhen": [
+        "The definition passes the same verification as hand-written code.",
+        "Every published input has a unit, bounds and an identifier that survives a structural change."
+      ]
+    },
+    "buildInAgentApp": {
+      "title": "Build a configurator in the agent app",
+      "story": "As a designer without a coding agent I want to build a configurator in a conversation beside a view of the result, so that I can see the product while it is being built.",
+      "lanes": [
+        "designer",
+        "agentApp",
+        "agentKit",
+        "aiAgent",
+        "inspector"
+      ],
+      "steps": [
+        {
+          "lane": "designer",
+          "does": "Describes the product in the app.",
+          "process": "agentAppConversing",
+          "handsOver": {
+            "object": "conversation",
+            "to": "aiAgent"
+          }
+        },
+        {
+          "lane": "agentApp",
+          "does": "Passes the conversation and the kit's tools to the agent.",
+          "process": "agentAppConversing"
+        },
+        {
+          "lane": "agentKit",
+          "does": "Supplies the rules, the catalogue and the inspector's tools.",
+          "process": "agentAppConversing"
+        },
+        {
+          "lane": "aiAgent",
+          "does": "Writes the definition and has it built and run.",
+          "process": "agentAuthoring",
+          "handsOver": {
+            "object": "definition",
+            "state": "draft",
+            "to": "inspector"
+          }
+        },
+        {
+          "lane": "inspector",
+          "does": "Verifies the definition and returns its state.",
+          "process": "verifying",
+          "handsOver": {
+            "object": "definition",
+            "state": "verified",
+            "to": "agentApp"
+          }
+        },
+        {
+          "lane": "agentApp",
+          "does": "Shows the result beside the conversation.",
+          "process": "agentAppConversing",
+          "problem": "Open decision D1: if anyone may use the app, drafts must never run on shared infrastructure without isolation."
+        }
+      ],
+      "doneWhen": [
+        "A definition built in the app is indistinguishable from one built with a coding agent."
+      ]
+    },
+    "configureProduct": {
+      "title": "Configure a product and see it change",
+      "story": "As a customer I want to change a product's dimensions and options and see the result at once, so that I can find the variant I need.",
+      "lanes": [
+        "customer",
+        "customerUi",
+        "previewGenerator"
+      ],
+      "steps": [
+        {
+          "lane": "customerUi",
+          "does": "Opens a session on the published definition.",
+          "process": "configuring",
+          "handsOver": {
+            "object": "definition",
+            "state": "published",
+            "to": "previewGenerator"
+          }
+        },
+        {
+          "lane": "customer",
+          "does": "Changes the width.",
+          "process": "configuring",
+          "handsOver": {
+            "object": "configuration",
+            "to": "previewGenerator"
+          }
+        },
+        {
+          "lane": "previewGenerator",
+          "does": "Recomputes the product on the customer's side.",
+          "process": "configuring",
+          "handsOver": {
+            "object": "scene",
+            "to": "customerUi"
+          },
+          "waits": "must feel immediate"
+        },
+        {
+          "lane": "customerUi",
+          "does": "Draws the new scene and the displayed values.",
+          "process": "configuring"
+        }
+      ],
+      "doneWhen": [
+        "A change of a value shows without a round trip for code definitions.",
+        "The configuration's revision rises with every change."
+      ]
+    },
+    "getPrice": {
+      "title": "Get a price for a configuration",
+      "story": "As a customer I want a price for exactly what I configured, so that I can decide whether to buy.",
+      "lanes": [
+        "customer",
+        "customerUi",
+        "generatorService",
+        "artifactStore",
+        "pricingModule"
+      ],
+      "steps": [
+        {
+          "lane": "customer",
+          "does": "Asks for a price.",
+          "process": "configuring",
+          "handsOver": {
+            "object": "configuration",
+            "to": "generatorService"
+          }
+        },
+        {
+          "lane": "generatorService",
+          "does": "Runs the definition authoritatively for this revision.",
+          "process": "modelRunning",
+          "handsOver": {
+            "object": "bom",
+            "to": "artifactStore"
+          },
+          "waits": "seconds, longer for NURBS geometry"
+        },
+        {
+          "lane": "artifactStore",
+          "does": "Stores the production files under their content hash.",
+          "process": "artifactWriting"
+        },
+        {
+          "lane": "generatorService",
+          "does": "Writes the snapshot.",
+          "process": "snapshotWriting",
+          "handsOver": {
+            "object": "snapshot",
+            "state": "valid",
+            "to": "pricingModule"
+          }
+        },
+        {
+          "lane": "pricingModule",
+          "does": "Prices the snapshot.",
+          "process": "pricing",
+          "handsOver": {
+            "object": "priceResult",
+            "to": "customerUi"
+          },
+          "problem": "A partial price must say which part is missing. A total over missing parts is not a price."
+        },
+        {
+          "lane": "customerUi",
+          "does": "Shows the price with its validity.",
+          "process": "configuring"
+        }
+      ],
+      "doneWhen": [
+        "The price names the snapshot it priced.",
+        "The same configuration of the same definition version gives the same snapshot hash."
+      ]
+    },
+    "orderFromProductPage": {
+      "title": "Order from the product's own web page",
+      "story": "As a customer I want to order the configured product from its page, so that the order carries exactly what I configured.",
+      "lanes": [
+        "customer",
+        "customerUi",
+        "erp"
+      ],
+      "steps": [
+        {
+          "lane": "customer",
+          "does": "Confirms the order.",
+          "process": "ordering",
+          "handsOver": {
+            "object": "orderRequest",
+            "to": "erp"
+          },
+          "problem": "This path has no payment. It suits quotes and business customers; who collects payment is not modelled."
+        },
+        {
+          "lane": "customerUi",
+          "does": "Shows the confirmation with the price and its validity.",
+          "process": "ordering"
+        },
+        {
+          "lane": "erp",
+          "does": "Imports the order request as a confirmed sale order.",
+          "process": "orderImporting",
+          "handsOver": {
+            "object": "saleOrder",
+            "to": "customer"
+          }
+        }
+      ],
+      "doneWhen": [
+        "The sale order refers to the snapshot hash and carries the production files."
+      ]
+    },
+    "buyInShop": {
+      "title": "Buy a configured product in the shop",
+      "story": "As a customer I want to put a configured product in the shop's cart and pay, so that I can buy it like any other product.",
+      "lanes": [
+        "customer",
+        "shop",
+        "erp"
+      ],
+      "steps": [
+        {
+          "lane": "customer",
+          "does": "Adds the configured product to the cart.",
+          "process": "checkingOut",
+          "handsOver": {
+            "object": "priceResult",
+            "to": "shop"
+          }
+        },
+        {
+          "lane": "shop",
+          "does": "Creates an order line with the snapshot reference and the price from the pricing module.",
+          "process": "checkingOut",
+          "handsOver": {
+            "object": "shopOrder",
+            "state": "open",
+            "to": "customer"
+          },
+          "problem": "The shop must not set its own price for a configured product."
+        },
+        {
+          "lane": "customer",
+          "does": "Pays.",
+          "process": "checkingOut",
+          "handsOver": {
+            "object": "shopOrder",
+            "state": "paid",
+            "to": "shop"
+          },
+          "problem": "If the snapshot expired between cart and payment, the order is priced again before payment, not accepted at the old price."
+        },
+        {
+          "lane": "shop",
+          "does": "Sends the order request to the ERP.",
+          "process": "checkingOut",
+          "handsOver": {
+            "object": "orderRequest",
+            "to": "erp"
+          }
+        },
+        {
+          "lane": "erp",
+          "does": "Imports the order request as a confirmed sale order.",
+          "process": "orderImporting",
+          "handsOver": {
+            "object": "saleOrder",
+            "to": "shop"
+          }
+        }
+      ],
+      "doneWhen": [
+        "The shop's order number is stored in the ERP only as an external reference."
+      ]
+    },
+    "orderCarriesFiles": {
+      "title": "Production files arrive with the order",
+      "story": "As a sales person I want every sale order to carry the files production needs, so that nobody re-draws a configured product.",
+      "lanes": [
+        "generatorService",
+        "artifactStore",
+        "erp",
+        "salesPerson"
+      ],
+      "steps": [
+        {
+          "lane": "generatorService",
+          "does": "Runs the definition and produces the BOM and cost drivers.",
+          "process": "modelRunning",
+          "handsOver": {
+            "object": "bom",
+            "to": "artifactStore"
+          }
+        },
+        {
+          "lane": "artifactStore",
+          "does": "Stores the production files under their content hash.",
+          "process": "artifactWriting",
+          "handsOver": {
+            "object": "productionFiles",
+            "to": "erp"
+          }
+        },
+        {
+          "lane": "erp",
+          "does": "Attaches the files to the imported sale order.",
+          "process": "orderImporting",
+          "handsOver": {
+            "object": "saleOrder",
+            "state": "confirmed",
+            "to": "salesPerson"
+          }
+        },
+        {
+          "lane": "salesPerson",
+          "does": "Checks the order and its files and releases it to production.",
+          "process": "releasing",
+          "problem": "Production is outside the model so far; what happens after the release is not drawn."
+        }
+      ],
+      "doneWhen": [
+        "Each file on the order matches the hash recorded in the snapshot."
+      ]
+    },
+    "returnToSavedConfiguration": {
+      "title": "Come back to a saved configuration",
+      "story": "As a customer I want to open a configuration I saved earlier, so that I can order it later or change it.",
+      "lanes": [
+        "customer",
+        "customerUi",
+        "previewGenerator",
+        "generatorService",
+        "pricingModule"
+      ],
+      "steps": [
+        {
+          "lane": "customer",
+          "does": "Opens the saved configuration.",
+          "process": "configuring",
+          "handsOver": {
+            "object": "configuration",
+            "to": "previewGenerator"
+          }
+        },
+        {
+          "lane": "previewGenerator",
+          "does": "Applies the saved values by identifier and draws the product.",
+          "process": "configuring",
+          "handsOver": {
+            "object": "scene",
+            "to": "customerUi"
+          },
+          "problem": "If the definition was superseded, values whose identifiers no longer resolve are shown to the customer. A value is never dropped silently."
+        },
+        {
+          "lane": "customerUi",
+          "does": "Asks for a fresh snapshot, because the old one expired.",
+          "process": "configuring",
+          "handsOver": {
+            "object": "configuration",
+            "to": "generatorService"
+          }
+        },
+        {
+          "lane": "generatorService",
+          "does": "Freezes the configuration again.",
+          "process": "snapshotWriting",
+          "handsOver": {
+            "object": "snapshot",
+            "state": "valid",
+            "to": "pricingModule"
+          }
+        },
+        {
+          "lane": "pricingModule",
+          "does": "Prices it.",
+          "process": "pricing",
+          "handsOver": {
+            "object": "priceResult",
+            "to": "customerUi"
+          }
+        }
+      ],
+      "doneWhen": [
+        "A saved configuration opens on the version it was saved with, or shows exactly what changed."
+      ]
+    },
+    "snapshotExpires": {
+      "title": "An old price is not honoured",
+      "story": "As the business I want a snapshot to expire when its prices or stock may have changed, so that nothing is sold at a price that no longer holds.",
+      "lanes": [
+        "artifactStore",
+        "pricingModule",
+        "customerUi"
+      ],
+      "steps": [
+        {
+          "lane": "artifactStore",
+          "does": "Marks the snapshot expired when the shortest validity among its dependencies ends.",
+          "process": "expiring",
+          "handsOver": {
+            "object": "snapshot",
+            "state": "expired",
+            "to": "pricingModule"
+          }
+        },
+        {
+          "lane": "pricingModule",
+          "does": "Refuses to price an expired snapshot.",
+          "process": "pricing",
+          "handsOver": {
+            "object": "priceResult",
+            "to": "customerUi"
+          }
+        },
+        {
+          "lane": "customerUi",
+          "does": "Asks for a fresh snapshot before showing a price.",
+          "process": "configuring"
+        }
+      ],
+      "doneWhen": [
+        "No price is shown or charged for an expired snapshot."
+      ]
+    },
+    "duplicateOrderRequest": {
+      "title": "The same order sent twice creates one order",
+      "story": "As the business I want a repeated order request to return the existing order, so that a retry after a timeout never creates a second order.",
+      "lanes": [
+        "shop",
+        "erp"
+      ],
+      "steps": [
+        {
+          "lane": "shop",
+          "does": "Sends the order request.",
+          "process": "checkingOut",
+          "handsOver": {
+            "object": "orderRequest",
+            "to": "erp"
+          }
+        },
+        {
+          "lane": "shop",
+          "does": "Hears nothing back and sends the same request again.",
+          "process": "checkingOut",
+          "handsOver": {
+            "object": "orderRequest",
+            "to": "erp"
+          },
+          "waits": "timeout"
+        },
+        {
+          "lane": "erp",
+          "does": "Finds the same channel order line already imported and returns the existing order.",
+          "process": "orderImporting",
+          "handsOver": {
+            "object": "saleOrder",
+            "to": "shop"
+          }
+        }
+      ],
+      "doneWhen": [
+        "The same channel order line returns the same order.",
+        "The same channel order line with a different payload is reported as a conflict.",
+        "Two different orders of the same configuration create two orders."
+      ]
+    },
+    "publishNewVersion": {
+      "title": "Publish a new version of a configurator",
+      "story": "As an author I want to publish a new version without breaking saved configurations and placed orders, so that a product can change after it is on sale.",
+      "lanes": [
+        "author",
+        "inspector",
+        "customerUi"
+      ],
+      "steps": [
+        {
+          "lane": "author",
+          "does": "Changes the definition.",
+          "process": "modelWriting",
+          "handsOver": {
+            "object": "definition",
+            "state": "draft",
+            "to": "inspector"
+          }
+        },
+        {
+          "lane": "inspector",
+          "does": "Verifies and publishes the new version.",
+          "process": "publishing",
+          "handsOver": {
+            "object": "definition",
+            "state": "published",
+            "to": "customerUi"
+          }
+        },
+        {
+          "lane": "customerUi",
+          "does": "Opens new sessions on the new version. Existing snapshots keep the version they were frozen with.",
+          "process": "configuring",
+          "problem": "Saved configurations of the old version need a rule: carry values over by identifier, report what could not be carried."
+        }
+      ],
+      "doneWhen": [
+        "An order placed on the old version is produced from the old version."
+      ]
+    },
+    "configureCanvasProduct": {
+      "title": "Configure a product defined on a canvas",
+      "story": "As a customer I want to configure a product whose definition was drawn on a canvas, so that it sells like any other product.",
+      "lanes": [
+        "customer",
+        "customerUi",
+        "generatorService",
+        "canvasRunner"
+      ],
+      "steps": [
+        {
+          "lane": "customer",
+          "does": "Changes a value.",
+          "process": "configuring",
+          "handsOver": {
+            "object": "configuration",
+            "to": "generatorService"
+          }
+        },
+        {
+          "lane": "generatorService",
+          "does": "Sends the run to the canvas runner.",
+          "process": "modelRunning"
+        },
+        {
+          "lane": "canvasRunner",
+          "does": "Runs the canvas definition.",
+          "process": "modelRunning",
+          "handsOver": {
+            "object": "bom",
+            "to": "generatorService"
+          },
+          "waits": "a server round trip per change",
+          "problem": "Model gap: the authoritative side yields no scene, so the model has no preview for canvas products. Open decision D5."
+        },
+        {
+          "lane": "customerUi",
+          "does": "Shows the result when it arrives.",
+          "process": "configuring"
+        }
+      ],
+      "doneWhen": [
+        "A canvas product can be priced and ordered through the same snapshot as a code product."
+      ]
+    }
+  }
+}

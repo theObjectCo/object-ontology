@@ -1,0 +1,142 @@
+{
+  "$schema": "../../schema/opm-model.schema.json",
+  "name": "Window configuration and pricing",
+  "description": "A user configures a window, the generator freezes the configuration into a snapshot, and the pricing module prices the snapshot with data from the ERP and other departments.",
+  "objects": {
+    "user": { "essence": "physical" },
+    "ui": { "role": "module" },
+    "generator": { "role": "module" },
+    "snapshotStore": { "role": "module" },
+    "pricingModule": { "role": "module" },
+    "erp": { "role": "module", "affiliation": "environmental", "consistsOf": ["customer"] },
+    "customer": { "affiliation": "environmental" },
+    "departmentData": { "affiliation": "environmental", "description": "Stock, capacity, price lists and carrier tariffs, as versioned copies." },
+    "contextManifest": {},
+    "changeProposal": { "schema": "contracts.schema.json#/$defs/changeProposal" },
+    "decision": { "schema": "contracts.schema.json#/$defs/decision", "states": ["passed", "rejected", "applied"] },
+    "configuration": { "schema": "contracts.schema.json#/$defs/configuration" },
+    "snapshot": {
+      "schema": "contracts.schema.json#/$defs/snapshot",
+      "states": ["valid", "expired"],
+      "consistsOf": ["bom", "costDrivers"],
+      "exhibits": ["hash"]
+    },
+    "bom": {},
+    "costDrivers": {},
+    "hash": {},
+    "priceRequest": { "schema": "contracts.schema.json#/$defs/priceRequest" },
+    "priceResult": {
+      "schema": "contracts.schema.json#/$defs/priceResult",
+      "states": ["complete", "approximate", "partial", "rejected"],
+      "consistsOf": ["productPrice", "transportPrice", "leadTime"]
+    },
+    "productPrice": {},
+    "transportPrice": { "states": ["exact", "approximate", "missing"] },
+    "leadTime": {}
+  },
+  "processes": {
+    "configuring": {
+      "handledBy": ["user"],
+      "requires": ["ui"],
+      "zoomsInto": ["proposing", "validating", "applying"]
+    },
+    "proposing": { "requires": ["ui"], "yields": ["changeProposal"], "zoomsInto": [] },
+    "validating": {
+      "requires": ["generator", "changeProposal"],
+      "yields": ["decision"],
+      "zoomsInto": []
+    },
+    "applying": {
+      "requires": ["generator"],
+      "consumes": ["changeProposal"],
+      "affects": ["configuration"],
+      "changes": [{ "object": "decision", "from": "passed", "to": "applied" }],
+      "conditions": [{ "object": "decision", "state": "passed" }]
+    },
+    "contextUpdating": {
+      "requires": ["generator"],
+      "events": [{ "object": "departmentData" }],
+      "affects": ["contextManifest"],
+      "zoomsInto": []
+    },
+    "freezing": {
+      "requires": ["generator", "snapshotStore", "configuration", "contextManifest"],
+      "yields": ["snapshot"],
+      "zoomsInto": []
+    },
+    "expiring": {
+      "requires": ["snapshotStore"],
+      "changes": [{ "object": "snapshot", "from": "valid", "to": "expired" }],
+      "zoomsInto": []
+    },
+    "pricing": {
+      "requires": ["pricingModule", "snapshot", "customer", "departmentData"],
+      "consumes": ["priceRequest"],
+      "yields": ["priceResult"],
+      "conditions": [{ "object": "snapshot", "state": "valid" }],
+      "zoomsInto": ["productPricing", "transportPricing", "leadTimeEstimating"]
+    },
+    "productPricing": { "requires": ["snapshot", "customer"], "yields": ["productPrice"] },
+    "transportPricing": { "requires": ["departmentData"], "yields": ["transportPrice"] },
+    "leadTimeEstimating": { "requires": ["departmentData"], "yields": ["leadTime"] }
+  },
+  "views": {
+    "snapshotLifecycle": {
+      "title": "Snapshot lifecycle",
+      "things": ["freezing", "expiring", "pricing", "snapshot", "snapshotStore"]
+    }
+  },
+  "stories": {
+    "changeWindow": {
+      "title": "Change a window and see the change accepted",
+      "story": "As a user I want to change the size of a window and see at once whether the generator accepts it, so that I only price windows that can be built.",
+      "lanes": ["user", "ui", "generator"],
+      "steps": [
+        { "lane": "user", "does": "Drags the width of the window to 1450 mm.", "process": "proposing",
+          "handsOver": { "object": "changeProposal", "to": "ui" } },
+        { "lane": "ui", "does": "Sends the change proposal to the generator.", "process": "proposing",
+          "handsOver": { "object": "changeProposal", "to": "generator" } },
+        { "lane": "generator", "does": "Checks the proposal against the size limits of the profile system.", "process": "validating",
+          "handsOver": { "object": "decision", "state": "passed", "to": "ui" },
+          "problem": "A rejected proposal comes back without a reason the user can read." },
+        { "lane": "generator", "does": "Applies the proposal to the configuration.", "process": "applying",
+          "handsOver": { "object": "configuration", "to": "ui" }, "waits": "about 200 ms" },
+        { "lane": "ui", "does": "Redraws the window with the new width.", "process": "configuring" }
+      ],
+      "doneWhen": ["The configuration holds the new width only after the decision is applied."]
+    },
+    "getPrice": {
+      "title": "Get a price for a configured window",
+      "story": "As a user I want a price for the window I configured, so that I can decide whether to order it.",
+      "lanes": ["user", "generator", "snapshotStore", "pricingModule"],
+      "steps": [
+        { "lane": "user", "does": "Asks for the price of the current configuration.", "process": "configuring",
+          "handsOver": { "object": "configuration", "to": "generator" } },
+        { "lane": "generator", "does": "Freezes the configuration and the context manifest into a snapshot.", "process": "freezing",
+          "handsOver": { "object": "snapshot", "state": "valid", "to": "snapshotStore" } },
+        { "lane": "snapshotStore", "does": "Stores the snapshot under its hash.", "process": "freezing",
+          "handsOver": { "object": "snapshot", "state": "valid", "to": "pricingModule" } },
+        { "lane": "pricingModule", "does": "Prices the snapshot with the customer's discount and the carrier tariff.", "process": "pricing",
+          "handsOver": { "object": "priceResult", "to": "user" }, "waits": "up to 20 s when the carrier tariff is fetched",
+          "problem": "The transport price is approximate when the carrier tariff is older than a week." },
+        { "lane": "user", "does": "Reads the price and the lead time." }
+      ],
+      "doneWhen": ["The price result names the snapshot it priced.", "An expired snapshot is not priced."]
+    },
+    "expireSnapshot": {
+      "title": "Expire an old snapshot",
+      "story": "As a sales manager I want snapshots to expire after 30 days, so that no customer is quoted a price from an outdated price list.",
+      "lanes": ["snapshotStore", "pricingModule"],
+      "steps": [
+        { "lane": "snapshotStore", "does": "Marks snapshots older than 30 days as expired.", "process": "expiring",
+          "handsOver": { "object": "snapshot", "state": "expired", "to": "pricingModule" } },
+        { "lane": "pricingModule", "does": "Skips pricing for the expired snapshot.", "process": "pricing" }
+      ]
+    }
+  },
+  "layout": {
+    "system": { "user": [-26, 261], "ui": [-22, 136], "generator": [140, 416], "snapshotStore": [451, 410], "pricingModule": [711, 126], "customer": [861, 122], "departmentData": [709, 608], "contextManifest": [164, 649], "changeProposal": [414, 122], "decision": [147, 23], "configuration": [308, 412], "snapshot": [612, 386], "priceRequest": [847, 515], "priceResult": [993, 512], "productPrice": [1009, 125], "transportPrice": [1179, 237], "leadTime": [1317, 399], "configuring": [156, 252], "contextUpdating": [426, 673], "freezing": [433, 537], "expiring": [481, 267], "pricing": [805, 271] },
+    "expiring": { "expiring": [311, 30], "snapshotStore": [113, 90], "snapshot": [435, -114] },
+    "pricing": { "pricing": [311, 52], "pricingModule": [165, 79], "snapshot": [255, -86], "customer": [52, 315], "departmentData": [66, 439], "priceRequest": [74, 182], "priceResult": [699, 94], "productPrice": [731, 240], "transportPrice": [735, 464], "leadTime": [886, 239] }
+  }
+}

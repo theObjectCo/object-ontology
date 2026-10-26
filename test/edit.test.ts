@@ -303,3 +303,53 @@ test("subprocesses and stories have their own operations, and new sections keep 
   assert.deepEqual(parse(withStory).stories, { first: story });
   assert.equal(run(withStory, { op: "setStory", id: "first", story: null }), small, "removing the only story removes the section");
 });
+
+test("syncStory materialises lanes, handed-over objects, states, processes and links from a Makigami story", () => {
+  const initial = JSON.stringify({
+    name: "Makigami First",
+    objects: {
+      customer: { essence: "physical" },
+    },
+    stories: {
+      quoteFlow: {
+        title: "Quote Flow",
+        story: "As a customer I want a quote.",
+        lanes: ["customer", "salesDesk", "pricingEngine"],
+        steps: [
+          {
+            lane: "customer",
+            does: "Submits inquiry.",
+            process: "submittingInquiry",
+            handsOver: { object: "inquiry", state: "submitted", to: "salesDesk" },
+          },
+          {
+            lane: "salesDesk",
+            does: "Validates inquiry.",
+            process: "validatingInquiry",
+            handsOver: { object: "inquiry", state: "validated", to: "pricingEngine" },
+          },
+          {
+            lane: "pricingEngine",
+            does: "Computes price.",
+            process: "computingPrice",
+            handsOver: { object: "quote", to: "customer" },
+          },
+        ],
+      },
+    },
+  }, null, 2);
+
+  const synced = run(initial, { op: "syncStory", id: "quoteFlow" });
+  const m = parse(synced);
+  assert.equal(m.objects!.salesDesk.role, "module");
+  assert.equal(m.objects!.pricingEngine.role, "module");
+  assert.deepEqual(m.objects!.inquiry.states, ["submitted", "validated"]);
+  assert.ok(m.objects!.quote);
+  assert.deepEqual(m.processes!.submittingInquiry.handledBy, ["customer"]);
+  assert.deepEqual(m.processes!.submittingInquiry.yields, [{ object: "inquiry", state: "submitted" }]);
+  assert.ok(m.processes!.validatingInquiry.requires!.some((e) => e === "salesDesk"));
+  assert.deepEqual(m.processes!.validatingInquiry.changes, [{ object: "inquiry", from: "submitted", to: "validated" }]);
+  assert.ok(m.processes!.computingPrice.requires!.some((e) => e === "pricingEngine"));
+  assert.deepEqual(m.processes!.computingPrice.yields, ["quote"]);
+  assert.deepEqual(errors(synced), []);
+});

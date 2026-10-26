@@ -5,11 +5,11 @@ import {
 import { toPng, toSvg } from "html-to-image";
 import { CSSProperties, MouseEvent as ReactMouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Operation } from "../core/edit";
-import { fragmentOf } from "../core/edit";
+import { fragmentOf, uniqueId } from "../core/edit";
 import { EditorLinkKind, STATEFUL, allowedKinds, editorLinks, stateOwner, thingKind } from "../core/links";
 import { Model, affiliation, essence, label, objects, processes } from "../core/model";
 import { oplSentences } from "../core/opl";
-import { stories } from "../core/stories";
+import { stories, storyTitle } from "../core/stories";
 import { ViewContent, ViewEdge, ViewInfo, ViewNode, listViews, viewContent, viewsContaining } from "../core/viewmodel";
 import { LINK_WORDS, format, messages } from "../shared/i18n";
 import { ElementDiagnostic, HostMessage, SchemaFile, UiDefaults } from "../shared/protocol";
@@ -478,6 +478,28 @@ export function App() {
     goTo(id);
   }, [model, frozen, run, goTo]);
 
+  const toggleRole = useCallback((id: string) => {
+    if (frozen || !model || !objects(model)[id]) return;
+    const cur = objects(model)[id].role;
+    void run({ op: "updateElement", id, patch: { role: cur === "module" ? undefined : "module" } });
+  }, [frozen, model, run]);
+
+  const togglePhysical = useCallback((id: string) => {
+    if (frozen || !model) return;
+    const def = objects(model)[id] ?? processes(model)[id];
+    if (!def) return;
+    const isPhys = essence(def) === "physical";
+    void run({ op: "updateElement", id, patch: { essence: isPhys ? "informational" : "physical" } });
+  }, [frozen, model, run]);
+
+  const toggleEnv = useCallback((id: string) => {
+    if (frozen || !model) return;
+    const def = objects(model)[id] ?? processes(model)[id];
+    if (!def) return;
+    const isEnv = affiliation(def) === "environmental";
+    void run({ op: "updateElement", id, patch: { affiliation: isEnv ? "systemic" : "environmental" } });
+  }, [frozen, model, run]);
+
   const baseNodes = useMemo<Node[]>(() => {
     if (!model || !content || !shapes) return [];
     const out: Node[] = [];
@@ -486,6 +508,7 @@ export function App() {
       const def = objects(model)[n.id] ?? processes(model)[n.id];
       if (!def) continue;
       const diag = diagBy.get(n.id);
+      const selected = selection.includes(n.id);
       const data: NodeData = {
         id: n.id,
         label: label(model, n.id),
@@ -497,9 +520,22 @@ export function App() {
         dimmed: !!related && !n.container && !related.has(n.id),
         target: connecting && n.id !== connecting.from ? canLink(n.id) : undefined,
         editing: editing === n.id,
-        onLabel, onStartEdit: startEdit, onOpenZoom: (id: string) => void openZoom(id),
+        singleSelected: selected && selection.length === 1 && !frozen && !exporting && !n.container,
+        onLabel,
+        onStartEdit: startEdit,
+        onOpenZoom: (id: string) => void openZoom(id),
+        onAddState: (id: string) => void run({ op: "addState", object: id }),
+        onRenameState: (id: string, oldState: string, newState: string) => void run({ op: "renameState", object: id, oldState, newState }),
+        onDeleteState: (id: string, state: string) => void run({ op: "deleteState", object: id, state }),
+        onToggleRole: toggleRole,
+        onTogglePhysical: togglePhysical,
+        onToggleEnv: toggleEnv,
+        onOpenInspector: (id: string) => { setSelection([id]); setDrawer(true); },
+        onDeleteNode: (id: string) => {
+          void run({ op: "deleteElements", ids: [id], links: [] });
+          setSelection((prev) => prev.filter((x) => x !== id));
+        },
       };
-      const selected = selection.includes(n.id);
       const common = { id: n.id, selected, draggable: !frozen, connectable: !frozen };
       if (n.kind === "object") {
         const s = shapes.objects[n.id];
@@ -531,7 +567,7 @@ export function App() {
       }
     }
     return out;
-  }, [model, content, shapes, positions, diagBy, related, connecting, canLink, editing, selection, frozen, onLabel, startEdit, openZoom, t]);
+  }, [model, content, shapes, positions, diagBy, related, connecting, canLink, editing, selection, frozen, exporting, onLabel, startEdit, openZoom, run, toggleRole, togglePhysical, toggleEnv, t]);
 
   useEffect(() => setNodes(baseNodes), [baseNodes, rebuild]);
 
@@ -693,13 +729,18 @@ export function App() {
     return [Math.round(x), Math.round(y)];
   }, [content, shapes, positions, visibleCenter]);
 
-  const addElement = useCallback(async (kind: "object" | "process", at?: [number, number]) => {
+  const addElement = useCallback(async (kind: "object" | "process", at?: [number, number], preset?: "module" | "actor") => {
     if (frozen || !model) return;
     const parentId = kind === "process" ? zoomProcess : undefined;
     const pos = manual && !parentId ? freeSpot(kind === "object" ? 120 : 220, kind === "object" ? 50 : 84, at) : undefined;
     const r = await run({ op: "addElement", kind, viewId, pos, parentId });
     const id = r.ok ? r.select?.[0] : undefined;
     if (!id) return;
+    if (preset === "module") {
+      await run({ op: "updateElement", id, patch: { role: "module" } }, { quiet: true });
+    } else if (preset === "actor") {
+      await run({ op: "updateElement", id, patch: { essence: "physical" } }, { quiet: true });
+    }
     fresh.current.add(id);
     if (zoomProcess && !parentId) setExtra((x) => ({ ...x, [viewId]: [...(x[viewId] ?? []), id] }));
     setSelection([id]);
@@ -969,6 +1010,54 @@ export function App() {
 
   /* ---------- user story ---------- */
 
+  const storyList = useMemo(() => (
+    model ? Object.entries(stories(model)).map(([id, s]) => ({ id, title: storyTitle(id, s) })) : []
+  ), [model]);
+
+  const createNewStory = useCallback(async () => {
+    if (!model || frozen) return;
+    const existingPerformers = Object.entries(objects(model))
+      .filter(([, o]) => o.role === "module" || essence(o) === "physical")
+      .map(([id]) => id);
+    const lanes = existingPerformers.length >= 2
+      ? existingPerformers.slice(0, 3)
+      : existingPerformers.length === 1
+        ? [existingPerformers[0], "systemModule"]
+        : ["user", "systemModule"];
+    const takenStories = new Set(Object.keys(stories(model)));
+    const newId = uniqueId(model, "procedure", takenStories);
+    const dataObjs = Object.entries(objects(model))
+      .filter(([, o]) => o.role !== "module" && essence(o) !== "physical")
+      .map(([id]) => id);
+    const defaultObj = dataObjs[0] ?? "requestData";
+    await run({
+      op: "setStory",
+      id: newId,
+      story: {
+        title: `Procedure ${storyList.length + 1}`,
+        story: "As a user I want to complete the procedure, so that the result is produced.",
+        lanes,
+        steps: [
+          {
+            lane: lanes[0],
+            does: "Initiates the request.",
+            handsOver: { object: defaultObj, state: "draft", to: lanes[1] ?? lanes[0] },
+          },
+          {
+            lane: lanes[1] ?? lanes[0],
+            does: "Processes the request and returns the result.",
+            handsOver: { object: defaultObj, state: "ready", to: lanes[0] },
+          },
+        ],
+        doneWhen: ["The procedure finishes without errors."],
+      },
+    });
+    setMethod(null);
+    setSelection([]);
+    setEdgeSel(null);
+    setStoryId(newId);
+  }, [model, frozen, run, storyList.length]);
+
   // a story renamed or deleted in the text leaves the diagram in view
   const story = model && storyId ? stories(model)[storyId] : undefined;
   storyOpen.current = !!story;
@@ -1011,6 +1100,8 @@ export function App() {
       return { items: [
         { label: `▭ ${t.object}`, keys: "O", action: () => void addElement("object", context.pos) },
         { label: `◯ ${t.process}`, keys: "P", action: () => void addElement("process", context.pos) },
+        { label: `▣ ${t.module} (IT)`, action: () => void addElement("object", context.pos, "module") },
+        { label: `👤 ${t.agent} (Physical)`, action: () => void addElement("object", context.pos, "actor") },
         "-", paste,
       ] };
     }
@@ -1053,6 +1144,13 @@ export function App() {
            onPointerDownCapture={(e) => {
              if (e.button === 2) rightDown.current = { x: e.clientX, y: e.clientY };
              if (!(e.target as HTMLElement).closest(".opm-context")) setContext(null);
+           }}
+           onDoubleClick={(e) => {
+             const el = e.target as HTMLElement;
+             if (frozen || isEditable(el) || !el.classList.contains("react-flow__pane")) return;
+             const box = wrapper.current!.getBoundingClientRect();
+             const p = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+             setContext({ x: e.clientX - box.left, y: e.clientY - box.top, pos: [Math.round(p.x), Math.round(p.y)], on: "pane" });
            }}
            onContextMenu={openContext}>
         <ReactFlow
@@ -1103,6 +1201,9 @@ export function App() {
             onAddProcess={() => void addElement("process")}
             onAddState={selectedObject ? () => addState() : undefined}
             onArrange={(a) => void arrange(a)}
+            stories={storyList}
+            onOpenStory={(id) => { setMethod(null); setStoryId(id); setSelection([]); setEdgeSel(null); }}
+            onNewStory={() => void createNewStory()}
             menu={[
               { label: t.exportPng, action: () => void exportImage("png") },
               { label: t.exportSvg, action: () => void exportImage("svg") },
@@ -1134,6 +1235,7 @@ export function App() {
             <div className="opm-actions">
               <button className="opm-button primary" onClick={() => void addElement("object")}>▭ {t.object}</button>
               <button className="opm-button primary" onClick={() => void addElement("process")}>◯ {t.process}</button>
+              <button className="opm-button primary" onClick={() => void createNewStory()}>▤ {t.newStory}</button>
             </div>
           </div>
         )}
@@ -1173,9 +1275,20 @@ export function App() {
           <MethodPanel model={model} state={method} language={language} onChange={setMethod} onClose={() => setMethod(null)} />
         )}
         {story && model && storyId && (
-          <Makigami t={t} model={model} id={storyId} story={story} diagnostics={storyDiagnostics}
-                    onBack={() => setStoryId(null)}
-                    onShow={(id) => { setStoryId(null); setReveal({ elementId: id }); }} />
+          <Makigami
+            t={t}
+            model={model}
+            id={storyId}
+            story={story}
+            diagnostics={storyDiagnostics}
+            onBack={() => setStoryId(null)}
+            onShow={(id) => { setStoryId(null); setReveal({ elementId: id }); }}
+            onRun={frozen ? undefined : (op) => run(op)}
+            onDeleteStory={frozen ? undefined : () => {
+              void run({ op: "setStory", id: storyId, story: null });
+              setStoryId(null);
+            }}
+          />
         )}
 
         <OplBar

@@ -1,6 +1,8 @@
-import { CSSProperties, ChangeEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { EditorLink, EditorLinkKind, STATEFUL, allowedKinds } from "../core/links";
-import { Model, affiliation, essence, humanize, label, objects, processes } from "../core/model";
+import {
+  Model, affiliation, deriveAuthorityId, deriveCapabilityId, essence, humanize, label, objects, processes, refIds, refObject,
+} from "../core/model";
 import { Sentence } from "../core/opl";
 import { ViewInfo } from "../core/viewmodel";
 import { LINK_WORDS, Messages, format } from "../shared/i18n";
@@ -18,12 +20,15 @@ export interface ToolbarProps {
   onAddProcess: () => void;
   onAddState?: () => void;
   onArrange: (algorithm: LayoutAlgorithm) => void;
+  stories?: { id: string; title: string }[];
+  onOpenStory?: (id: string) => void;
+  onNewStory?: () => void;
   menu: { label: string; action: () => void; checked?: boolean; disabled?: boolean }[];
   disabled: boolean;
 }
 
 export function Toolbar(p: ToolbarProps) {
-  const [open, setOpen] = useState<"more" | "layout" | null>(null);
+  const [open, setOpen] = useState<"more" | "layout" | "stories" | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -46,6 +51,27 @@ export function Toolbar(p: ToolbarProps) {
       <button onClick={p.onAddProcess} title="P">◯ {p.t.process}</button>
       {p.onAddState && <button onClick={p.onAddState} title="S">▢ {p.t.state}</button>}
       <span className="opm-sep" />
+      {(p.onOpenStory || p.onNewStory) && (
+        <span className="opm-split">
+          <button className="opm-stories-btn" onClick={() => setOpen(open === "stories" ? null : "stories")}>
+            ▤ {p.t.stories}{p.stories?.length ? ` (${p.stories.length})` : ""} ▾
+          </button>
+          {open === "stories" && (
+            <div className="opm-menu opm-stories-menu">
+              {(p.stories ?? []).map((s) => (
+                <button key={s.id} onClick={() => { setOpen(null); p.onOpenStory?.(s.id); }}>
+                  <span>{s.title}</span> <span className="opm-dim">{s.id}</span>
+                </button>
+              ))}
+              {p.onNewStory && (
+                <button disabled={p.disabled} onClick={() => { setOpen(null); p.onNewStory?.(); }}>
+                  <b>{p.t.newStory}</b>
+                </button>
+              )}
+            </div>
+          )}
+        </span>
+      )}
       <span className="opm-split">
         <button className="opm-layout" onClick={() => setOpen(open === "layout" ? null : "layout")}>{p.t.arrange} ▾</button>
         {open === "layout" && (
@@ -256,6 +282,159 @@ function StatePills({ p, id, editable }: { p: InspectorProps; id: string; editab
   );
 }
 
+function TokenPills({ items, suggestions, addLabel, prefix, onChange }: {
+  items: string[];
+  suggestions: string[];
+  addLabel: string;
+  prefix: "can_" | "owns_";
+  onChange: (next: string[] | null) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const normalize = (raw: string) => {
+    const s = raw.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+    if (!s) return "";
+    return s.startsWith(prefix) ? s : `${prefix}${s}`;
+  };
+  const add = (val: string) => {
+    const token = normalize(val);
+    if (!token || token === prefix || items.includes(token)) return;
+    onChange([...items, token]);
+  };
+  const remove = (val: string) => {
+    const next = items.filter((x) => x !== val);
+    onChange(next.length ? next : null);
+  };
+  const unused = suggestions.filter((s) => !items.includes(s));
+  return (
+    <div className="opm-pills">
+      {items.map((item) => (
+        <span key={item} className="opm-pill mono">
+          <span>{item}</span>
+          <button className="opm-x" onClick={() => remove(item)} aria-label={`Remove ${item}`}>×</button>
+        </span>
+      ))}
+      {unused.map((s) => (
+        <button key={s} className="opm-pill suggestion mono" onClick={() => add(s)}>+ {s}</button>
+      ))}
+      {adding ? (
+        <input
+          className="opm-pill-input mono"
+          autoFocus
+          defaultValue={prefix}
+          onBlur={(e) => { setAdding(false); add(e.target.value); }}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            if (e.key === "Escape") setAdding(false);
+          }}
+        />
+      ) : (
+        <button className="opm-pill add mono" onClick={() => setAdding(true)}>{addLabel}</button>
+      )}
+    </div>
+  );
+}
+
+function CapabilitiesSection({ p, id }: { p: InspectorProps; id: string }) {
+  const objs = objects(p.model);
+  const procs = processes(p.model);
+  const o = objs[id];
+  const proc = procs[id];
+
+  if (proc) {
+    const derived = deriveCapabilityId(id);
+    const summary = proc.capability ?? "";
+    return (
+      <Section title={p.t.capabilitiesSection} summary={summary} open={!!proc.capability}>
+        <div className="opm-row">
+          <span>{p.t.capability}</span>
+          <div className="opm-grow opm-inline-row">
+            <Field mono value={proc.capability ?? ""} placeholder={derived}
+                   onCommit={(v) => p.onUpdate(id, { capability: v.trim() || null })} />
+            {proc.capability !== derived && (
+              <button className="opm-button" onClick={() => p.onUpdate(id, { capability: derived })}>{p.t.derive}</button>
+            )}
+          </div>
+        </div>
+      </Section>
+    );
+  }
+
+  if (!o) return null;
+  const isPerformer = o.role === "module" || essence(o) === "physical";
+  if (!isPerformer) {
+    const derived = deriveAuthorityId(id);
+    return (
+      <Section title={p.t.capabilitiesSection} summary={o.authority ?? ""} open={!!o.authority}>
+        <div className="opm-row">
+          <span>{p.t.authority}</span>
+          <div className="opm-grow opm-inline-row">
+            <Field mono value={o.authority ?? ""} placeholder={derived}
+                   onCommit={(v) => p.onUpdate(id, { authority: v.trim() || null })} />
+            {o.authority !== derived && (
+              <button className="opm-button" onClick={() => p.onUpdate(id, { authority: derived })}>{p.t.derive}</button>
+            )}
+          </div>
+        </div>
+      </Section>
+    );
+  }
+
+  // Suggestions for a module or agent based on the processes it performs and the objects those processes yield/change
+  const performedProcs = Object.keys(procs).filter((pid) =>
+    o.role === "module"
+      ? (procs[pid].requires ?? []).some((r) => refObject(r) === id)
+      : refIds(procs[pid].handledBy).includes(id),
+  );
+  const capSuggestions = [...new Set(performedProcs.map((pid) => procs[pid].capability ?? deriveCapabilityId(pid)))];
+  const touchedObjs = [...new Set(performedProcs.flatMap((pid) => [
+    ...(procs[pid].yields ?? []).map(refObject),
+    ...refIds(procs[pid].affects),
+    ...(procs[pid].changes ?? []).map((c) => c.object),
+  ]))].filter((oid) => oid !== id && objs[oid]?.role !== "module");
+  const authSuggestions = [...new Set(touchedObjs.map((oid) => objs[oid]?.authority ?? deriveAuthorityId(oid)))];
+  const hasAny = Boolean(o.deploymentName || o.capabilities?.length || o.owns?.length);
+  const summary = [
+    o.deploymentName,
+    o.capabilities?.length ? `${o.capabilities.length} can_*` : "",
+    o.owns?.length ? `${o.owns.length} owns_*` : "",
+  ].filter(Boolean).join(" · ");
+
+  return (
+    <Section title={p.t.capabilitiesSection} summary={summary} open={hasAny}>
+      <div className="opm-row">
+        <span>{p.t.deploymentName}</span>
+        <Field mono value={o.deploymentName ?? ""} placeholder={`${id}_v1.0.0`}
+               onCommit={(v) => p.onUpdate(id, { deploymentName: v.trim() || null })} />
+      </div>
+      <div className="opm-row">
+        <span>{p.t.capabilities}</span>
+        <div className="opm-grow">
+          <TokenPills
+            items={o.capabilities ?? []}
+            suggestions={capSuggestions}
+            addLabel={p.t.addCapability}
+            prefix="can_"
+            onChange={(next) => p.onUpdate(id, { capabilities: next })}
+          />
+        </div>
+      </div>
+      <div className="opm-row">
+        <span>{p.t.owns}</span>
+        <div className="opm-grow">
+          <TokenPills
+            items={o.owns ?? []}
+            suggestions={authSuggestions}
+            addLabel={p.t.addAuthority}
+            prefix="owns_"
+            onChange={(next) => p.onUpdate(id, { owns: next })}
+          />
+        </div>
+      </div>
+    </Section>
+  );
+}
+
 function SchemaPicker({ p, id }: { p: InspectorProps; id: string }) {
   const [q, setQ] = useState("");
   const current = objects(p.model)[id]?.schema;
@@ -421,6 +600,7 @@ export function Inspector(p: InspectorProps) {
         <Note value={def.note ?? ""} onCommit={(v) => p.onUpdate(id, { note: v })} onLink={p.onOpenLink} t={p.t} />
       </Section>
       {isObject && <Section title={p.t.states}><StatePills p={p} id={id} editable /></Section>}
+      <CapabilitiesSection p={p} id={id} />
       {isObject && <Section title={p.t.jsonSchema}><SchemaPicker p={p} id={id} /></Section>}
       <Classification p={p} id={id} />
       <div className="opm-actions">
