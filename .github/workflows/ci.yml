@@ -20,4 +20,5 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: node test/webapp-browser.mjs
+      - run: node test/makigami-browser.mjs
       - run: node tools/check-examples.mjs
