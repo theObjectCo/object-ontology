@@ -17,6 +17,8 @@ jobs:
           node-version: "22"
           cache: "npm"
       - run: npm ci
+      - run: node tools/check-object-kit.mjs
+      - run: node --test test/cloud-*.test.mjs
       - run: npm run typecheck
       - run: npm test
       - run: node test/webapp-browser.mjs

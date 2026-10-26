@@ -46,6 +46,7 @@ ordering assertion and the clipboard-selection regression cover that contract.
   shortcuts, frozen editing after a parse error and passive/explicit JSON reveal.
 - The new regression is included in the GitHub verification workflow.
 
-The five named ontology monoliths are now decomposed on this branch. Shared `@kit`
-adoption, cloud integration and broader fleet migration remain Phase 3 work. No
-website deployment is included.
+The five named ontology monoliths are now decomposed. The cloud adapter uses the
+pinned shared `@kit/cloud` snapshot described in `phase3-kit-cloud.md`. Shared UI
+component adoption and broader fleet migration remain Phase 3 work. No website
+deployment is included.
