@@ -6,4 +6,3 @@ export * from "./panels/InspectorProps";
 export * from "./panels/Inspector";
 export * from "./panels/ContextMenu";
 export * from "./panels/LinkMenu";
-export * from "./panels/Toast";

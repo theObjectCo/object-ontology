@@ -1,6 +1,6 @@
 {
   "repository": "https://git.infra.object.pl/Object/object-system",
-  "revision": "2da18d9020595a56d7643deb77b067af5c52d036",
+  "revision": "cd9840d173cbdf229ebd778c1156936e8ea9e933",
   "sourceDirectory": "code/Applications/object-themes/kit",
   "files": {
     "cloud/cloudTypes.ts": "5bc60a258e6efcecaacaec2053f51e389d5c4a1b1662b8f8eec047662223abf0",
@@ -15,6 +15,8 @@
     "styles/base/theme.css": "0f25b1e28c6badc922eacca8575a260693175d3dcfa2a38e7f1cb522e26606e8",
     "styles/studio/studio.css": "7a702a5640689aba6570676498e5b10a84343079de45a779b4a952d7e9bbc64b",
     "components/studio/StudioPanel.tsx": "d70c9e535f7eff0bec2fa741130104d9b1fc44bc878ec02e517e0833abed3e12",
-    "components/studio/CanvasToolbar.tsx": "e0702d3fd054ecf0a47eed9a87a2b1c9624889db619796e505b01c5d8db6af16"
+    "components/studio/CanvasToolbar.tsx": "e0702d3fd054ecf0a47eed9a87a2b1c9624889db619796e505b01c5d8db6af16",
+    "components/studio/StudioNotice.tsx": "730b4b68e4297272bd1a6552c88c8d1e62938e9859d6817a45ef2c6bed1046d5",
+    "components/studio/StudioNoticeProps.ts": "9bfa1e7d281d61b554c9920132be8e411d5e356f2b4b5cf9eae8da67db812c3e"
   }
 }

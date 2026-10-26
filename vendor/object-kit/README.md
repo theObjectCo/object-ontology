@@ -1,7 +1,8 @@
 # Shared Object kit sources
 
 This is a pinned subset of `object-system/code/Applications/object-themes/kit`:
-cloud providers, `StudioHeader`, `StudioPanel`, `CanvasToolbar`, theme tokens and Studio styles.
+cloud providers, `StudioHeader`, `StudioPanel`, `CanvasToolbar`, `StudioNotice`,
+theme tokens and Studio styles.
 `SOURCE.json` pins the upstream revision and SHA-256 of every copied file.
 Files are copied verbatim from Git blobs, without local adaptations. GitHub CI
 and application builds use this snapshot and need no private repository access.
