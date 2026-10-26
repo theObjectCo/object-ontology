@@ -19,13 +19,19 @@ export async function openBrowserApp(query = '') {
   let browser;
   const close = async () => {
     let timer;
+    const started = performance.now();
+    const trace = (...args) => {
+      if (process.env.BROWSER_CLOSE_TRACE) console.error(Math.round(performance.now() - started), ...args);
+    };
     try {
       if (browser) await Promise.race([
         (async () => {
-          // Close the diagram pages (including their ELK workers) before asking
-          // Chrome to exit. Keep both operations inside the same timeout.
-          for (const page of await browser.pages()) await page.close({ runBeforeUnload: false });
+          // Let Chrome coordinate target and process shutdown in one operation.
+          // Closing pages first timed out on Windows, and enumerating workers
+          // adds lifecycle races without resolving that shutdown failure.
+          trace('Closing test browser process');
           await browser.close();
+          trace('Test browser closed');
         })(),
         new Promise((_, reject) => { timer = setTimeout(() => {
           browser.process()?.kill();
@@ -43,6 +49,7 @@ export async function openBrowserApp(query = '') {
       executablePath: process.env.CHROME || (process.platform === 'win32' ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : '/usr/bin/google-chrome'),
       headless: true,
     });
+    if (process.env.BROWSER_CLOSE_TRACE) browser.process()?.once('exit', code => console.error('Test browser process exited:', code));
     const page = await browser.newPage();
     await page.setViewport({ width: 1500, height: 1000 });
     if (process.env.BROWSER_CPU_RATE) await page.emulateCPUThrottling(Number(process.env.BROWSER_CPU_RATE));

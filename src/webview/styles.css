@@ -63,7 +63,6 @@ button {
 .opm-zoom,
 .opm-linkmenu,
 .opm-menu,
-.opm-toast,
 .opm-confirm {
   background: var(--vscode-editorWidget-background);
   border: 1px solid var(--vscode-editorWidget-border, transparent);
@@ -260,13 +259,8 @@ button {
   left: 50%;
   bottom: calc(var(--opl-h) + 16px);
   transform: translateX(-50%);
-  padding: 6px 14px;
   z-index: 30;
   max-width: 70%;
-}
-
-.opm-toast.error {
-  border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-editorError-foreground));
 }
 
 .opm-confirm {

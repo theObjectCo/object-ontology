@@ -1,5 +1,6 @@
 import { Background, BackgroundVariant, ConnectionLineType, ConnectionMode, ReactFlow, SelectionMode, ViewportPortal } from "@xyflow/react";
 import { CSSProperties } from "react";
+import { StudioNotice } from "../../vendor/object-kit/components/studio/StudioNotice";
 import { METHODS } from "../core/methods/common";
 import { format } from "../shared/i18n";
 import { DRAWER_WIDTH, LARGE_VIEW, NONE, OPL_COLLAPSED, OPL_HEIGHT } from "./app/constants";
@@ -14,7 +15,7 @@ import { Makigami } from "./makigami";
 import { methodMessages } from "./methods/messages";
 import { MethodPanel } from "./methods/panel";
 import { nodeTypes, ThingLabels } from "./nodes";
-import { ContextMenu, Inspector, LinkMenu, OplBar, Toast, Toolbar } from "./panels";
+import { ContextMenu, Inspector, LinkMenu, OplBar, Toolbar } from "./panels";
 import { post, saveTabState } from "./vscode";
 
 export function App() {
@@ -162,7 +163,7 @@ export function App() {
           </div>
         )}
 
-        {toast && <Toast text={toast.text} error={toast.error} />}
+        {toast && <StudioNotice className="opm-toast" tone={toast.error ? "error" : "info"}>{toast.text}</StudioNotice>}
 
         <Zoom t={t} />
 
