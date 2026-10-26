@@ -574,6 +574,17 @@ function updateHeaderUi() {
   }
 }
 
+// Treat cloud names, account labels and stored configuration as text.
+const escapeHtml = (value: unknown): string => String(value ?? "").replace(/[&<>"']/g, ch => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+}[ch]!));
+const cloudLink = (value: string | undefined): string => {
+  try {
+    const url = new URL(value || "");
+    return url.protocol === "https:" ? escapeHtml(url.href) : "";
+  } catch { return ""; }
+};
+
 let cloudFilesCache: CloudFileEntry[] = [];
 
 async function refreshCloudFilesList() {
@@ -595,8 +606,8 @@ async function refreshCloudFilesList() {
     if (!cloudFilesCache.length) {
       listEl.innerHTML = `<div class="opm-wa-cloud-empty">${
         session.lang === "pl"
-          ? `Folder /${cs.folderName} jest pusty. Kliknij „Zapisz obecny model .opm.json w /${cs.folderName}”.`
-          : `Folder /${cs.folderName} is empty. Click "Save current .opm.json to /${cs.folderName}".`
+          ? `Folder /${escapeHtml(cs.folderName)} jest pusty. Kliknij „Zapisz obecny model .opm.json w /${escapeHtml(cs.folderName)}”.`
+          : `Folder /${escapeHtml(cs.folderName)} is empty. Click "Save current .opm.json to /${escapeHtml(cs.folderName)}".`
       }</div>`;
       return;
     }
@@ -605,12 +616,12 @@ async function refreshCloudFilesList() {
         (f, idx) => `
         <div class="opm-wa-cloud-row">
           <div>
-            <strong>${f.name}</strong>
-            <small>${Math.max(1, Math.round(f.size / 1024))} KB ${f.lastModified ? "• " + f.lastModified.slice(0, 16).replace("T", " ") : ""}</small>
+            <strong>${escapeHtml(f.name)}</strong>
+            <small>${Math.max(1, Math.round(f.size / 1024))} KB ${escapeHtml(f.lastModified ? "• " + f.lastModified.slice(0, 16).replace("T", " ") : "")}</small>
           </div>
           <div class="opm-wa-cloud-row-actions">
             ${f.name.endsWith(".json") ? `<button type="button" class="opm-wa-btn opm-wa-btn-primary" data-cloud-load="${idx}">${session.lang === "pl" ? "Wczytaj" : "Open"}</button>` : ""}
-            ${f.webUrl ? `<a class="opm-wa-btn" href="${f.webUrl}" target="_blank" rel="noopener noreferrer">↗</a>` : ""}
+            ${cloudLink(f.webUrl) ? `<a class="opm-wa-btn" href="${cloudLink(f.webUrl)}" target="_blank" rel="noopener noreferrer">↗</a>` : ""}
           </div>
         </div>
       `,
@@ -642,7 +653,7 @@ async function refreshCloudFilesList() {
       });
     });
   } catch (err) {
-    listEl.innerHTML = `<div class="opm-wa-cloud-empty">${err instanceof Error ? err.message : String(err)}</div>`;
+    listEl.innerHTML = `<div class="opm-wa-cloud-empty">${escapeHtml(err instanceof Error ? err.message : String(err))}</div>`;
   }
 }
 
@@ -666,7 +677,7 @@ function toggleCloudModal(force?: boolean) {
       <div class="opm-wa-modal-head">
         <div>
           <strong>☁ Chmura Konsultanta (OneDrive / Google Drive) — 100% Client-Side</strong>
-          <div class="opm-wa-modal-sub">Wspólny folder z map.phenome.object.pl (domyślnie <code>/${cfg.folderName}</code>)</div>
+          <div class="opm-wa-modal-sub">Wspólny folder z map.phenome.object.pl (domyślnie <code>/${escapeHtml(cfg.folderName)}</code>)</div>
         </div>
         <button type="button" id="opm-wa-cloud-close" class="opm-wa-btn">✕</button>
       </div>
@@ -674,15 +685,15 @@ function toggleCloudModal(force?: boolean) {
         <div class="opm-wa-cloud-grid">
           <label>
             <span>Nazwa folderu na OneDrive / Google Drive</span>
-            <input id="opm-wa-cloud-folder" class="opm-wa-input" value="${cfg.folderName}" placeholder="phenome" />
+            <input id="opm-wa-cloud-folder" class="opm-wa-input" value="${escapeHtml(cfg.folderName)}" placeholder="phenome" />
           </label>
           <label>
             <span>Microsoft Entra Client ID (opcjonalnie SPA)</span>
-            <input id="opm-wa-cloud-entra" class="opm-wa-input" value="${cfg.entraClientId}" placeholder="00000000-0000-0000-0000-000000000000" />
+            <input id="opm-wa-cloud-entra" class="opm-wa-input" value="${escapeHtml(cfg.entraClientId)}" placeholder="00000000-0000-0000-0000-000000000000" />
           </label>
           <label>
             <span>Google OAuth Client ID (opcjonalnie Web)</span>
-            <input id="opm-wa-cloud-google" class="opm-wa-input" value="${cfg.googleClientId}" placeholder="1234567890-abc.apps.googleusercontent.com" />
+            <input id="opm-wa-cloud-google" class="opm-wa-input" value="${escapeHtml(cfg.googleClientId)}" placeholder="1234567890-abc.apps.googleusercontent.com" />
           </label>
         </div>
 
@@ -690,18 +701,18 @@ function toggleCloudModal(force?: boolean) {
           <button type="button" id="opm-wa-login-ms" class="opm-wa-btn opm-wa-btn-primary">⊞ Zaloguj Microsoft (OneDrive)</button>
           <button type="button" id="opm-wa-login-google" class="opm-wa-btn opm-wa-btn-primary">◉ Zaloguj Google (Google Drive)</button>
           <button type="button" id="opm-wa-login-local" class="opm-wa-btn">📁 Wskaż folder lokalny OneDrive / GDrive</button>
-          ${cs ? `<button type="button" id="opm-wa-cloud-logout" class="opm-wa-btn">Wyloguj (${cs.userName})</button>` : ""}
+          ${cs ? `<button type="button" id="opm-wa-cloud-logout" class="opm-wa-btn">Wyloguj (${escapeHtml(cs.userName)})</button>` : ""}
         </div>
 
         <div id="opm-wa-cloud-status" class="opm-wa-cloud-status">
-          ${cs ? `Połączono: ${cs.userName} • Folder: /${cs.folderName}` : "Nie połączono z dyskiem chmurowym."}
+          ${cs ? `Połączono: ${escapeHtml(cs.userName)} • Folder: /${escapeHtml(cs.folderName)}` : "Nie połączono z dyskiem chmurowym."}
         </div>
 
         ${
           cs
             ? `<div class="opm-wa-cloud-save-bar">
-                <button type="button" id="opm-wa-save-opm-cloud" class="opm-wa-btn opm-wa-btn-primary">☁ Zapisz ${session.fileName} w /${cs.folderName}</button>
-                <button type="button" id="opm-wa-save-md-cloud" class="opm-wa-btn">☁ Zapisz dokumentację .md w /${cs.folderName}</button>
+                <button type="button" id="opm-wa-save-opm-cloud" class="opm-wa-btn opm-wa-btn-primary">☁ Zapisz ${escapeHtml(session.fileName)} w /${escapeHtml(cs.folderName)}</button>
+                <button type="button" id="opm-wa-save-md-cloud" class="opm-wa-btn">☁ Zapisz dokumentację .md w /${escapeHtml(cs.folderName)}</button>
                 <button type="button" id="opm-wa-refresh-cloud" class="opm-wa-btn">↻ Odśwież listę</button>
               </div>`
             : ""
@@ -970,4 +981,3 @@ if (!handleOAuthPopupCallbackIfPresent()) {
     mountWebAppChrome();
   }
 }
-
