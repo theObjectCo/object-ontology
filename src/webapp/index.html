@@ -371,19 +371,14 @@
     padding: 8px 2px;
   }
 </style>
+<link rel="stylesheet" href="./webapp.css">
 </head>
 <body class="vscode-dark">
   <div id="opm-webapp-shell">
-    <header id="opm-webapp-bar"></header>
+    <div id="opm-webapp-bar"></div>
     <div id="opm-webapp-workspace">
       <div id="root" data-elk-worker="./elk-worker.min.js"></div>
-      <aside id="opm-webapp-json-pane">
-        <div class="opm-wa-json-head">
-          <span>Live <code>.opm.json</code> source</span>
-          <button id="opm-webapp-json-close" title="Close JSON editor">×</button>
-        </div>
-        <textarea id="opm-webapp-json-editor" spellcheck="false"></textarea>
-      </aside>
+      <div id="opm-webapp-json-mount"></div>
     </div>
   </div>
   <script src="./webapp.js"></script>

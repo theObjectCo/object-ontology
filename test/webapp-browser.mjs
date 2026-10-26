@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import puppeteer from 'puppeteer-core';
 
@@ -37,6 +37,23 @@ try {
     localStorage.setItem('phenome_cloud_session_v1', JSON.stringify({ provider: 'google', accessToken: 'synthetic-only', expiresAt: Date.now() + 3600000, userName: value, userEmail: '', folderName: 'phenome', folderId: 'fixture' }));
   }, malicious);
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
+  await page.waitForSelector('#opm-webapp-bar .v2-header');
+  for (const width of [1440, 390]) {
+    await page.setViewport({ width, height: 900 });
+    assert(await page.evaluate(() => [...document.querySelectorAll('#opm-webapp-bar button')].every(button => {
+      const box = button.getBoundingClientRect();
+      return box.width > 0 && box.left >= 0 && box.right <= innerWidth;
+    })), `Header actions must remain reachable at ${width}px`);
+    assert(await page.$eval('#root', el => {
+      const box = el.getBoundingClientRect();
+      return box.height > 200 && box.bottom <= innerHeight + 1;
+    }), 'The diagram must fit below the wrapped header');
+    if (process.env.CHROME_SHOTS) {
+      mkdirSync(process.env.CHROME_SHOTS, { recursive: true });
+      await page.screenshot({ path: resolve(process.env.CHROME_SHOTS, `ontology-chrome-${width}.png`) });
+    }
+  }
+  await page.setViewport({ width: 1440, height: 900 });
   await page.click('#opm-webapp-btn-cloud');
   await page.waitForSelector('.opm-wa-cloud-row');
   assert.equal(await page.$eval('#opm-webapp-cloud-modal', el => el.querySelectorAll('img,script').length), 0, 'cloud strings must remain text');
@@ -88,6 +105,11 @@ try {
   assert.equal(await page.$eval('#opm-webapp-json-editor', el => el.value), savedSession.text);
   assert.equal(await page.$eval('body', el => el.className), savedSession.theme);
   assert.equal(await page.$eval('#opm-webapp-btn-lang', el => el.textContent), savedSession.lang.toUpperCase());
+  assert.equal(await page.$eval('html', el => el.dataset.theme), savedSession.theme === 'vscode-light' ? 'light' : 'dark');
+  assert(await page.$eval('.opm-studio-header', el => getComputedStyle(el).getPropertyValue('--paper').trim().length > 0));
+  assert.equal(await page.$eval('#opm-webapp-btn-json', el => el.getAttribute('aria-pressed')), 'true');
+  await page.click('#opm-webapp-json-close');
+  assert.equal(await page.$eval('#opm-webapp-btn-json', el => el.getAttribute('aria-pressed')), 'false');
 
   // A selected native file handle must survive until Save in another host module.
   await page.evaluate(() => {
@@ -103,7 +125,7 @@ try {
   await page.waitForFunction(() => window.__fileClosed === true);
   assert.equal(await page.evaluate(() => JSON.parse(window.__savedFile).name), 'Native fixture');
   assert.deepEqual(pageErrors, []);
-  console.log('PASS cloud safety/load, JSON edits/undo/redo, editor bridge, persisted session and native file save');
+  console.log('PASS responsive React/kit chrome, theme tokens, cloud safety/load, JSON edits/undo/redo, editor bridge, persisted session and native file save');
 } finally {
   await browser.close();
   await new Promise(r => server.close(r));

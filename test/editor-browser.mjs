@@ -134,6 +134,9 @@ try {
   assert.equal(await page.evaluate(() => localStorage.getItem('opm.webapp.state.v1')), before);
   assert.deepEqual(errors, []);
   console.log('PASS diagram editor: keyboard creation/rename/state, inspector, clipboard/cut/undo, zoom/subprocesses, context menu, selection and frozen editing');
+} catch (error) {
+  console.error('Editor browser scenario failed:', error);
+  throw error;
 } finally {
   await app.close();
 }

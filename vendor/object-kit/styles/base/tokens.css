@@ -1,0 +1,149 @@
+/* Generated from kit/tokens/tokens.json by scripts/build-tokens.mjs in
+   object-themes. Do not edit: change tokens.json and run `npm run tokens`.
+   Layout and motion values (gutter, container, transitions) are hand-written
+   in layout.css. The light theme is the default; the dark one applies under
+   data-theme="dark" (theme.css). */
+:root,
+[data-theme="light"] {
+    --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+
+    /* Teal scale: one hue (OKLCH 180.9, the same in CIELAB LCh), lightness from 50 to 975. Step 500 is Object Teal and does not change. Every teal role below takes its value from a step; a teal that is not a step does not belong in an app. */
+    --teal-50: #f1f9f7;
+    --teal-100: #daf1ec;
+    --teal-200: #b4e3d9;
+    --teal-300: #8cd5c7;
+    --teal-400: #68c4b4;
+    --teal-500: #4ab3a2;               /* Object Teal, the brand colour */
+    --teal-600: #359586;
+    --teal-700: #2c7a6e;
+    --teal-800: #215b52;
+    --teal-900: #174039;
+    --teal-950: #0f2d28;
+    --teal-975: #0c211d;
+
+    /* Orange scale: the hue of Object Orange (OKLCH 64), every step at 95% of the chroma sRGB allows at its lightness, so the whole scale is equally vivid. Step 500 is Object Orange. */
+    --orange-50: #f9f6f4;
+    --orange-100: #f6eae0;
+    --orange-200: #f9d7b9;
+    --orange-300: #fdc28b;
+    --orange-400: #fcb064;
+    --orange-500: #fc9a22;             /* Object Orange, the accent colour */
+    --orange-600: #e28a1d;
+    --orange-700: #c57718;
+    --orange-800: #9c5e11;
+    --orange-900: #76450a;
+    --orange-950: #522e04;
+
+    /* Dark navy scale, a colour of the product family (2026-10-21): the hue of Phenome navy, lightness on the profile of the teal scale. Step 950 is the lead, white text on it 14.4:1; its action colour is saffron 300. */
+    --navy-50: #f3f7ff;
+    --navy-100: #e2ebff;
+    --navy-200: #c4d8ff;
+    --navy-300: #a7c4ff;
+    --navy-400: #89afff;
+    --navy-500: #6c9bff;
+    --navy-600: #527edf;
+    --navy-700: #4367b7;
+    --navy-800: #324d89;
+    --navy-900: #223661;
+    --navy-950: #1a2949;               /* Dark navy, the lead of the scale */
+
+    /* Terracotta scale, a colour of the product family (2026-10-21). Step 700 is the lead, white text on it 5.0:1; its action colour is cream, saffron 100. Steps 400 and 500 are turned 2 and 1 degrees of hue away from the error colour to keep CIEDE2000 10 from it. */
+    --terracotta-50: #fff4f2;
+    --terracotta-100: #ffe4de;
+    --terracotta-200: #ffc9bc;
+    --terracotta-300: #ffad98;
+    --terracotta-400: #ff8b74;
+    --terracotta-500: #f66f53;
+    --terracotta-600: #d0583d;
+    --terracotta-700: #b5523b;         /* Terracotta, the lead of the scale */
+    --terracotta-800: #803625;
+    --terracotta-900: #5b2519;
+    --terracotta-950: #411a10;
+
+    /* Petrol scale, a colour of the product family (2026-10-21). Step 800 is the lead, white text on it 6.6:1; its action colour is saffron 300. */
+    --petrol-50: #eff9fc;
+    --petrol-100: #d4f1fa;
+    --petrol-200: #a7e2f6;
+    --petrol-300: #75d4f0;
+    --petrol-400: #43c2e5;
+    --petrol-500: #04b0d5;
+    --petrol-600: #0092b1;
+    --petrol-700: #017892;
+    --petrol-800: #12657a;             /* Petrol, the lead of the scale */
+    --petrol-900: #013f4e;
+    --petrol-950: #022c37;
+
+    /* Saffron scale, a colour of the product family (2026-10-21). Step 300 is the lead, ink text on it 10.3:1; its action colour is navy 950. Step 100 is cream, the sixth colour of the family: ink on it 14.2:1, its action colour terracotta 700. */
+    --saffron-50: #faf7eb;
+    --saffron-100: #f5ecc9;            /* Cream, the light companion of saffron: the lead of the cream product and the action colour of terracotta */
+    --saffron-200: #ebd790;
+    --saffron-300: #e7c952;            /* Saffron, the lead of the scale */
+    --saffron-400: #d0ae03;
+    --saffron-500: #bb9c02;
+    --saffron-600: #9b8102;            /* Saffron as an underline or another graphic on white paper, 3.8:1 (WCAG 3:1 for graphics); not for text, under 4.5:1 */
+    --saffron-700: #7f6a01;
+    --saffron-800: #5f4f01;
+    --saffron-900: #433701;
+    --saffron-950: #302600;
+
+    --bg-base: #215b52;                /* Top of the page gradient: teal 800 in light, teal 900 in dark */
+    --bg-top: #4ab3a2;                 /* Bottom of the page gradient: Object Teal (teal 500) in light, teal 700 in dark */
+    --bg-surface: rgba(16, 16, 17, 0.65); /* Fill of inputs and controls on the teal page */
+    --bg-surface-hover: rgba(16, 16, 17, 0.8); /* Fill of a control on the teal page, on hover */
+    --bg-panel: rgba(16, 16, 17, 0.8); /* Dark panel on the teal page: the website chat, side panels of apps */
+    --bg-grid-opacity: 1;              /* Triangle field (GridBlobBackground) */
+
+    --color-primary: #4ab3a2;          /* Object Teal */
+    --color-primary-hover: #68c4b4;    /* Teal fill on hover: teal 400 */
+    --color-primary-light: rgba(74, 179, 162, 0.15); /* Teal tint behind a highlighted item, such as a chat message */
+
+    /* Paleta pomarańczy: baza / 90% / 80% */
+    --color-accent: #fc9a22;           /* Object Orange (orange 500): buttons, download links, the marker of the active tab */
+    --color-accent-hover: #e28a1d;     /* Orange fill on hover: orange 600 */
+    --color-accent-active: #c57718;    /* Orange fill pressed, and large orange text on paper: orange 700 */
+    --color-accent-highlight: #fdc28b; /* Highlight behind ink text and the fill of an orange badge: orange 300, ink on it 10.6:1 */
+    --color-on-accent: #0c211d;        /* Text on orange and on Object Teal: teal 975 */
+    --color-warn: #e08a5c;             /* Wyłącznie stany błędu */
+
+    --border-light: rgba(255, 255, 255, 0.5); /* Lines and outlines on the teal page */
+    --border-focus: #ffffff;           /* Outline of a hovered or focused control on the teal page */
+
+    --glass-fill: rgba(255, 255, 255, 0.08); /* Glass fill on the teal page: header buttons, the theme switch */
+    --glass-fill-hover: rgba(255, 255, 255, 0.16); /* Glass fill on hover */
+    --glass-blur: 4px;
+
+    --text-main: #ffffff;              /* Text on the teal page */
+    --text-muted: rgba(255, 255, 255, 0.82); /* Secondary text on the teal page */
+    --text-dark: #0c211d;              /* Text on the sheet: teal 975 in light, teal 50 on the dark sheet */
+    --text-on-teal: #ffffff;           /* White on teal, also inside paper: paper does not re-point it */
+
+    /* Papier arkusza i karty wewnątrz niego. */
+    --paper: rgba(241, 249, 247, 0.96); /* The sheet laid over the page: teal 50 in light, teal 975 in dark */
+    --paper-text-muted: rgba(12, 33, 29, 0.72); /* Secondary text on paper */
+    --paper-line: rgba(12, 33, 29, 0.20); /* Lines and outlines on paper */
+    --paper-line-focus: rgba(12, 33, 29, 0.45); /* Outline of a hovered or focused control on paper */
+    --paper-card: rgba(12, 33, 29, 0.04); /* Card fill inside paper */
+    --paper-card-hover: rgba(12, 33, 29, 0.08); /* Card fill inside paper, on hover */
+    --paper-teal: #215b52;             /* Teal text on the sheet (links, headings in an editor): teal 800 in light (7:1 on paper, 6.6:1 on a card), Object Teal in dark */
+    --paper-orange: #9c5e11;           /* Orange text on the sheet: orange 800 in light (4.5:1 on paper), Object Orange in dark */
+    --paper-tabs: rgba(12, 33, 29, 0.08); /* Tab strip at the top of a sheet, a shade below the sheet: ink at 8% in light, in dark the fill of controls on the teal page (as --bg-surface) */
+    --paper-tab-active: #f1f9f7;       /* The open tab in the strip: the sheet colour in both themes (teal 50 / teal 975) */
+}
+
+[data-theme="dark"] {
+    --bg-base: #174039;
+    --bg-top: #2c7a6e;
+    --bg-grid-opacity: 0.5;
+    --text-dark: #f1f9f7;
+    --paper: rgba(12, 33, 29, 0.94);
+    --paper-text-muted: rgba(241, 249, 247, 0.72);
+    --paper-line: rgba(241, 249, 247, 0.20);
+    --paper-line-focus: rgba(241, 249, 247, 0.48);
+    --paper-card: rgba(241, 249, 247, 0.05);
+    --paper-card-hover: rgba(241, 249, 247, 0.09);
+    --paper-teal: #4ab3a2;
+    --paper-orange: #fc9a22;
+    --paper-tabs: rgba(16, 16, 17, 0.65);
+    --paper-tab-active: #0c211d;
+}

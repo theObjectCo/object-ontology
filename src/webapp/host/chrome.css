@@ -1,0 +1,62 @@
+@import '../../../vendor/object-kit/styles/base/tokens.css';
+@import '../../../vendor/object-kit/styles/base/theme.css';
+@import '../../../vendor/object-kit/styles/studio/studio.css';
+
+/* Shared Studio header, in document flow above a 2D editor rather than floating
+   over a viewport. Host-specific sizing leaves the diagram webview independent. */
+#opm-webapp-bar {
+  height: auto;
+  min-height: 38px;
+  padding: 0;
+  border: 0;
+}
+.v2-header.opm-studio-header {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  min-height: 38px;
+  height: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 6px 12px;
+  box-sizing: border-box;
+  box-shadow: none;
+  background: var(--paper);
+  color: var(--text-dark);
+  border: 0;
+  border-bottom: 1px solid var(--paper-line);
+  font-family: var(--font-sans);
+}
+.opm-studio-header .v2-header-left { flex-shrink: 0; }
+.opm-studio-header .v2-header-right {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-left: auto;
+}
+.opm-wa-model { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.opm-studio-header .opm-wa-filename { color: var(--paper-text-muted); }
+.opm-studio-header .opm-wa-select,
+.opm-studio-header .opm-wa-btn {
+  background: var(--paper-card);
+  color: var(--text-dark);
+  border-color: var(--paper-line);
+  border-radius: 0;
+}
+.opm-studio-header .opm-wa-btn:hover { background: var(--paper-card-hover); }
+.opm-studio-header .opm-wa-btn-primary,
+.opm-studio-header .opm-wa-btn.active {
+  color: var(--paper-teal);
+  border-color: var(--paper-line-focus);
+}
+#opm-webapp-json-mount { display: contents; }
+#opm-webapp-workspace { min-height: 0; flex: 1; }
+#opm-webapp-workspace #root { min-height: 0; height: 100%; }
+#opm-webapp-workspace .opm-app { height: 100%; }
+@media (max-width: 600px) {
+  .opm-wa-model { width: 100%; }
+  .opm-studio-header .opm-wa-select { min-width: 0; max-width: 60%; }
+  .opm-studio-header .v2-header-right { justify-content: flex-start; }
+  #opm-webapp-json-pane { width: 55vw; max-width: 55vw; }
+}

@@ -37,6 +37,8 @@ copyFileSync("node_modules/elkjs/lib/elk-worker.min.js", "media/elk-worker.min.j
 mkdirSync("dist/web", { recursive: true });
 await build({
   entryPoints: ["src/webapp/host.ts"],
+  jsx: "automatic",
+  define: { "process.env.NODE_ENV": '"production"' },
   outfile: "dist/web/webapp.js",
   bundle: true,
   platform: "browser",
