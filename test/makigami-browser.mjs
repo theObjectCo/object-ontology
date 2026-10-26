@@ -115,6 +115,9 @@ try {
   const laneHeaders = await page.$$('.opm-mk-lane-head');
   await (await laneHeaders.at(-1).$('button[title="Move lane up"]')).click();
   await waitStory(s => s.lanes[2] === 'qualityReview');
+  // Persistence precedes the React model message; wait for the reordered DOM too.
+  await page.waitForFunction(() =>
+    document.querySelectorAll('.opm-mk-lane-head')[2]?.querySelector('.opm-mk-thing-label')?.textContent === 'Quality review');
   await page.click('.opm-mk-lane-head:nth-child(4) .opm-mk-lane-tools button:last-child');
   await waitStory(s => s.lanes.length === 3 && !s.lanes.includes('qualityReview'));
   assert.deepEqual(errors, []);
