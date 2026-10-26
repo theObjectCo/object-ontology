@@ -25,7 +25,8 @@ Validation:
   Markdown notes, classification, deployment field, close action and inspector
   bounds at 1500×1000 and 900×700. Included in GitHub CI.
 - Desktop/tablet screenshots inspected under `dist/panel-shots/` (local artifacts).
-- `git diff --check` passes.
+- Authored files pass `git diff --check`; the verbatim upstream CanvasToolbar
+  retains its existing extra blank line at EOF (reported by the full diff check).
 
 This validates the built standalone application. Native VS Code runtime acceptance
 and public deployment are separate checks, not claimed by these browser tests.
