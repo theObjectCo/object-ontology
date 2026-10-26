@@ -3,7 +3,7 @@
 The browser host now renders its header and live JSON drawer through React.
 `WebAppHeader` uses the shared `StudioHeader` component; the vendored component,
 Studio stylesheet and theme tokens are exact Git blobs from Object kit revision
-`44a3a8b1d5ee6964e479b45694c410b1fb3dbf60`. The snapshot verifier checks all eleven
+`44a3a8b1d5ee6964e479b45694c410b1fb3dbf60`. The snapshot verifier checks all twelve
 source files recursively, including unexpected files, and hashes their LF bytes.
 The public GitHub build needs no access to the private upstream repository.
 
@@ -32,6 +32,23 @@ Validation:
   fixture now bounds shutdown and reports failures before cleanup. Its rerun
   completed successfully.
 
+The cloud dialog now also renders through React, using the pinned `StudioPanel`
+inside a native modal dialog. Provider configuration, document operations and
+file-list presentation have separate modules; names and account labels are React
+text, and external links only accept HTTPS. The native dialog handles focus,
+Escape and focus restoration. Its colors come from the same shared theme tokens.
+List requests carry a generation so an old response cannot restore files after
+logout. Actions are guarded while running; errors leave controls usable.
+
+Cloud-dialog validation includes 1440/390-pixel layout, inspected screenshots,
+focus restoration, untrusted file labels, a delayed list response after logout,
+local folder connection with normalized configuration, JSON/Markdown saves,
+failed-write recovery and reopening/loading. All use synthetic credentials and
+file handles; real Microsoft/Google authorization was not exercised. The eight
+provider contracts and 97 unit tests passed. Editor, Makigami and example checks
+passed after the browser fixture was changed to close its pages before Chrome;
+the initial shutdown timeout remains recorded as a failed run.
+
 This is one stage of EPIC-29, not completion of the ontology UI migration.
-Cloud dialog rendering, toast presentation and the diagram's remaining local UI
-components still need migration to shared kit components. No site was deployed.
+Toast presentation and the diagram's remaining local UI components still need
+migration to shared kit components. No site was deployed.

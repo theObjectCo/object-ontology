@@ -13,6 +13,7 @@
     "components/studio/StudioHeader.tsx": "4b976f5ee9245f273aa415644c02f3a2779e0c997fa01d4405e776efc546ddcc",
     "styles/base/tokens.css": "ef7c53e78cdba1ae2e12b36661760b3a00e4418011bc9c851434776dc6ba5140",
     "styles/base/theme.css": "0f25b1e28c6badc922eacca8575a260693175d3dcfa2a38e7f1cb522e26606e8",
-    "styles/studio/studio.css": "7a702a5640689aba6570676498e5b10a84343079de45a779b4a952d7e9bbc64b"
+    "styles/studio/studio.css": "7a702a5640689aba6570676498e5b10a84343079de45a779b4a952d7e9bbc64b",
+    "components/studio/StudioPanel.tsx": "d70c9e535f7eff0bec2fa741130104d9b1fc44bc878ec02e517e0833abed3e12"
   }
 }

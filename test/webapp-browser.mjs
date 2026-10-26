@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import puppeteer from 'puppeteer-core';
+import { checkCloudDialog } from './cloud-dialog-browser.mjs';
 
 const root = resolve('dist/web');
 const server = createServer((req, res) => {
@@ -20,13 +21,20 @@ try {
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(error.message));
   const malicious = '<img src=x onerror="window.__injected=1">';
+  let delayList = false, releaseList;
   await page.setRequestInterception(true);
   page.on('request', request => {
     if (request.url().startsWith('https://www.googleapis.com/drive/v3/files')) {
       const payload = request.url().includes('alt=media')
         ? { name: 'Cloud fixture', objects: {}, processes: {} }
         : { files: [{ id: 'fixture', name: malicious + '.json', size: 100, webViewLink: 'javascript:window.__injected=2' }] };
-      return request.respond({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization', 'access-control-allow-methods': 'GET, OPTIONS' }, body: JSON.stringify(payload) });
+      const respond = () => request.respond({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization', 'access-control-allow-methods': 'GET, OPTIONS' }, body: JSON.stringify(payload) });
+      if (delayList && request.method() === 'GET' && !request.url().includes('alt=media')) {
+        delayList = false;
+        releaseList = respond;
+        return;
+      }
+      return respond();
     }
     if (request.url().startsWith('http://127.0.0.1:')) return request.continue();
     return request.abort();
@@ -56,12 +64,28 @@ try {
   await page.setViewport({ width: 1440, height: 900 });
   await page.click('#opm-webapp-btn-cloud');
   await page.waitForSelector('.opm-wa-cloud-row');
+  assert(await page.$eval('#opm-webapp-cloud-modal', el => el instanceof HTMLDialogElement && el.open));
+  assert(await page.$eval('#opm-webapp-cloud-modal', el => el.contains(document.activeElement)), 'Dialog takes focus');
+  for (const width of [1440, 390]) {
+    await page.setViewport({ width, height: 900 });
+    assert(await page.$eval('#opm-webapp-cloud-modal', el => {
+      const box = el.getBoundingClientRect();
+      return box.width > 0 && box.left >= 0 && box.right <= innerWidth && el.scrollWidth <= el.clientWidth + 1;
+    }), `Cloud dialog must fit at ${width}px`);
+    if (process.env.CHROME_SHOTS) await page.screenshot({ path: resolve(process.env.CHROME_SHOTS, `ontology-cloud-${width}.png`) });
+  }
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.getElementById('opm-webapp-cloud-modal'));
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'opm-webapp-btn-cloud', 'Escape restores focus');
+  await page.setViewport({ width: 1440, height: 900 });
+  await page.click('#opm-webapp-btn-cloud');
+  await page.waitForSelector('.opm-wa-cloud-row');
   assert.equal(await page.$eval('#opm-webapp-cloud-modal', el => el.querySelectorAll('img,script').length), 0, 'cloud strings must remain text');
   assert.equal(await page.evaluate(() => window.__injected), undefined);
   assert.equal(await page.$eval('.opm-wa-cloud-row strong', el => el.textContent), malicious + '.json');
   assert.equal(await page.$eval('.opm-wa-cloud-row', el => el.querySelectorAll('a[href^="javascript:"]').length), 0);
   await page.click('[data-cloud-load="0"]');
-  await page.waitForFunction(() => !document.getElementById('opm-webapp-cloud-modal').classList.contains('open'));
+  await page.waitForFunction(() => !document.getElementById('opm-webapp-cloud-modal'));
   await page.click('#opm-webapp-btn-json');
   assert.equal(await page.$eval('#opm-webapp-json-editor', el => JSON.parse(el.value).name), 'Cloud fixture');
 
@@ -124,9 +148,26 @@ try {
   await page.click('#opm-webapp-btn-save');
   await page.waitForFunction(() => window.__fileClosed === true);
   assert.equal(await page.evaluate(() => JSON.parse(window.__savedFile).name), 'Native fixture');
+  await page.click('#opm-webapp-btn-cloud');
+  await page.waitForSelector('.opm-wa-cloud-row');
+  delayList = true;
+  await page.click('#opm-wa-refresh-cloud');
+  for (let attempt = 0; !releaseList && attempt < 500; attempt++) await new Promise(resolve => setTimeout(resolve, 10));
+  assert(releaseList, 'Refresh must issue the delayed request');
+  await page.click('#opm-wa-cloud-logout');
+  await page.waitForFunction(() => !document.getElementById('opm-wa-cloud-logout'));
+  await releaseList();
+  await page.waitForNetworkIdle({ idleTime: 200 });
+  assert.equal(await page.$$eval('.opm-wa-cloud-row', rows => rows.length), 0, 'A late list response must not restore logged-out files');
+  assert.equal(await page.$eval('#opm-wa-cloud-files', el => el.getAttribute('aria-busy')), 'false');
+  await page.click('#opm-wa-cloud-close');
+  await page.waitForFunction(() => !document.getElementById('opm-webapp-cloud-modal'));
+  await checkCloudDialog(page);
   assert.deepEqual(pageErrors, []);
   console.log('PASS responsive React/kit chrome, theme tokens, cloud safety/load, JSON edits/undo/redo, editor bridge, persisted session and native file save');
 } finally {
-  await browser.close();
+  const timeout = setTimeout(() => browser.process()?.kill(), 10_000);
+  try { await browser.close(); } finally { clearTimeout(timeout); }
+  server.closeAllConnections();
   await new Promise(r => server.close(r));
 }
