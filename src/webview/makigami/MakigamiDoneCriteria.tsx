@@ -1,9 +1,15 @@
 
 import type { MakigamiEditor } from "./useMakigamiEditor";
 
-type Props = Pick<MakigamiEditor, "story" | "onRun" | "t" | "saveStory" | "addingCriterion" | "newCriterion" | "setNewCriterion" | "setAddingCriterion">;
+type Props = Pick<MakigamiEditor,
+  "story" | "onRun" | "t" | "saveStory"
+  | "addingCriterion" | "newCriterion" | "setNewCriterion" | "setAddingCriterion"
+>;
 
-export function MakigamiDoneCriteria({ story, onRun, t, saveStory, addingCriterion, newCriterion, setNewCriterion, setAddingCriterion }: Props) {
+export function MakigamiDoneCriteria({
+  story, onRun, t, saveStory, addingCriterion,
+  newCriterion, setNewCriterion, setAddingCriterion,
+}: Props) {
   return (<>
     {(!!story.doneWhen?.length || onRun) && (
       <div className="opm-story-done">

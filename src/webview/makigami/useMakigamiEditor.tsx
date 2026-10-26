@@ -16,6 +16,7 @@ export function useMakigamiEditor({ t, model, id, story, diagnostics, onBack, on
     items.some((d) => d.severity === "error") ? "error" : items.length ? "warning" : undefined;
 
   const [selectedStep, setSelectedStep] = useState<number | null>(null);
+  const [pendingInsertion, setPendingInsertion] = useState<{ storyId: string; index: number; count: number } | null>(null);
   const [editingField, setEditingField] = useState<"does" | "waits" | "problem" | "handover" | "process" | null>(null);
   const [dragStep, setDragStep] = useState<number | null>(null);
   const [dropTarget, setDropTarget] = useState<{ lane: string; col: number } | null>(null);
@@ -35,6 +36,17 @@ export function useMakigamiEditor({ t, model, id, story, diagnostics, onBack, on
     setTitleDraft(story.title ?? humanize(id));
     setSentenceDraft(story.story);
   }, [id, story.title, story.story]);
+
+  useEffect(() => {
+    if (!pendingInsertion) return;
+    if (pendingInsertion.storyId !== id) {
+      setPendingInsertion(null);
+    } else if (steps.length >= pendingInsertion.count) {
+      setSelectedStep(pendingInsertion.index);
+      setEditingField("does");
+      setPendingInsertion(null);
+    }
+  }, [id, steps.length, pendingInsertion]);
 
   useEffect(() => {
     if (selectedStep !== null && selectedStep >= steps.length) {
@@ -67,7 +79,8 @@ export function useMakigamiEditor({ t, model, id, story, diagnostics, onBack, on
     saveStory({ ...story, steps: nextSteps });
   };
 
-  const insertStep = (afterIndex: number, laneId?: string) => {
+  const insertStep = async (afterIndex: number, laneId?: string) => {
+    if (!onRun) return;
     const prev = steps[afterIndex];
     const defaultLane = laneId ?? prev?.handsOver?.to ?? prev?.lane ?? lanes[0] ?? "user";
     const newStep: StoryStep = {
@@ -75,9 +88,11 @@ export function useMakigamiEditor({ t, model, id, story, diagnostics, onBack, on
       does: "Performs the next step.",
     };
     const nextSteps = [...steps.slice(0, afterIndex + 1), newStep, ...steps.slice(afterIndex + 1)];
-    saveStory({ ...story, steps: nextSteps });
-    setSelectedStep(afterIndex + 1);
-    setEditingField("does");
+    // A host may acknowledge before publishing the updated model. Wait for both
+    // before selecting, so the bounds effect cannot clamp to the old last step.
+    const result = await onRun({ op: "setStory", id, story: { ...story, steps: nextSteps } }) as { ok?: boolean } | undefined;
+    if (result?.ok === false) return;
+    setPendingInsertion({ storyId: id, index: afterIndex + 1, count: nextSteps.length });
   };
 
   const moveStep = (index: number, delta: -1 | 1) => {

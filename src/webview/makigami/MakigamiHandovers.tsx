@@ -1,9 +1,17 @@
 
 import type { MakigamiEditor } from "./useMakigamiEditor";
 
-type Props = Pick<MakigamiEditor, "arrows" | "selectedStep" | "editingField" | "onRun" | "setSelectedStep" | "setEditingField" | "t" | "updateStep" | "steps" | "lanes" | "L" | "thing">;
+type Props = Pick<MakigamiEditor,
+  "arrows" | "selectedStep" | "editingField" | "onRun"
+  | "setSelectedStep" | "setEditingField" | "t" | "updateStep"
+  | "steps" | "lanes" | "L" | "thing"
+>;
 
-export function MakigamiHandovers({ arrows, selectedStep, editingField, onRun, setSelectedStep, setEditingField, t, updateStep, steps, lanes, L, thing }: Props) {
+export function MakigamiHandovers({
+  arrows, selectedStep, editingField, onRun, setSelectedStep,
+  setEditingField, t, updateStep, steps, lanes,
+  L, thing,
+}: Props) {
   return (<>
     {arrows.map((a) => {
       const isEditingHandover = selectedStep === a.k && editingField === "handover" && !!onRun;

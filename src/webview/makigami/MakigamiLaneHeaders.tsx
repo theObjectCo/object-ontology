@@ -3,9 +3,22 @@ import { laneKind } from "../../core/stories";
 import { HEAD_H, LANE_W } from "./dimensions";
 import type { MakigamiEditor } from "./useMakigamiEditor";
 
-type Props = Pick<MakigamiEditor, "height" | "t" | "lanes" | "model" | "severityOf" | "laneIssues" | "heights" | "onRun" | "setEditingLane" | "setLaneLabelDraft" | "L" | "editingLane" | "laneLabelDraft" | "commitLaneRename" | "thing" | "moveLane" | "insertStep" | "steps" | "removeLane" | "ADD_LANE_H" | "setAddingLane">;
+type Props = Pick<MakigamiEditor,
+  "height" | "t" | "lanes" | "model"
+  | "severityOf" | "laneIssues" | "heights" | "onRun"
+  | "setEditingLane" | "setLaneLabelDraft" | "L" | "editingLane"
+  | "laneLabelDraft" | "commitLaneRename" | "thing" | "moveLane"
+  | "insertStep" | "steps" | "removeLane" | "ADD_LANE_H"
+  | "setAddingLane"
+>;
 
-export function MakigamiLaneHeaders({ height, t, lanes, model, severityOf, laneIssues, heights, onRun, setEditingLane, setLaneLabelDraft, L, editingLane, laneLabelDraft, commitLaneRename, thing, moveLane, insertStep, steps, removeLane, ADD_LANE_H, setAddingLane }: Props) {
+export function MakigamiLaneHeaders({
+  height, t, lanes, model, severityOf,
+  laneIssues, heights, onRun, setEditingLane, setLaneLabelDraft,
+  L, editingLane, laneLabelDraft, commitLaneRename, thing,
+  moveLane, insertStep, steps, removeLane, ADD_LANE_H,
+  setAddingLane,
+}: Props) {
   return (<>
     <div className="opm-mk-lanes" style={{ width: LANE_W, height }}>
       <div className="opm-mk-corner" style={{ height: HEAD_H }}>{t.lanes}</div>

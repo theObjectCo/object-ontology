@@ -2,9 +2,20 @@ import { idFromLabel } from "../../core/edit";
 import { CARD_H, CARD_W, cardX, GAP, PROBLEM_H, WAIT_H } from "./dimensions";
 import type { MakigamiEditor } from "./useMakigamiEditor";
 
-type Props = Pick<MakigamiEditor, "steps" | "tops" | "cardY" | "selectedStep" | "severityOf" | "stepIssues" | "editingField" | "dragStep" | "onRun" | "setDragStep" | "setDropTarget" | "setSelectedStep" | "setEditingField" | "doesInputRef" | "updateStep" | "thing" | "t" | "lanes" | "dataObjects">;
+type Props = Pick<MakigamiEditor,
+  "steps" | "tops" | "cardY" | "selectedStep"
+  | "severityOf" | "stepIssues" | "editingField" | "dragStep"
+  | "onRun" | "setDragStep" | "setDropTarget" | "setSelectedStep"
+  | "setEditingField" | "doesInputRef" | "updateStep" | "thing"
+  | "t" | "lanes" | "dataObjects"
+>;
 
-export function MakigamiStepCards({ steps, tops, cardY, selectedStep, severityOf, stepIssues, editingField, dragStep, onRun, setDragStep, setDropTarget, setSelectedStep, setEditingField, doesInputRef, updateStep, thing, t, lanes, dataObjects }: Props) {
+export function MakigamiStepCards({
+  steps, tops, cardY, selectedStep, severityOf,
+  stepIssues, editingField, dragStep, onRun, setDragStep,
+  setDropTarget, setSelectedStep, setEditingField, doesInputRef, updateStep,
+  thing, t, lanes, dataObjects,
+}: Props) {
   return (<>
     {steps.map((s, k) => {
       if (!tops.has(s.lane)) return null;

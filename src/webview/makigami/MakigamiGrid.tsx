@@ -1,9 +1,22 @@
 import { CARD_H, CARD_W, cardX, COL_W, HEAD_H, PAD } from "./dimensions";
 import type { MakigamiEditor } from "./useMakigamiEditor";
 
-type Props = Pick<MakigamiEditor, "lanes" | "dropTarget" | "tops" | "heights" | "onRun" | "dragStep" | "steps" | "setDropTarget" | "moveStepToCell" | "setDragStep" | "updateStep" | "setSelectedStep" | "setEditingField" | "insertStep" | "t" | "L" | "cardY" | "selectedStep" | "width" | "height" | "arrows">;
+type Props = Pick<MakigamiEditor,
+  "lanes" | "dropTarget" | "tops" | "heights"
+  | "onRun" | "dragStep" | "steps" | "setDropTarget"
+  | "moveStepToCell" | "setDragStep" | "updateStep" | "setSelectedStep"
+  | "setEditingField" | "insertStep" | "t" | "L"
+  | "cardY" | "selectedStep" | "width" | "height"
+  | "arrows"
+>;
 
-export function MakigamiGrid({ lanes, dropTarget, tops, heights, onRun, dragStep, steps, setDropTarget, moveStepToCell, setDragStep, updateStep, setSelectedStep, setEditingField, insertStep, t, L, cardY, selectedStep, width, height, arrows }: Props) {
+export function MakigamiGrid({
+  lanes, dropTarget, tops, heights, onRun,
+  dragStep, steps, setDropTarget, moveStepToCell, setDragStep,
+  updateStep, setSelectedStep, setEditingField, insertStep, t,
+  L, cardY, selectedStep, width, height,
+  arrows,
+}: Props) {
   return (<>
     {lanes.map((lane, i) => (
       <div

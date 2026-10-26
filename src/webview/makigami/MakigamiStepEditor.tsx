@@ -2,9 +2,18 @@ import { idFromLabel } from "../../core/edit";
 import { objects, processes } from "../../core/model";
 import type { MakigamiEditor } from "./useMakigamiEditor";
 
-type Props = Pick<MakigamiEditor, "activeStep" | "selectedStep" | "onRun" | "t" | "updateStep" | "lanes" | "L" | "model" | "moveStep" | "steps" | "insertStep" | "deleteStep" | "setSelectedStep" | "setEditingField" | "dataObjects">;
+type Props = Pick<MakigamiEditor,
+  "activeStep" | "selectedStep" | "onRun" | "t"
+  | "updateStep" | "lanes" | "L" | "model"
+  | "moveStep" | "steps" | "insertStep" | "deleteStep"
+  | "setSelectedStep" | "setEditingField" | "dataObjects"
+>;
 
-export function MakigamiStepEditor({ activeStep, selectedStep, onRun, t, updateStep, lanes, L, model, moveStep, steps, insertStep, deleteStep, setSelectedStep, setEditingField, dataObjects }: Props) {
+export function MakigamiStepEditor({
+  activeStep, selectedStep, onRun, t, updateStep,
+  lanes, L, model, moveStep, steps,
+  insertStep, deleteStep, setSelectedStep, setEditingField, dataObjects,
+}: Props) {
   return (<>
     {activeStep && selectedStep !== null && onRun && (
       <div className="opm-mk-editor" onKeyDown={(e) => e.stopPropagation()}>

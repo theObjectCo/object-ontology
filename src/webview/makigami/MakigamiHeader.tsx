@@ -2,9 +2,23 @@ import { humanize } from "../../core/model";
 import { laneKind, storyTitle } from "../../core/stories";
 import type { MakigamiEditor } from "./useMakigamiEditor";
 
-type Props = Pick<MakigamiEditor, "onBack" | "t" | "editingHeader" | "titleDraft" | "setTitleDraft" | "setEditingHeader" | "saveStory" | "story" | "id" | "onRun" | "setAddingLane" | "addingLane" | "insertStep" | "steps" | "onDeleteStory" | "sentenceDraft" | "setSentenceDraft" | "availablePerformers" | "handleAddLane" | "L" | "model" | "newLaneName" | "setNewLaneName" | "newLaneKind" | "setNewLaneKind">;
+type Props = Pick<MakigamiEditor,
+  "onBack" | "t" | "editingHeader" | "titleDraft"
+  | "setTitleDraft" | "setEditingHeader" | "saveStory" | "story"
+  | "id" | "onRun" | "setAddingLane" | "addingLane"
+  | "insertStep" | "steps" | "onDeleteStory" | "sentenceDraft"
+  | "setSentenceDraft" | "availablePerformers" | "handleAddLane" | "L"
+  | "model" | "newLaneName" | "setNewLaneName" | "newLaneKind"
+  | "setNewLaneKind"
+>;
 
-export function MakigamiHeader({ onBack, t, editingHeader, titleDraft, setTitleDraft, setEditingHeader, saveStory, story, id, onRun, setAddingLane, addingLane, insertStep, steps, onDeleteStory, sentenceDraft, setSentenceDraft, availablePerformers, handleAddLane, L, model, newLaneName, setNewLaneName, newLaneKind, setNewLaneKind }: Props) {
+export function MakigamiHeader({
+  onBack, t, editingHeader, titleDraft, setTitleDraft,
+  setEditingHeader, saveStory, story, id, onRun,
+  setAddingLane, addingLane, insertStep, steps, onDeleteStory,
+  sentenceDraft, setSentenceDraft, availablePerformers, handleAddLane, L,
+  model, newLaneName, setNewLaneName, newLaneKind, setNewLaneKind,
+}: Props) {
   return (<>
     <div className="opm-story-head">
       <button className="opm-button" onClick={onBack} title={t.backHint}>‹ {t.diagram}</button>
