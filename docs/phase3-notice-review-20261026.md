@@ -22,16 +22,24 @@ https://git.infra.object.pl/Object/object-system/pulls/6
   the VS Code error token, status attributes, wrapping at two widths and the
   existing dismissal behavior. It does not prove native VS Code operation
   handling or screen-reader announcements.
-- With the final fixture, notice and panel browser commands exited successfully.
-  Editor assertions passed, but its command failed at the existing 10-second
-  browser-shutdown deadline. Earlier attempts also showed intermittent shutdown
-  timeouts in the other browser commands. This is not a fully green browser run.
-- The fixture explicitly waits for its page workers to stop before closing
-  pages, and supports `BROWSER_CLOSE_TRACE=1` timing diagnostics. The final
-  shutdown deadline remains 10 seconds; a timeout still fails the command.
-  A temporary 30-second diagnostic probe completed quickly and did not establish
-  that a longer deadline would solve the intermittent issue.
-- Hosted CI, upstream merge, deployment and public acceptance remain pending.
+- Initial Windows attempts intermittently failed at the existing 10-second
+  browser-shutdown deadline despite passing application assertions. The original
+  main fixture (`4a3c1ca`) reproduced this failure with the same editor test,
+  establishing that the problem predates the new worker cleanup. Trace showed
+  it had already entered `browser.close()`, not stalled in a worker listener.
+- A controlled probe using that baseline fixture but omitting manual page
+  closure exited normally in 1.302 seconds. The final fixture therefore delegates
+  target/process shutdown to `browser.close()` and removes the manual page and
+  worker lifecycle code. It supports `BROWSER_CLOSE_TRACE=1` timing diagnostics.
+- All four commands using this fixture then passed sequentially on Windows:
+  notice, panels, editor and methods. Measured shutdown times were 7.012, 1.517,
+  1.781 and 2.569 seconds; each browser exited normally with code 0. The deadline
+  remains 10 seconds and a timeout still fails the command. This is measured
+  verification, not a guarantee against every future environment-related timeout.
+- Hosted Ubuntu CI passed the complete initial consumer head `8240826`, including
+  all six browser commands. The simplified final fixture requires fresh exact-head
+  hosted checks and independent review before merging.
+- Upstream merge, deployment and public acceptance remain pending.
 
-The PR must remain unmerged until the browser shutdown failure is resolved or
-isolated with sufficient evidence, and hosted checks validate the exact head.
+Merge the upstream kit PR with history preserved before merging this consumer,
+so the pinned source revision remains reachable from upstream main.

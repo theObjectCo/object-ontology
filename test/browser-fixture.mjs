@@ -26,26 +26,9 @@ export async function openBrowserApp(query = '') {
     try {
       if (browser) await Promise.race([
         (async () => {
-          // Close the diagram pages (including their ELK workers) before asking
-          // Chrome to exit. Keep both operations inside the same timeout.
-          for (const page of await browser.pages()) {
-            trace('Closing test page:', page.url());
-            for (const worker of page.workers()) {
-              trace('Closing test worker:', worker.url());
-              let onDestroyed;
-              const stopped = new Promise(resolve => {
-                onDestroyed = closed => { if (closed === worker) resolve(); };
-                page.on('workerdestroyed', onDestroyed);
-              });
-              try {
-                await worker.evaluate(() => setTimeout(() => self.close(), 0));
-                await stopped;
-              } finally {
-                page.off('workerdestroyed', onDestroyed);
-              }
-            }
-            await page.close({ runBeforeUnload: false });
-          }
+          // Let Chrome coordinate target and process shutdown in one operation.
+          // Closing pages first timed out on Windows, and enumerating workers
+          // adds lifecycle races without resolving that shutdown failure.
           trace('Closing test browser process');
           await browser.close();
           trace('Test browser closed');
