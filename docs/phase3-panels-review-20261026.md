@@ -19,6 +19,12 @@ The state now retains that choice and reuses it when returning to a process view
 The new browser test reproduced the loss before this fix (pricing became
 configuring after SIPOC → N² → process flow).
 
+Makigami now uses `StudioPanel` for its story surface and selected-step editor,
+and `CanvasToolbar` for adding lanes/steps. Its title editor, story details and
+actions are separate focused components. The existing synchronization CTA keeps
+its explanatory tooltip; diagram-specific forms and drag behavior remain in the
+domain components. Scoped CSS keeps the lane grid scrollable within the host.
+
 The kit snapshot is pinned to object-system commit
 `2da18d9020595a56d7643deb77b067af5c52d036`. The previous 12 files are byte-identical
 at that revision; only `CanvasToolbar.tsx` is added. All 13 hashes pass verification.
@@ -37,6 +43,13 @@ Validation:
   across N², the agents toggle, unchanged model data, English/Polish close actions,
   Escape, shared-panel markup and desktop/tablet bounds. Screenshots under
   `dist/method-shots/` were inspected. This suite also runs in GitHub CI.
+- The expanded Makigami browser suite passes with shared-panel markup, the lane
+  toolbar toggle, inline input focus, step/wait/problem editing, handovers, title
+  save/cancel, criteria, lane creation/reordering/deletion, ghost insertion,
+  cross-lane drag, sync to model, read-only state and desktop/tablet bounds.
+  The tablet screenshot in `dist/makigami-shots/` was inspected. Existing host
+  Escape handling stays outside the shared panel; editable step controls still
+  isolate diagram shortcuts.
 - Authored files pass `git diff --check`; the verbatim upstream CanvasToolbar
   retains its existing extra blank line at EOF (reported by the full diff check).
 

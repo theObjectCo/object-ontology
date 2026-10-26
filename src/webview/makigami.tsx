@@ -1,13 +1,17 @@
 import { MakigamiDoneCriteria } from "./makigami/MakigamiDoneCriteria";
+import { StudioPanel } from "../../vendor/object-kit/components/studio/StudioPanel";
+import { MakigamiActions } from "./makigami/MakigamiActions";
+import { MakigamiTitle } from "./makigami/MakigamiTitle";
 import { MakigamiGrid } from "./makigami/MakigamiGrid";
 import { MakigamiHandovers } from "./makigami/MakigamiHandovers";
-import { MakigamiHeader } from "./makigami/MakigamiHeader";
+import { MakigamiDetails } from "./makigami/MakigamiDetails";
 import { MakigamiLaneHeaders } from "./makigami/MakigamiLaneHeaders";
 import type { MakigamiProps } from "./makigami/MakigamiProps";
 import { MakigamiStepCards } from "./makigami/MakigamiStepCards";
 import { MakigamiStepEditor } from "./makigami/MakigamiStepEditor";
 import { LANE_W } from "./makigami/dimensions";
 import { useMakigamiEditor } from "./makigami/useMakigamiEditor";
+import "./makigami/studio.css";
 
 export type { MakigamiProps } from "./makigami/MakigamiProps";
 
@@ -24,7 +28,9 @@ export function Makigami(props: MakigamiProps) {
       setEditingHeader(false);
     }
   }}>
-    <MakigamiHeader {...editor} />
+    <StudioPanel className="opm-story-panel" variant="floating" testId="opm-story"
+      title={<MakigamiTitle {...editor} />} actions={<MakigamiActions {...editor} />}>
+    <MakigamiDetails {...editor} />
 
     <MakigamiStepEditor {...editor} />
 
@@ -44,5 +50,6 @@ export function Makigami(props: MakigamiProps) {
       </div>
     </div>
     <MakigamiDoneCriteria {...editor} />
+    </StudioPanel>
   </div>);
 }

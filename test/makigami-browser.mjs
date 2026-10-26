@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
 import puppeteer from 'puppeteer-core';
 
@@ -41,11 +41,19 @@ try {
   };
   await page.goto(`http://127.0.0.1:${server.address().port}/?preset=makigami&lang=en`);
   await page.waitForSelector('.opm-mk-card');
+  await page.waitForSelector('[data-testid="opm-story"] > .v2-panel-header .opm-story-tools[role="toolbar"]');
   assert.equal(await page.$$eval('.opm-mk-card', nodes => nodes.length), 4);
   assert.equal(await page.$$eval('.opm-mk-lane-head', nodes => nodes.length), 3);
+  await page.click('.opm-story-tools [aria-label="+ Lane"]');
+  await page.waitForSelector('.opm-mk-bar');
+  assert.equal(await page.$eval('.opm-story-tools [aria-label="+ Lane"]', el => el.getAttribute('aria-pressed')), 'true');
+  await page.click('.opm-story-tools [aria-label="+ Lane"]');
+  await page.waitForSelector('.opm-mk-bar', { hidden: true });
 
   // Controlled inputs keep focus across model updates and component rerenders.
   await page.click('.opm-mk-card');
+  await page.waitForSelector('[data-testid="opm-story-step"] .v2-panel-body');
+  assert(await page.$eval('.opm-mk-step-btns button[title="Move left"]', el => el.disabled));
   await page.waitForSelector('.opm-mk-inline-does');
   await replace('.opm-mk-inline-does', 'Review customer requirements');
   await waitStory(s => s.steps[0].does === 'Review customer requirements');
@@ -67,8 +75,13 @@ try {
   await page.click('.opm-mk-handover-pop button');
 
   await page.click('.opm-story-title', { clickCount: 2 });
-  await replace('.opm-story-head > input', 'Acceptance procedure');
+  await replace('.opm-story-title-block input', 'Acceptance procedure');
   await page.keyboard.press('Enter');
+  await waitStory(s => s.title === 'Acceptance procedure');
+  await page.click('.opm-story-title', { clickCount: 2 });
+  await replace('.opm-story-title-block input', 'Discard this title');
+  await page.keyboard.press('Escape');
+  await page.waitForSelector('.opm-story-title-block input', { hidden: true });
   await waitStory(s => s.title === 'Acceptance procedure');
 
   await page.click('.opm-story-done > button');
@@ -120,8 +133,30 @@ try {
     document.querySelectorAll('.opm-mk-lane-head')[2]?.querySelector('.opm-mk-thing-label')?.textContent === 'Quality review');
   await page.click('.opm-mk-lane-head:nth-child(4) .opm-mk-lane-tools button:last-child');
   await waitStory(s => s.lanes.length === 3 && !s.lanes.includes('qualityReview'));
+  await page.click('.opm-mk-sync');
+  await waitStory((s, m) => s.steps.every(step => step.process && m.processes[step.process]));
+  await page.waitForSelector('.opm-busy', { hidden: true });
+  await page.click('.opm-mk-card');
+  await page.waitForSelector('[data-testid="opm-story-step"]');
+  mkdirSync('dist/makigami-shots', { recursive: true });
+  for (const [name, width, height] of [['desktop', 1600, 1000], ['tablet', 900, 700]]) {
+    await page.setViewport({ width, height });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+    const bounds = await page.$eval('.opm-mk-scroll', el => {
+      const box = el.getBoundingClientRect();
+      return { top: box.top, bottom: box.bottom, right: box.right, height: box.height };
+    });
+    assert(bounds.top >= 0 && bounds.bottom <= height + 1 && bounds.right <= width + 1);
+    assert(bounds.height >= 60, 'Story canvas must retain a scrollable viewing area');
+    await page.screenshot({ path: `dist/makigami-shots/${name}.png` });
+  }
+  await page.evaluate(() => window.postMessage({ type: 'parseError', line: 1, version: 9000, message: 'Invalid JSON fixture' }, '*'));
+  await page.waitForSelector('.opm-story-actions', { hidden: true });
+  await page.waitForSelector('.opm-mk-editor', { hidden: true });
+  await page.click('.opm-story-title', { clickCount: 2 });
+  assert.equal(await page.$('.opm-story-title-block input'), null);
   assert.deepEqual(errors, []);
-  console.log('PASS Makigami: inline focus, step/wait/problem editing, layout, handover, title, criteria, lane creation/order/removal, ghost insertion and cross-lane drag reorder');
+  console.log('PASS Makigami: shared panels/toolbar, editing, handovers, lane/step order, sync, read-only state and viewport bounds');
 } finally {
   await browser.close();
   await new Promise(r => server.close(r));
