@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { StudioPanel } from "../../../vendor/object-kit/components/studio/StudioPanel";
 import { METHODS, MethodId } from "../../core/methods/common";
 import { dsm } from "../../core/methods/dsm";
 import { flow } from "../../core/methods/flow";
@@ -46,13 +47,16 @@ export function MethodPanel({ model, state, language, onChange, onClose }: {
 
   const hint = { idef0: t.idef0Hint, sipoc: t.sipocHint, dsm: t.dsmHint, flow: t.flowHint }[state.id];
   return (
-    <div className="opm-method">
-      <div className="opm-method-head">
-        <div className="opm-seg">
+    <StudioPanel className="opm-method" variant="floating" testId="opm-method"
+      title={
+        <span className="opm-seg">
           {METHODS.map((m) => (
-            <button key={m} className={m === state.id ? "on" : ""} onClick={() => onChange({ id: m, process })}>{t.names[m]}</button>
+            <button key={m} className={m === state.id ? "on" : ""} aria-pressed={m === state.id}
+              onClick={() => onChange({ id: m, process: process ?? state.process })}>{t.names[m]}</button>
           ))}
-        </div>
+        </span>
+      }
+      actions={<>
         {state.id === "dsm" ? (
           <label className="opm-method-option">
             <input type="checkbox" checked={withAgents} onChange={(e) => setWithAgents(e.target.checked)} /> {t.agents}
@@ -65,13 +69,12 @@ export function MethodPanel({ model, state, language, onChange, onClose }: {
             </select>
           </label>
         )}
-        <span className="opm-method-spacer" />
         <button className="opm-button" onClick={onClose} title="Esc">{t.back}</button>
-      </div>
+      </>}>
       <div className="opm-method-body">
         <p className="opm-dim">{hint} {t.readOnly}</p>
         {body}
       </div>
-    </div>
+    </StudioPanel>
   );
 }

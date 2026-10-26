@@ -30,9 +30,11 @@ try {
   await page.keyboard.sendCharacter('Panel object');
   await page.keyboard.press('Enter');
   await waitModel(m => !!m.objects.panelObject);
+  await page.waitForSelector('.opm-label-input', { hidden: true });
   await page.waitForSelector('[data-thing="panelObject"]');
   await page.waitForSelector('.opm-busy', { hidden: true });
   await page.click('[data-thing="panelObject"]');
+  await page.waitForSelector('.react-flow__node.selected[data-id="panelObject"]');
   await page.keyboard.press('F2');
   await page.waitForSelector('[data-testid="opm-inspector"] .v2-panel-body #opm-id-field');
   assert.equal(await page.$eval('.opm-drawer .v2-panel-title', el => el.textContent), 'Panel object');
@@ -91,6 +93,16 @@ try {
   assert(await page.$eval('.opm-create-tools [aria-label="Process"]', el => el.disabled));
   assert.deepEqual(errors, []);
   console.log('PASS shared toolbar creation/freeze; inspector note, classification, capabilities, close, multi-selection shortcuts and viewport bounds');
+} catch (error) {
+  mkdirSync('dist/panel-shots', { recursive: true });
+  await page.screenshot({ path: 'dist/panel-shots/failure.png' });
+  console.error('Panel failure state:', await page.evaluate(() => ({
+    focused: document.activeElement?.outerHTML,
+    selected: document.querySelectorAll('.react-flow__node.selected').length,
+    drawer: document.querySelector('.opm-drawer')?.textContent,
+  })));
+  console.error('Browser errors:', errors);
+  throw error;
 } finally {
   await app.close();
 }

@@ -11,6 +11,14 @@ outside editable inspector controls. Creation buttons use `CanvasToolbar`, with
 native disabled states when the model cannot be edited. Breadcrumbs and the
 existing story/layout menus retain their behavior.
 
+The four derived method views (IDEF0, SIPOC, N² and process flow) also use
+`StudioPanel`, with the existing view selector and process/agent controls in its
+header and the results in its scrollable body. Method switching previously lost
+the selected process when passing through N², which has no process selector.
+The state now retains that choice and reuses it when returning to a process view.
+The new browser test reproduced the loss before this fix (pricing became
+configuring after SIPOC → N² → process flow).
+
 The kit snapshot is pinned to object-system commit
 `2da18d9020595a56d7643deb77b067af5c52d036`. The previous 12 files are byte-identical
 at that revision; only `CanvasToolbar.tsx` is added. All 13 hashes pass verification.
@@ -25,6 +33,10 @@ Validation:
   Markdown notes, classification, deployment field, close action and inspector
   bounds at 1500×1000 and 900×700. Included in GitHub CI.
 - Desktop/tablet screenshots inspected under `dist/panel-shots/` (local artifacts).
+- `test/methods-browser.mjs` covers all four rendered projections, process selection
+  across N², the agents toggle, unchanged model data, English/Polish close actions,
+  Escape, shared-panel markup and desktop/tablet bounds. Screenshots under
+  `dist/method-shots/` were inspected. This suite also runs in GitHub CI.
 - Authored files pass `git diff --check`; the verbatim upstream CanvasToolbar
   retains its existing extra blank line at EOF (reported by the full diff check).
 

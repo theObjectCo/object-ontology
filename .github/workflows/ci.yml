@@ -25,4 +25,5 @@ jobs:
       - run: node test/makigami-browser.mjs
       - run: node test/editor-browser.mjs
       - run: node test/panels-browser.mjs
+      - run: node test/methods-browser.mjs
       - run: node tools/check-examples.mjs
