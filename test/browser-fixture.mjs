@@ -45,6 +45,7 @@ export async function openBrowserApp(query = '') {
     });
     const page = await browser.newPage();
     await page.setViewport({ width: 1500, height: 1000 });
+    if (process.env.BROWSER_CPU_RATE) await page.emulateCPUThrottling(Number(process.env.BROWSER_CPU_RATE));
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.setRequestInterception(true);

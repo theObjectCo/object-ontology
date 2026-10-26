@@ -1,0 +1,35 @@
+/* Adapt the shared panel surfaces to the existing VS Code/standalone story host. */
+.opm-story > .opm-story-panel {
+  flex: 1;
+  border: 0;
+  box-shadow: none;
+  background: var(--vscode-editor-background);
+}
+.opm-story-panel > .v2-panel-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.opm-story-panel > .v2-panel-header { flex-wrap: wrap; }
+.opm-story-title-block { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.opm-story-title-block .opm-id { margin: 0; }
+.opm-story-panel > .v2-panel-header .v2-panel-title {
+  font: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--vscode-editor-foreground);
+}
+.opm-story .opm-story-tools {
+  border: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  font-family: inherit !important;
+}
+.opm-story-actions, .opm-story-tools > div { flex-wrap: wrap; }
+.opm-story-actions button { white-space: normal; }
+.opm-story .opm-mk-editor { padding: 0; border-radius: 0; flex-shrink: 0; }
+.opm-mk-editor > .fx-float-panel { border: 0; box-shadow: none; }
+.opm-mk-editor .v2-panel-header { flex-wrap: wrap; }
+.opm-mk-editor .v2-panel-body { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; }
+.opm-story-panel > .v2-panel-body > .opm-story-sentence,
+.opm-story-panel > .v2-panel-body > .opm-story-done { flex-shrink: 0; }

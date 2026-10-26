@@ -1,9 +1,18 @@
 import assert from 'node:assert/strict';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { openBrowserApp } from './browser-fixture.mjs';
 
 const app = await openBrowserApp('?preset=blank&lang=en');
 const { page, errors } = app;
 try {
+  await page.evaluate(() => {
+    window.editorPointerTrace = [];
+    for (const type of ['pointerdown', 'pointerup', 'click']) document.addEventListener(type, event => {
+      window.editorPointerTrace.push({ type, x: event.clientX, y: event.clientY,
+        target: event.target.outerHTML.slice(0, 500), thing: event.target.closest('[data-thing]')?.dataset.thing });
+      window.editorPointerTrace = window.editorPointerTrace.slice(-30);
+    }, true);
+  });
   const waitModel = predicate => page.waitForFunction(`(() => {
     const saved = localStorage.getItem('opm.webapp.state.v1');
     return saved && (${predicate.toString()})(JSON.parse(JSON.parse(saved).text));
@@ -30,7 +39,13 @@ try {
   const select = async id => {
     await page.waitForSelector(`[data-thing="${id}"]`);
     await page.waitForSelector('.opm-busy', { hidden: true });
-    await page.click(`[data-thing="${id}"]`);
+    // Layout/model persistence does not imply a visible click target: opening
+    // inspector/JSON panels can clip nodes, and fitting animates for 200 ms.
+    await page.locator('.opm-zoom button[title]').click();
+    await page.locator(`[data-thing="${id}"]`).filter(element => {
+      const rect = element.getBoundingClientRect();
+      return element.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+    }).click();
     await page.waitForSelector(`.react-flow__node[data-id="${id}"].selected`);
   };
   await page.waitForSelector('.opm-empty');
@@ -76,6 +91,7 @@ try {
   await waitModel(m => !m.objects.orderRecord2);
   await page.click('#opm-webapp-btn-undo');
   await waitModel(m => !!m.objects.orderRecord2);
+  await page.waitForSelector('.react-flow__node[data-id="orderRecord2"]');
 
   console.log('PASS editor state, clipboard, cut and undo');
 
@@ -135,6 +151,18 @@ try {
   assert.deepEqual(errors, []);
   console.log('PASS diagram editor: keyboard creation/rename/state, inspector, clipboard/cut/undo, zoom/subprocesses, context menu, selection and frozen editing');
 } catch (error) {
+  mkdirSync('dist/editor-shots', { recursive: true });
+  await page.screenshot({ path: 'dist/editor-shots/failure.png' });
+  const state = await page.evaluate(() => ({
+    focused: document.activeElement?.outerHTML.slice(0, 1000),
+    pointers: window.editorPointerTrace,
+    nodes: [...document.querySelectorAll('.react-flow__node')].map(el => ({
+      id: el.dataset.id, selected: el.classList.contains('selected'), rect: el.getBoundingClientRect().toJSON(),
+    })),
+    saved: localStorage.getItem('opm.webapp.state.v1'),
+  }));
+  writeFileSync('dist/editor-shots/failure.json', JSON.stringify({ ...state, errors }, null, 2));
+  console.error('Editor failure state:', JSON.stringify(state));
   console.error('Editor browser scenario failed:', error);
   throw error;
 } finally {

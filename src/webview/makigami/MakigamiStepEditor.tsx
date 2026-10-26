@@ -1,4 +1,5 @@
 import { idFromLabel } from "../../core/edit";
+import { StudioPanel } from "../../../vendor/object-kit/components/studio/StudioPanel";
 import { objects, processes } from "../../core/model";
 import type { MakigamiEditor } from "./useMakigamiEditor";
 
@@ -17,8 +18,15 @@ export function MakigamiStepEditor({
   return (<>
     {activeStep && selectedStep !== null && onRun && (
       <div className="opm-mk-editor" onKeyDown={(e) => e.stopPropagation()}>
+        <StudioPanel variant="floating" testId="opm-story-step" title={<>{t.stepEditor} #{selectedStep + 1}</>}
+          actions={<div className="opm-mk-step-btns">
+            <button className="opm-button" disabled={selectedStep === 0} onClick={() => moveStep(selectedStep, -1)} title="Move left">←</button>
+            <button className="opm-button" disabled={selectedStep >= steps.length - 1} onClick={() => moveStep(selectedStep, 1)} title="Move right">→</button>
+            <button className="opm-button" onClick={() => insertStep(selectedStep)} title="Insert step after">+ {t.stepEditor}</button>
+            <button className="opm-button" disabled={steps.length <= 1} onClick={() => deleteStep(selectedStep)} title={t.delete}>🗑</button>
+            <button className="opm-button" onClick={() => { setSelectedStep(null); setEditingField(null); }}>{t.close}</button>
+          </div>}>
         <div className="opm-mk-editor-row">
-          <b>{t.stepEditor} #{selectedStep + 1}</b>
           <label>
             <span>{t.lanes}:</span>
             <select className="opm-input" value={activeStep.lane} onChange={(e) => updateStep(selectedStep, { lane: e.target.value })}>
@@ -46,13 +54,6 @@ export function MakigamiStepEditor({
               {Object.keys(processes(model)).map((pid) => <option key={pid} value={pid}>{L(pid)}</option>)}
             </datalist>
           </label>
-          <div className="opm-mk-step-btns">
-            <button className="opm-button" disabled={selectedStep === 0} onClick={() => moveStep(selectedStep, -1)} title="Move left">←</button>
-            <button className="opm-button" disabled={selectedStep >= steps.length - 1} onClick={() => moveStep(selectedStep, 1)} title="Move right">→</button>
-            <button className="opm-button" onClick={() => insertStep(selectedStep)} title="Insert step after">+ {t.stepEditor}</button>
-            <button className="opm-button" disabled={steps.length <= 1} onClick={() => deleteStep(selectedStep)} title={t.delete}>🗑</button>
-            <button className="opm-button" onClick={() => { setSelectedStep(null); setEditingField(null); }}>{t.close}</button>
-          </div>
         </div>
         <div className="opm-mk-editor-row">
           <label>
@@ -130,6 +131,7 @@ export function MakigamiStepEditor({
             />
           </label>
         </div>
+        </StudioPanel>
       </div>
     )}
   </>);

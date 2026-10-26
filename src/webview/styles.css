@@ -1063,19 +1063,8 @@ button.link:hover {
   --opm-divider: color-mix(in srgb, var(--vscode-foreground) 14%, transparent);
 }
 
-.opm-story-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 12px 14px 4px;
-}
-
 .opm-story-title {
   font-size: 14px;
-}
-
-.opm-story-head .opm-id {
-  margin: 0;
 }
 
 .opm-story-sentence {

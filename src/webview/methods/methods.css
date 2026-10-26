@@ -1,24 +1,23 @@
 /* The method views: a read-only page over the diagram, colors from the VS Code theme. */
 
-.opm-method {
+.opm-method.fx-float-panel {
   position: absolute;
   inset: 0;
   z-index: 50;
-  display: flex;
-  flex-direction: column;
+  border: 0;
+  box-shadow: none;
   background: var(--vscode-editor-background);
 }
 
-.opm-method-head {
-  display: flex;
-  align-items: center;
+.opm-method > .v2-panel-header {
+  flex-wrap: wrap;
   gap: 12px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border));
   background: var(--vscode-editorWidget-background);
 }
 
-.opm-method-head .opm-seg button {
+.opm-method .opm-seg button {
   padding: 3px 10px;
 }
 
@@ -33,13 +32,18 @@
   min-width: 160px;
 }
 
-.opm-method-spacer {
-  flex: 1;
+.opm-method .v2-panel-title {
+  font: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.opm-method .v2-panel-actions {
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .opm-method-body {
-  flex: 1;
-  overflow: auto;
   padding: 4px 16px 24px;
 }
 
