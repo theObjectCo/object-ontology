@@ -28,6 +28,7 @@ try {
     await page.waitForSelector('.opm-label-input', { hidden: true });
   };
   const select = async id => {
+    await page.waitForSelector(`[data-thing="${id}"]`);
     await page.waitForSelector('.opm-busy', { hidden: true });
     await page.click(`[data-thing="${id}"]`);
     await page.waitForSelector(`.react-flow__node[data-id="${id}"].selected`);

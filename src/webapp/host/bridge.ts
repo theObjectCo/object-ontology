@@ -43,8 +43,10 @@ export function installBrowserBridge() {
           redoStack.length = 0;
           session.text = r.text;
           runtime.version++;
+          // The editor must see created/pasted identifiers before selecting them
+          // from the operation result; an older model can prune that selection.
+          broadcastModel();
           send({ type: "result", requestId: m.requestId, ok: true, select: r.select, message: r.message });
-          setTimeout(broadcastModel, 20);
         } catch (e) {
           send({ type: "result", requestId: m.requestId, ok: false, error: e instanceof Error ? e.message : String(e) });
         }

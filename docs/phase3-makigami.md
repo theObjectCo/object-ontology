@@ -14,8 +14,8 @@ focus across renders. The geometry helper is shared by rendering and drag previe
 
 ## Inserted-step selection regression
 
-The standalone host acknowledges an operation before broadcasting the updated
-model (a 20 ms delay). Previously, inserting the fifth step immediately selected
+The original standalone host acknowledged an operation before broadcasting the
+updated model (a 20 ms delay). Inserting the fifth step immediately selected
 index 4 while the component still saw four steps. Its bounds effect clamped the
 selection to index 3, causing editing to target the previous step.
 
@@ -23,7 +23,9 @@ This was reproduced against the original `4fb75f4` Makigami bundle as well as th
 initial extraction. The fix waits for both a successful operation acknowledgement
 and the model's expected step count before selecting and focusing the new card.
 A rejected operation does not schedule selection; changing stories clears the
-pending selection. Both acknowledgement/model arrival orders are supported.
+pending selection. Both acknowledgement/model arrival orders are supported. The subsequent App
+integration also changes the standalone host to publish its model before
+acknowledging; the hook remains compatible with hosts that acknowledge first.
 
 ## Validation
 

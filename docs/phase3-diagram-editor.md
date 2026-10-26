@@ -27,6 +27,11 @@ from an explicit request. Passive selection does not open a closed pane and can
 scroll an already-open pane without taking focus. Explicit "Show in JSON" still
 opens/focuses the editor and selects the requested identifier.
 
+The hosted browser test also exposed pasted selections being pruned against an
+older model: the host acknowledged edits before a delayed model broadcast. It now
+publishes the updated model before the success acknowledgement. A host-message
+ordering assertion and the clipboard-selection regression cover that contract.
+
 ## Validation
 
 - Structural TypeScript AST comparison against `5115e76`: all 141 editor
