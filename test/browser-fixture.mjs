@@ -21,7 +21,12 @@ export async function openBrowserApp(query = '') {
     let timer;
     try {
       if (browser) await Promise.race([
-        browser.close(),
+        (async () => {
+          // Close the diagram pages (including their ELK workers) before asking
+          // Chrome to exit. Keep both operations inside the same timeout.
+          for (const page of await browser.pages()) await page.close({ runBeforeUnload: false });
+          await browser.close();
+        })(),
         new Promise((_, reject) => { timer = setTimeout(() => {
           browser.process()?.kill();
           reject(new Error('Test browser did not exit within 10 seconds'));
