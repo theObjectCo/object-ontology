@@ -35,6 +35,14 @@ Validation:
 
 - TypeScript and production build pass; 97 unit tests pass.
 - Existing editor, Makigami and webapp/cloud Chromium scenarios pass.
+- The editor selection helper now fits the diagram using its visible control,
+  checks the hit target and waits for stable bounds before clicking. A diagnostic
+  run with 8x CPU throttling reproduced a missed selection after opening JSON:
+  the node's center was clipped by the inspector and the pointer hit the panel.
+  Undo also waits for the restored node to render, not just persisted model data.
+  Selection assertions remain intact; failure screenshots, pointer traces and
+  model/node state are uploaded by CI. `BROWSER_CPU_RATE=8` enables the same local
+  scheduling stress through the shared browser fixture.
 - New `test/panels-browser.mjs` passes: toolbar creation/disabled states, persisted
   Markdown notes, classification, deployment field, close action and inspector
   bounds at 1500×1000 and 900×700. Included in GitHub CI.
