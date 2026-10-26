@@ -65,13 +65,32 @@ try {
   await clickText('.opm-drawer .v2-panel-actions button', '‹ Less');
   await page.waitForSelector('.opm-drawer', { hidden: true });
 
+  // Multi-selection has no editable fields: keep its diagram shortcuts working.
+  await page.click('.opm-create-tools [aria-label="Process"]');
+  await page.waitForSelector('.opm-label-input');
+  await page.keyboard.sendCharacter('Panel process');
+  await page.keyboard.press('Enter');
+  await waitModel(m => !!m.processes.panelProcess);
+  await page.waitForSelector('.opm-label-input', { hidden: true });
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.keyboard.press('F2');
+  await page.waitForSelector('#opm-id-field');
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.keyboard.down('Control');
+  await page.keyboard.press('KeyA');
+  await page.keyboard.up('Control');
+  await page.waitForSelector('.opm-drawer .opm-actions .opm-button');
+  await page.focus('.opm-drawer .opm-actions .opm-button');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelectorAll('.react-flow__node.selected').length === 0);
+
   // Parse errors disable the shared controls as well as diagram shortcuts.
   await page.evaluate(() => window.postMessage({ type: 'parseError', line: 1, version: 9000, message: 'Invalid JSON fixture' }, '*'));
   await page.waitForSelector('.opm-banner.error');
   assert(await page.$eval('.opm-create-tools [aria-label="Object"]', el => el.disabled));
   assert(await page.$eval('.opm-create-tools [aria-label="Process"]', el => el.disabled));
   assert.deepEqual(errors, []);
-  console.log('PASS shared toolbar creation/freeze; inspector note, classification, capabilities, close and viewport bounds');
+  console.log('PASS shared toolbar creation/freeze; inspector note, classification, capabilities, close, multi-selection shortcuts and viewport bounds');
 } finally {
   await app.close();
 }

@@ -22,7 +22,7 @@ export function Inspector(p: InspectorProps) {
   }
   if (p.ids.length > 1) {
     return (
-      <InspectorFrame title={format(p.t.elements, { n: p.ids.length })}>
+      <InspectorFrame title={format(p.t.elements, { n: p.ids.length })} isolateKeys={false}>
         <div className="opm-actions">
           <button className="opm-button" onClick={p.onDelete}>{p.t.delete}</button>
           <button className="opm-button" onClick={p.onCopy}>{p.t.copy}</button>
