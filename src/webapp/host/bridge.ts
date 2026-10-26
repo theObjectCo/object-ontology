@@ -66,7 +66,7 @@ export function installBrowserBridge() {
         toggleJsonPane();
         return;
       case "revealInText":
-        revealIdInJsonPane(m.id);
+        revealIdInJsonPane(m.id, m.open);
         return;
       case "openLink":
         if (/^https?:\/\//i.test(m.href)) window.open(m.href, "_blank", "noopener,noreferrer");

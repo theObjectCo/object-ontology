@@ -4,11 +4,14 @@ import { redoStack, session, undoStack } from "./session";
 
 export let jsonPaneOpen = false;
 
-export function revealIdInJsonPane(id?: string) {
-  if (!jsonPaneOpen) toggleJsonPane(true);
+export function revealIdInJsonPane(id?: string, open = true) {
+  if (!jsonPaneOpen) {
+    if (!open) return;
+    toggleJsonPane(true);
+  }
   const ta = document.getElementById("opm-webapp-json-editor") as HTMLTextAreaElement | null;
   if (!ta) return;
-  ta.focus();
+  if (open) ta.focus();
   if (!id) return;
   const needle = `"${id}":`;
   const idx = ta.value.indexOf(needle);
