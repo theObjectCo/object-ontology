@@ -73,6 +73,12 @@ try {
   await page.evaluate(() => window.acquireVsCodeApi().postMessage({ type: 'op', requestId: 900001, operation: { op: 'addElement', kind: 'object', viewId: 'system', label: 'Parcel' } }));
   await page.waitForFunction(() => window.__hostMessages.some(m => m.type === 'result' && m.requestId === 900001 && m.ok));
   await page.waitForFunction(previous => window.__hostMessages.some(m => m.type === 'model' && m.version > previous && m.model.objects?.parcel), {}, beforeVersion);
+  assert(await page.evaluate(previous => {
+    const messages = window.__hostMessages;
+    const modelIndex = messages.findIndex(m => m.type === 'model' && m.version > previous && m.model.objects?.parcel);
+    const resultIndex = messages.findIndex(m => m.type === 'result' && m.requestId === 900001);
+    return modelIndex >= 0 && modelIndex < resultIndex;
+  }, beforeVersion), 'The updated model must arrive before a successful edit acknowledgement');
   await page.click('#opm-webapp-btn-lang');
   await page.click('#opm-webapp-btn-theme');
   const savedSession = await page.evaluate(() => JSON.parse(localStorage.getItem('opm.webapp.state.v1')));
