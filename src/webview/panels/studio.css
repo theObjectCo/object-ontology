@@ -1,0 +1,36 @@
+@import '../../../vendor/object-kit/styles/studio/studio.css';
+
+/* The shared widgets inherit the host theme, including native VS Code themes. */
+.opm-app {
+  --bg-panel: var(--vscode-editorWidget-background);
+  --border-light: var(--vscode-editorWidget-border, var(--vscode-panel-border));
+  --text-main: var(--vscode-editor-foreground);
+  --text-muted: var(--vscode-descriptionForeground);
+  --color-primary: var(--vscode-textLink-foreground);
+  --font-mono: var(--vscode-editor-font-family);
+}
+
+.opm-inspector-frame { height: 100%; min-height: 0; }
+.opm-inspector-frame .opm-drawer {
+  height: 100%;
+  padding: 0;
+  border-width: 0 0 0 1px;
+  overflow: hidden;
+}
+.opm-drawer > .v2-panel-header { padding: 12px 14px; }
+.opm-drawer > .v2-panel-body { padding: 0 14px 14px; }
+.opm-drawer .v2-panel-title { overflow-wrap: anywhere; }
+.opm-drawer .v2-panel-body > .opm-actions {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--opm-divider);
+}
+.opm-toolbar .opm-create-tools {
+  /* CanvasToolbar owns its buttons; its surrounding toolbar owns the surface. */
+  border: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+}
+.opm-create-tools button:disabled { opacity: 0.45; cursor: default; }
