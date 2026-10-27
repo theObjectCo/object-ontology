@@ -1,6 +1,6 @@
 {
   "repository": "https://git.infra.object.pl/Object/object-system",
-  "revision": "933d84bca2f6e2b6da884b9e3fa7d681f92a1464",
+  "revision": "2cd417ee0959e98ce0b2c36b339324f83f4dadb4",
   "sourceDirectory": "code/Applications/object-themes/kit",
   "files": {
     "cloud/CloudDriveModal.tsx": "3f61df96cc5cbb45304e74a0875cf9706f177539ebcce63d8bcbead2d7563e1e",
