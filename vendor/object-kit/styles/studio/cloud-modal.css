@@ -1,0 +1,200 @@
+/* ==========================================================================
+   Shared Cloud Drive Modal (@kit/cloud)
+   Token-driven styles for CloudDriveModal across Studio & Paper hosts.
+   Scoped strictly to .kit-cloud-* so styles do not leak to other host dialogs.
+   ========================================================================== */
+
+.kit-cloud-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 850;
+  background: rgba(9, 14, 30, 0.78);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.kit-cloud-modal {
+  max-width: 780px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--paper-line-focus, var(--border-light));
+  background: var(--paper, var(--bg-panel));
+  color: var(--text-dark, var(--text-main));
+  font-family: var(--font-sans);
+}
+
+.kit-cloud-dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: 88vh;
+  padding: 0;
+  border: 1px solid var(--paper-line, var(--border-light));
+  background: var(--paper, var(--bg-panel));
+  color: var(--text-dark, var(--text-main));
+  font-family: var(--font-sans);
+}
+
+.kit-cloud-dialog::backdrop {
+  background: rgb(6 12 24 / 72%);
+  backdrop-filter: blur(3px);
+}
+
+.kit-cloud-panel.fx-float-panel {
+  position: static;
+  width: auto;
+  max-height: none;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.kit-cloud-panel .v2-panel-body {
+  padding: 0;
+  overflow: visible;
+}
+
+.kit-cloud-modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kit-cloud-modal-sub {
+  font-size: 12px;
+  color: var(--paper-text-muted, var(--text-muted));
+  line-height: 1.45;
+}
+
+.kit-cloud-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.kit-cloud-field,
+.kit-cloud-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--paper-text-muted, var(--text-muted));
+  min-width: 0;
+}
+
+.kit-cloud-input {
+  min-width: 0;
+  padding: 6px 8px;
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dark, var(--text-main));
+  background: var(--paper-card, var(--bg-surface));
+  border: 1px solid var(--paper-line, var(--border-light));
+  border-radius: 0;
+}
+
+.kit-cloud-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-dark, var(--text-main));
+  background: var(--paper-card, var(--bg-surface));
+  border: 1px solid var(--paper-line, var(--border-light));
+  border-radius: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.kit-cloud-btn:hover:not(:disabled) {
+  background: var(--paper-card-hover, var(--bg-surface-hover));
+}
+
+.kit-cloud-btn-primary {
+  color: var(--paper-teal, var(--color-primary));
+  border-color: var(--paper-line-focus, var(--border-focus));
+  font-weight: 600;
+}
+
+.kit-cloud-providers,
+.kit-cloud-save-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kit-cloud-status,
+.kit-cloud-row {
+  padding: 8px 10px;
+  background: var(--paper-card, var(--bg-panel));
+  border: 1px solid var(--paper-line, var(--border-light));
+}
+
+.kit-cloud-status {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.kit-cloud-error {
+  border-left: 3px solid var(--color-warn, #c93b2b);
+}
+
+.kit-cloud-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.kit-cloud-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kit-cloud-row > div:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.kit-cloud-row small {
+  display: block;
+  font-size: 11px;
+  color: var(--paper-text-muted, var(--text-muted));
+}
+
+.kit-cloud-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.kit-cloud-empty {
+  font-size: 12px;
+  color: var(--paper-text-muted, var(--text-muted));
+  padding: 8px 2px;
+}
+
+.kit-cloud-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
