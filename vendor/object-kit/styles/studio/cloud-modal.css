@@ -1,10 +1,10 @@
 /* ==========================================================================
    Shared Cloud Drive Modal (@kit/cloud)
    Token-driven styles for CloudDriveModal across Studio & Paper hosts.
+   Scoped strictly to .kit-cloud-* so styles do not leak to other host dialogs.
    ========================================================================== */
 
-.kit-cloud-modal-backdrop,
-.makigami-modal-backdrop {
+.kit-cloud-modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 850;
@@ -16,8 +16,7 @@
   padding: 16px;
 }
 
-.kit-cloud-modal,
-.makigami-modal {
+.kit-cloud-modal {
   max-width: 780px;
   width: 100%;
   max-height: 90vh;
@@ -28,9 +27,7 @@
   font-family: var(--font-sans);
 }
 
-.kit-cloud-dialog,
-.opm-wa-cloud-dialog,
-.opm-wa-dialog {
+.kit-cloud-dialog {
   width: min(720px, calc(100vw - 32px));
   max-height: 88vh;
   padding: 0;
@@ -40,14 +37,12 @@
   font-family: var(--font-sans);
 }
 
-.kit-cloud-dialog::backdrop,
-.opm-wa-cloud-dialog::backdrop {
+.kit-cloud-dialog::backdrop {
   background: rgb(6 12 24 / 72%);
   backdrop-filter: blur(3px);
 }
 
-.kit-cloud-panel.fx-float-panel,
-.opm-wa-cloud-panel.fx-float-panel {
+.kit-cloud-panel.fx-float-panel {
   position: static;
   width: auto;
   max-height: none;
@@ -56,29 +51,25 @@
   background: transparent;
 }
 
-.kit-cloud-panel .v2-panel-body,
-.opm-wa-cloud-panel .v2-panel-body {
+.kit-cloud-panel .v2-panel-body {
   padding: 0;
   overflow: visible;
 }
 
-.kit-cloud-modal-body,
-.opm-wa-modal-body {
+.kit-cloud-modal-body {
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.kit-cloud-modal-sub,
-.opm-wa-modal-sub {
+.kit-cloud-modal-sub {
   font-size: 12px;
   color: var(--paper-text-muted, var(--text-muted));
   line-height: 1.45;
 }
 
-.kit-cloud-grid,
-.opm-wa-cloud-grid {
+.kit-cloud-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 10px;
@@ -89,9 +80,7 @@
 }
 
 .kit-cloud-field,
-.opm-wa-field,
-.kit-cloud-grid label,
-.opm-wa-cloud-grid label {
+.kit-cloud-grid label {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -100,8 +89,7 @@
   min-width: 0;
 }
 
-.kit-cloud-input,
-.opm-wa-input {
+.kit-cloud-input {
   min-width: 0;
   padding: 6px 8px;
   font: inherit;
@@ -113,8 +101,7 @@
   border-radius: 0;
 }
 
-.kit-cloud-btn,
-.opm-wa-btn {
+.kit-cloud-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -131,49 +118,40 @@
   text-decoration: none;
 }
 
-.kit-cloud-btn:hover:not(:disabled),
-.opm-wa-btn:hover:not(:disabled) {
+.kit-cloud-btn:hover:not(:disabled) {
   background: var(--paper-card-hover, var(--bg-surface-hover));
 }
 
-.kit-cloud-btn-primary,
-.opm-wa-btn-primary {
+.kit-cloud-btn-primary {
   color: var(--paper-teal, var(--color-primary));
   border-color: var(--paper-line-focus, var(--border-focus));
   font-weight: 600;
 }
 
 .kit-cloud-providers,
-.opm-wa-cloud-providers,
-.kit-cloud-save-bar,
-.opm-wa-cloud-save-bar {
+.kit-cloud-save-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
 .kit-cloud-status,
-.opm-wa-cloud-status,
-.kit-cloud-row,
-.opm-wa-cloud-row {
+.kit-cloud-row {
   padding: 8px 10px;
   background: var(--paper-card, var(--bg-panel));
   border: 1px solid var(--paper-line, var(--border-light));
 }
 
-.kit-cloud-status,
-.opm-wa-cloud-status {
+.kit-cloud-status {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
 
-.kit-cloud-error,
-.makigami-red-card {
+.kit-cloud-error {
   border-left: 3px solid var(--color-warn, #c93b2b);
 }
 
-.kit-cloud-file-list,
-.opm-wa-cloud-files {
+.kit-cloud-file-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -181,43 +159,37 @@
   overflow-y: auto;
 }
 
-.kit-cloud-row,
-.opm-wa-cloud-row {
+.kit-cloud-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
 
-.kit-cloud-row > div:first-child,
-.opm-wa-cloud-row > div:first-child {
+.kit-cloud-row > div:first-child {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.kit-cloud-row small,
-.opm-wa-cloud-row small {
+.kit-cloud-row small {
   display: block;
   font-size: 11px;
   color: var(--paper-text-muted, var(--text-muted));
 }
 
-.kit-cloud-row-actions,
-.opm-wa-cloud-row-actions {
+.kit-cloud-row-actions {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
 }
 
-.kit-cloud-empty,
-.opm-wa-cloud-empty {
+.kit-cloud-empty {
   font-size: 12px;
   color: var(--paper-text-muted, var(--text-muted));
   padding: 8px 2px;
 }
 
-.kit-cloud-sr-only,
-.opm-wa-sr-only {
+.kit-cloud-sr-only {
   position: absolute;
   width: 1px;
   height: 1px;

@@ -41,6 +41,17 @@ export interface CloudDriveModalProps {
   children?: ReactNode;
 }
 
+const FOCUSABLE = 'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], summary, [tabindex]:not([tabindex="-1"])';
+
+function getFocusable(root: HTMLElement): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => {
+    if (el.closest('[inert]') || el.closest('[hidden]')) return false;
+    const closedDetails = el.closest('details:not([open])');
+    if (closedDetails && !(el.tagName === 'SUMMARY' && el.parentElement === closedDetails)) return false;
+    return el.getClientRects().length > 0;
+  });
+}
+
 function safeHttpsHref(value?: string): string | undefined {
   try {
     const url = new URL(value || '');
@@ -64,32 +75,52 @@ export function CloudDriveModal({
 }: CloudDriveModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const modalDivRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useLayoutEffect(() => {
     if (!useDialogElement || !isOpen) return;
     const element = dialogRef.current;
     if (!element) return;
+    const prevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     element.showModal();
-    return () => element.close();
+    return () => { element.close(); prevFocus?.focus?.(); };
   }, [useDialogElement, isOpen]);
 
   useEffect(() => {
     if (useDialogElement || !isOpen) return;
-    const prevFocus = document.activeElement as HTMLElement | null;
-    const firstFocusable = modalDivRef.current?.querySelector<HTMLElement>('button, input, [href], [tabindex]:not([tabindex="-1"])');
-    firstFocusable?.focus();
+    const root = modalDivRef.current;
+    if (!root) return;
+    const prevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const inerted: Array<[HTMLElement, boolean]> = [];
+    let anc: HTMLElement | null = root;
+    while (anc && anc.parentElement && anc.parentElement !== document.documentElement) {
+      for (const sib of Array.from(anc.parentElement.children)) {
+        if (sib !== anc && sib instanceof HTMLElement && !['SCRIPT', 'STYLE', 'LINK'].includes(sib.tagName)) {
+          inerted.push([sib, sib.inert]);
+          sib.inert = true;
+        }
+      }
+      anc = anc.parentElement;
+    }
+    getFocusable(root)[0]?.focus();
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
+      if (e.key === 'Escape') { e.preventDefault(); onCloseRef.current(); return; }
+      if (e.key === 'Tab') {
+        const list = getFocusable(root);
+        if (!list.length) { e.preventDefault(); return; }
+        const first = list[0], last = list[list.length - 1], active = document.activeElement;
+        if (e.shiftKey && (active === first || !root.contains(active))) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && (active === last || !root.contains(active))) { e.preventDefault(); first.focus(); }
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
+      for (const [el, wasInert] of inerted) el.inert = wasInert;
       prevFocus?.focus?.();
     };
-  }, [useDialogElement, isOpen, onClose]);
+  }, [useDialogElement, isOpen]);
 
   if (!isOpen) return null;
 
@@ -170,14 +201,14 @@ export function CloudDriveModal({
 
   if (useDialogElement) {
     return (
-      <dialog ref={dialogRef} id={dialogId} className={dialogClassName} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); onClose(); }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <dialog ref={dialogRef} id={dialogId} className={dialogClassName} aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); onCloseRef.current(); }} onClick={(e) => { if (e.target === e.currentTarget) onCloseRef.current(); }}>
         {panel}
       </dialog>
     );
   }
 
   return (
-    <div className="kit-cloud-modal-backdrop makigami-modal-backdrop" onClick={onClose}>
+    <div className="kit-cloud-modal-backdrop makigami-modal-backdrop" onClick={() => onCloseRef.current()}>
       <div ref={modalDivRef} id={dialogId} role="dialog" aria-modal="true" aria-labelledby={titleId} className={`kit-cloud-modal makigami-modal sheet paper ${dialogClassName}`} onClick={(e) => e.stopPropagation()}>
         {panel}
       </div>
