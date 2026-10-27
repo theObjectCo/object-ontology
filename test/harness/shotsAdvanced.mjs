@@ -1,5 +1,52 @@
 export async function runAdvancedScenarios(ctx) {
-  const { page, wait, shot, clickThing, menuTitle, check, model, scenario, openStory } = ctx;
+  const { page, wait, shot, box, clickThing, menuTitle, check, text, model, scenario, openStory } = ctx;
+
+  // zoom view of configuring: double click on the process
+  {
+    const c = await box('[data-thing="configuring"]');
+    await page.mouse.click(c.x + c.width * 0.75, c.y + c.height * 0.7, { clickCount: 2 });
+    await wait(900);
+    await shot("08-zoom");
+  }
+
+  // a new process inside the zoom, then its label typed in place
+  {
+    await page.keyboard.press("p");
+    await wait(600);
+    await page.keyboard.type("Checking Stock");
+    await page.keyboard.press("Enter");
+    await wait(600);
+    await shot("09-new-subprocess");
+    const m = JSON.parse(await text());
+    console.log("zoomsInto:", m.processes.configuring.zoomsInto, "has checkingStock:", !!m.processes.checkingStock);
+  }
+
+  // link labels: switched on from the menu, drawn in the label layer
+  {
+    await page.click(".opm-more");
+    const toggle = await page.evaluateHandle(() => [...document.querySelectorAll(".opm-menu button")].find((b) => b.textContent.includes("Link labels")));
+    await toggle.asElement().click();
+    await wait(300);
+    const n = await page.evaluate(() => document.querySelectorAll(".react-flow__edgelabel-renderer .opm-edge-label").length);
+    check("link labels", n > 5, `${n} labels`);
+    await shot("08b-link-labels");
+    await page.click(".opm-more");
+    const off = await page.evaluateHandle(() => [...document.querySelectorAll(".opm-menu button")].find((b) => b.textContent.includes("Link labels")));
+    await off.asElement().click();
+  }
+
+  // a vertical drag of a subprocess changes the order of execution
+  {
+    const a = await box('[data-thing="checkingStock"]');
+    const p = await box('[data-thing="proposing"]');
+    await page.mouse.move(a.x + 30, a.y + a.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(a.x + 30, p.y + 5, { steps: 12 });
+    await page.mouse.up();
+    await wait(500);
+    const order = (await model()).processes.configuring.zoomsInto;
+    check("reorder subprocess", order[0] === "checkingStock", order.join(", "));
+  }
 
   // the right button on a link opens its menu
   async function clickEdge(id, button = "left") {
@@ -160,3 +207,4 @@ export async function runAdvancedScenarios(ctx) {
   await wait(500);
   await shot("11-parse-error");
 }
+
