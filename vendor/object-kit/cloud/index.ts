@@ -26,6 +26,7 @@ export * from './microsoftEntraClient';
 export * from './googleDriveClient';
 export * from './localFolderClient';
 export * from './workspaceSyncChannel';
+export { CloudDriveModal, type CloudDriveModalProps } from './CloudDriveModal';
 
 export async function listCloudFolderFiles(session: CloudUserSession): Promise<CloudFileEntry[]> {
   const folderName = sanitizeFolderName(session.folderName);

@@ -4,6 +4,6 @@ export {
   loadCloudSession, saveCloudSession, sanitizeFolderName,
   loginWithMicrosoftEntra, loginWithGoogleDrive,
   ensureOneDriveFolder, ensureGoogleDriveFolder, connectLocalSyncedFolder,
-  listCloudFolderFiles, saveFileToCloudFolder, readFileFromCloudFolder,
-  type CloudProvider, type CloudUserSession, type CloudOAuthConfig, type CloudFileEntry,
+  listCloudFolderFiles, saveFileToCloudFolder, readFileFromCloudFolder, CloudDriveModal,
+  type CloudProvider, type CloudUserSession, type CloudOAuthConfig, type CloudFileEntry, type CloudDriveModalProps,
 } from '../../vendor/object-kit/cloud';
