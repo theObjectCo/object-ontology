@@ -29,3 +29,4 @@ export const changedLines = (a: string, b: string) => {
   const la = new Set(a.split("\n")), lb = new Set(b.split("\n"));
   return [...lb].filter((l) => !la.has(l)).length + [...la].filter((l) => !lb.has(l)).length;
 };
+

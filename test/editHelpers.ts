@@ -15,3 +15,4 @@ export const changedLines = (a: string, b: string) => {
   const common = new Set(la);
   return lb.filter((l) => !common.has(l)).length + la.filter((l) => !new Set(lb).has(l)).length;
 };
+

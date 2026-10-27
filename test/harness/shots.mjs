@@ -228,7 +228,7 @@ await page.keyboard.press("Escape");
   console.log("layout views:", Object.keys(layout ?? {}), "entries:", Object.keys(layout?.system ?? {}).length);
 }
 
-await runAdvancedScenarios({ page, wait, shot, box, clickThing, menuTitle, check, text, model: async () => JSON.parse(await text()), scenario, openStory });
+await runAdvancedScenarios(page, wait, shot, box, clickThing, menuTitle, check, text, scenario, openStory);
 
 writeFileSync(join(out, "console.txt"), errors.join("\n"));
 console.log(errors.length ? `console: ${errors.length} message(s)\n${errors.slice(0, 20).join("\n")}` : "console: clean");
