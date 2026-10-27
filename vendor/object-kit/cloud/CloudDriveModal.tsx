@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { StudioNotice } from '../components/studio/StudioNotice';
 import { StudioPanel } from '../components/studio/StudioPanel';
 import type { CloudFileEntry, CloudOAuthConfig, CloudProvider, CloudUserSession } from './cloudTypes';
@@ -19,7 +19,8 @@ export interface CloudDriveModalProps {
   closeButtonId?: string;
   closeLabel?: string;
   config: CloudOAuthConfig;
-  onConfigChange: (next: CloudOAuthConfig) => void;
+  /** Receives a partial config patch so callers only update changed fields without resetting folderId unnecessarily. */
+  onConfigChange: (patch: Partial<CloudOAuthConfig>) => void;
   session: CloudUserSession | null;
   busy?: boolean;
   loading?: boolean;
@@ -51,7 +52,8 @@ function safeHttpsHref(value?: string): string | undefined {
 
 export function CloudDriveModal({
   isOpen = true, onClose, useDialogElement = false, dialogId,
-  dialogClassName = 'opm-wa-cloud-dialog', panelClassName = 'opm-wa-cloud-panel',
+  dialogClassName = 'kit-cloud-dialog opm-wa-cloud-dialog opm-wa-dialog',
+  panelClassName = 'kit-cloud-panel opm-wa-cloud-panel',
   titleId = 'opm-wa-cloud-title', title = 'Chmura konsultanta', subtitle, badge,
   closeButtonId = 'opm-wa-cloud-close', closeLabel = 'Zamknij chmurę',
   config, onConfigChange, session, busy = false, loading = false,
@@ -61,6 +63,7 @@ export function CloudDriveModal({
   loadLabel = 'Wczytaj', openWebLabel = 'Otwórz', emptyText, children,
 }: CloudDriveModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const modalDivRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     if (!useDialogElement || !isOpen) return;
@@ -69,6 +72,24 @@ export function CloudDriveModal({
     element.showModal();
     return () => element.close();
   }, [useDialogElement, isOpen]);
+
+  useEffect(() => {
+    if (useDialogElement || !isOpen) return;
+    const prevFocus = document.activeElement as HTMLElement | null;
+    const firstFocusable = modalDivRef.current?.querySelector<HTMLElement>('button, input, [href], [tabindex]:not([tabindex="-1"])');
+    firstFocusable?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      prevFocus?.focus?.();
+    };
+  }, [useDialogElement, isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -84,59 +105,59 @@ export function CloudDriveModal({
       title={<span id={titleId}>{title}</span>}
       actions={<button id={closeButtonId} className="v2-panel-close" type="button" aria-label={closeLabel} onClick={onClose}>×</button>}
     >
-      <div className="opm-wa-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 16 }}>
+      <div className="kit-cloud-modal-body opm-wa-modal-body">
         {badge && <div>{badge}</div>}
-        <div className="opm-wa-modal-sub">
+        <div className="kit-cloud-modal-sub opm-wa-modal-sub">
           {subtitle !== undefined ? subtitle : <>Wspólny folder z map.phenome.object.pl: <code>/{config.folderName}</code></>}
         </div>
-        <fieldset className="opm-wa-cloud-grid" disabled={busy} style={{ border: 0, margin: 0, padding: 0 }}>
-          <legend className="opm-wa-sr-only">Ustawienia połączenia</legend>
-          <label>
+        <fieldset className="kit-cloud-grid opm-wa-cloud-grid" disabled={busy}>
+          <legend className="kit-cloud-sr-only opm-wa-sr-only">Ustawienia połączenia</legend>
+          <label className="kit-cloud-field opm-wa-field">
             <span>Nazwa folderu na OneDrive / Google Drive</span>
-            <input id="opm-wa-cloud-folder" className="opm-wa-input map-input mono" value={config.folderName} placeholder="phenome" onChange={(e) => onConfigChange({ ...config, folderName: e.target.value })} />
+            <input id="opm-wa-cloud-folder" className="kit-cloud-input opm-wa-input map-input mono" value={config.folderName} placeholder="phenome" onChange={(e) => onConfigChange({ folderName: e.target.value })} />
           </label>
-          <label>
+          <label className="kit-cloud-field opm-wa-field">
             <span>Microsoft Entra Client ID (opcjonalnie SPA)</span>
-            <input id="opm-wa-cloud-entra" className="opm-wa-input map-input mono" value={config.entraClientId} placeholder="00000000-0000-0000-0000-000000000000" onChange={(e) => onConfigChange({ ...config, entraClientId: e.target.value })} />
+            <input id="opm-wa-cloud-entra" className="kit-cloud-input opm-wa-input map-input mono" value={config.entraClientId} placeholder="00000000-0000-0000-0000-000000000000" onChange={(e) => onConfigChange({ entraClientId: e.target.value })} />
           </label>
-          <label>
+          <label className="kit-cloud-field opm-wa-field">
             <span>Google OAuth Client ID (opcjonalnie Web)</span>
-            <input id="opm-wa-cloud-google" className="opm-wa-input map-input mono" value={config.googleClientId} placeholder="1234567890-abc.apps.googleusercontent.com" onChange={(e) => onConfigChange({ ...config, googleClientId: e.target.value })} />
+            <input id="opm-wa-cloud-google" className="kit-cloud-input opm-wa-input map-input mono" value={config.googleClientId} placeholder="1234567890-abc.apps.googleusercontent.com" onChange={(e) => onConfigChange({ googleClientId: e.target.value })} />
           </label>
         </fieldset>
-        <div className="opm-wa-cloud-providers" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          <button type="button" id="opm-wa-login-ms" className="opm-wa-btn opm-wa-btn-primary map-btn primary" disabled={busy} onClick={() => onConnect('microsoft')}>⊞ Zaloguj Microsoft (OneDrive)</button>
-          <button type="button" id="opm-wa-login-google" className="opm-wa-btn opm-wa-btn-primary map-btn primary" disabled={busy} onClick={() => onConnect('google')}>◉ Zaloguj Google (Google Drive)</button>
-          <button type="button" id="opm-wa-login-local" className="opm-wa-btn map-btn" disabled={busy} onClick={() => onConnect('local_fs')}>📁 Wskaż folder lokalny OneDrive / GDrive</button>
-          {session && <button type="button" id="opm-wa-cloud-logout" className="opm-wa-btn map-btn danger" disabled={busy} onClick={onLogout}>Wyloguj ({session.userName})</button>}
+        <div className="kit-cloud-providers opm-wa-cloud-providers">
+          <button type="button" id="opm-wa-login-ms" className="kit-cloud-btn kit-cloud-btn-primary opm-wa-btn opm-wa-btn-primary map-btn primary" disabled={busy} onClick={() => onConnect('microsoft')}>⊞ Zaloguj Microsoft (OneDrive)</button>
+          <button type="button" id="opm-wa-login-google" className="kit-cloud-btn kit-cloud-btn-primary opm-wa-btn opm-wa-btn-primary map-btn primary" disabled={busy} onClick={() => onConnect('google')}>◉ Zaloguj Google (Google Drive)</button>
+          <button type="button" id="opm-wa-login-local" className="kit-cloud-btn opm-wa-btn map-btn" disabled={busy} onClick={() => onConnect('local_fs')}>📁 Wskaż folder lokalny OneDrive / GDrive</button>
+          {session && <button type="button" id="opm-wa-cloud-logout" className="kit-cloud-btn opm-wa-btn map-btn danger" disabled={busy} onClick={onLogout}>Wyloguj ({session.userName})</button>}
         </div>
         <div id={statusId}>
-          <StudioNotice tone={error ? 'error' : 'info'} className={error ? 'opm-wa-cloud-status makigami-red-card' : 'opm-wa-cloud-status'}>{resolvedStatus}</StudioNotice>
+          <StudioNotice tone={error ? 'error' : 'info'} className={error ? 'kit-cloud-status kit-cloud-error opm-wa-cloud-status makigami-red-card' : 'kit-cloud-status opm-wa-cloud-status'}>{resolvedStatus}</StudioNotice>
         </div>
         {children}
         {session && (saveActions || onRefresh) && (
-          <div className="opm-wa-cloud-save-bar" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="kit-cloud-save-bar opm-wa-cloud-save-bar">
             {saveActions}
-            {onRefresh && <button type="button" id="opm-wa-refresh-cloud" className="opm-wa-btn map-btn" disabled={busy} onClick={onRefresh}>↻ Odśwież listę</button>}
+            {onRefresh && <button type="button" id="opm-wa-refresh-cloud" className="kit-cloud-btn opm-wa-btn map-btn" disabled={busy} onClick={onRefresh}>↻ Odśwież listę</button>}
           </div>
         )}
-        <div id={filesId} className="opm-wa-cloud-files" aria-busy={loading} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div id={filesId} className="kit-cloud-file-list opm-wa-cloud-files" aria-busy={loading}>
           {loading || !files.length ? (
-            <div className="opm-wa-cloud-empty" role={error ? 'alert' : 'status'}>{loading ? '…' : error || resolvedEmpty}</div>
+            <div className="kit-cloud-empty opm-wa-cloud-empty" role={error ? 'alert' : 'status'}>{loading ? '…' : error || resolvedEmpty}</div>
           ) : (
             files.map((file, index) => {
               const href = safeHttpsHref(file.webUrl);
               return (
-                <div className="opm-wa-cloud-row" key={file.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                <div className="kit-cloud-row opm-wa-cloud-row" key={file.id}>
                   <div>
                     <strong className="mono">{file.name}</strong>
-                    <small style={{ display: 'block' }}>{Math.max(1, Math.round(file.size / 1024))} KB {file.lastModified ? '• ' + file.lastModified.slice(0, 16).replace('T', ' ') : ''}</small>
+                    <small>{Math.max(1, Math.round(file.size / 1024))} KB {file.lastModified ? '• ' + file.lastModified.slice(0, 16).replace('T', ' ') : ''}</small>
                   </div>
-                  <div className="opm-wa-cloud-row-actions" style={{ display: 'flex', gap: 6 }}>
+                  <div className="kit-cloud-row-actions opm-wa-cloud-row-actions">
                     {onLoadFile && canLoadFile(file) && (
-                      <button type="button" className="opm-wa-btn opm-wa-btn-primary map-btn small primary" data-cloud-load={index} disabled={busy} onClick={() => onLoadFile(file, index)}>{loadLabel}</button>
+                      <button type="button" className="kit-cloud-btn kit-cloud-btn-primary opm-wa-btn opm-wa-btn-primary map-btn small primary" data-cloud-load={index} disabled={busy} onClick={() => onLoadFile(file, index)}>{loadLabel}</button>
                     )}
-                    {href && <a className="opm-wa-btn map-btn small" href={href} target="_blank" rel="noopener noreferrer" aria-label={`${openWebLabel}: ${file.name}`}>↗</a>}
+                    {href && <a className="kit-cloud-btn opm-wa-btn map-btn small" href={href} target="_blank" rel="noopener noreferrer" aria-label={`${openWebLabel}: ${file.name}`}>↗</a>}
                   </div>
                 </div>
               );
@@ -156,8 +177,8 @@ export function CloudDriveModal({
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 850, background: 'rgba(9, 14, 30, 0.78)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={onClose}>
-      <div className="sheet paper" style={{ maxWidth: 780, width: '100%', maxHeight: '90vh', overflowY: 'auto', border: '1px solid var(--paper-line-focus)' }} onClick={(e) => e.stopPropagation()}>
+    <div className="kit-cloud-modal-backdrop makigami-modal-backdrop" onClick={onClose}>
+      <div ref={modalDivRef} id={dialogId} role="dialog" aria-modal="true" aria-labelledby={titleId} className={`kit-cloud-modal makigami-modal sheet paper ${dialogClassName}`} onClick={(e) => e.stopPropagation()}>
         {panel}
       </div>
     </div>

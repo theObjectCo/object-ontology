@@ -1,9 +1,9 @@
 {
   "repository": "https://git.infra.object.pl/Object/object-system",
-  "revision": "ad17517e2f72ceeb5e7869160c3387da137df8d2",
+  "revision": "a0e3bce163f37db9591f6f099f7d42bdf85f2a17",
   "sourceDirectory": "code/Applications/object-themes/kit",
   "files": {
-    "cloud/CloudDriveModal.tsx": "e6786246d0e005a1037f46a3c8740b4ff9f6b53d34c577460fba72ebb57e02eb",
+    "cloud/CloudDriveModal.tsx": "b79afe76d5c3c82471cab6060ab0aa70e17321703bbf90863699464e3677f264",
     "cloud/cloudTypes.ts": "5bc60a258e6efcecaacaec2053f51e389d5c4a1b1662b8f8eec047662223abf0",
     "cloud/googleDriveClient.ts": "9b70c4087120cb0e4f72f8be7d4a6b1af87b80152810015939e348a27e1bc2e3",
     "cloud/index.ts": "a2b9d352d52bfb91d8f05400f60549e563738e55f52a4d6ff15038e272c094b8",
@@ -24,6 +24,8 @@
     "components/studio/StudioShell.tsx": "b119374957e28124a77256b6e50db2e705f048d66a9370bfef0e3130f7d58175",
     "styles/base/theme.css": "0f25b1e28c6badc922eacca8575a260693175d3dcfa2a38e7f1cb522e26606e8",
     "styles/base/tokens.css": "ef7c53e78cdba1ae2e12b36661760b3a00e4418011bc9c851434776dc6ba5140",
-    "styles/studio/studio.css": "7a702a5640689aba6570676498e5b10a84343079de45a779b4a952d7e9bbc64b"
+    "styles/studio/cloud-modal.css": "99c3df036fd199b14edbde1b5aa8a1943e27d6dd994f86702a7f0823314bf4fa",
+    "styles/studio/panels.css": "b0c87a0a7afc98b9af73b46e58cf5b560427cfcf035550f247b3c4fca791c38a",
+    "styles/studio/studio.css": "bcf1e9da8e779cfc8e93f32b53c9a7cd206c2eed7da772fbda17a580354dc9e3"
   }
 }

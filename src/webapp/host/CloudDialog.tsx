@@ -28,7 +28,7 @@ export function CloudDialog({ onClose }: { onClose: () => void }) {
       closeLabel="Zamknij chmurę"
       onClose={onClose}
       config={state.config}
-      onConfigChange={state.setConfig}
+      onConfigChange={(patch) => state.setConfig({ ...state.config, ...patch })}
       session={cloud}
       busy={busy}
       loading={state.loading}
