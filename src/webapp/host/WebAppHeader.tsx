@@ -1,4 +1,4 @@
-import { StudioHeader } from "../../../vendor/object-kit/components/studio/StudioHeader";
+import { StudioHeader } from "@object/kit/components/studio/StudioHeader";
 import { loadCloudSession } from "../cloudDrive";
 import { saveToCloud, selectPreset, toggleLanguage, toggleTheme } from "./chromeActions";
 import { useChromeRevision } from "./chromeState";

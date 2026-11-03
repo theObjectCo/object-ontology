@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { StudioPanel } from "../../../vendor/object-kit/components/studio/StudioPanel";
+import { StudioPanel } from "@object/kit/components/studio/StudioPanel";
 
 /** Keep diagram shortcuts out of editable inspector controls in both hosts. */
 export function InspectorFrame({ title, lessLabel, onLess, isolateKeys = true, children }: {

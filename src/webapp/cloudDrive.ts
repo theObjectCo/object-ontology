@@ -6,4 +6,4 @@ export {
   ensureOneDriveFolder, ensureGoogleDriveFolder, connectLocalSyncedFolder,
   listCloudFolderFiles, saveFileToCloudFolder, readFileFromCloudFolder, CloudDriveModal,
   type CloudProvider, type CloudUserSession, type CloudOAuthConfig, type CloudFileEntry, type CloudDriveModalProps,
-} from '../../vendor/object-kit/cloud';
+} from '@object/kit/cloud';

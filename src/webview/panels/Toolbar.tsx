@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Messages } from "../../shared/i18n";
 import { ViewInfo } from "../../core/viewmodel";
 import { LAYOUTS, LayoutAlgorithm } from "../layout";
-import { CanvasToolbar } from "../../../vendor/object-kit/components/studio/CanvasToolbar";
+import { CanvasToolbar } from "@object/kit/components/studio/CanvasToolbar";
 
 export interface ToolbarProps {
   t: Messages;

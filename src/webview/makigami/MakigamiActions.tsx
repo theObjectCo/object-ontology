@@ -1,4 +1,4 @@
-import { CanvasToolbar } from "../../../vendor/object-kit/components/studio/CanvasToolbar";
+import { CanvasToolbar } from "@object/kit/components/studio/CanvasToolbar";
 import type { MakigamiEditor } from "./useMakigamiEditor";
 
 type Props = Pick<MakigamiEditor, "onRun" | "t" | "setAddingLane" | "addingLane"

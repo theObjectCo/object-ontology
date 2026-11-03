@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { StudioPanel } from "../../../vendor/object-kit/components/studio/StudioPanel";
+import { StudioPanel } from "@object/kit/components/studio/StudioPanel";
 import { METHODS, MethodId } from "../../core/methods/common";
 import { dsm } from "../../core/methods/dsm";
 import { flow } from "../../core/methods/flow";

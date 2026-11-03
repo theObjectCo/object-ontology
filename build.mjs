@@ -1,8 +1,11 @@
 import { build } from "esbuild";
 import { copyFileSync, mkdirSync, readdirSync } from "fs";
+import { resolve } from "path";
+import { build as viteBuild } from "vite";
 
 // jsonc-parser: the ESM build bundles cleanly, its UMD build uses dynamic requires
 const common = { bundle: true, platform: "node", target: "node20", format: "cjs", sourcemap: true, logLevel: "warning", mainFields: ["module", "main"] };
+const kitAlias = { "@object/kit": resolve("vendor/object-kit") };
 
 await build({ ...common, entryPoints: ["src/extension.ts"], outfile: "dist/extension.js", external: ["vscode"] });
 await build({ ...common, entryPoints: ["src/cli.ts"], outfile: "dist/cli.js", banner: { js: "#!/usr/bin/env node" } });
@@ -26,6 +29,7 @@ await build({
   sourcemap: true,
   logLevel: "warning",
   mainFields: ["browser", "module", "main"],
+  alias: kitAlias,
   define: { "process.env.NODE_ENV": '"production"' },
 });
 
@@ -33,22 +37,9 @@ await build({
 mkdirSync("media", { recursive: true });
 copyFileSync("node_modules/elkjs/lib/elk-worker.min.js", "media/elk-worker.min.js");
 
-// standalone web application (dist/web) for opm.phenome.object.pl
+// standalone web application (dist/web) for opm.phenome.object.pl built via Vite + React
 mkdirSync("dist/web", { recursive: true });
-await build({
-  entryPoints: ["src/webapp/host.ts"],
-  jsx: "automatic",
-  define: { "process.env.NODE_ENV": '"production"' },
-  outfile: "dist/web/webapp.js",
-  bundle: true,
-  platform: "browser",
-  format: "iife",
-  target: "es2022",
-  minify: true,
-  sourcemap: true,
-  logLevel: "warning",
-  mainFields: ["browser", "module", "main"],
-});
+await viteBuild({ configFile: "vite.config.mts", logLevel: "warn" });
 copyFileSync("src/webapp/index.html", "dist/web/index.html");
 copyFileSync("dist/webview.js", "dist/web/webview.js");
 copyFileSync("dist/webview.css", "dist/web/webview.css");

@@ -1,16 +1,12 @@
 // Stable editing API shared by the extension, web app, and MCP server.
-export { Position } from "./editing/contracts";
-export { Positions } from "./editing/contracts";
-export { Fragment } from "./editing/contracts";
-export { Operation } from "./editing/contracts";
-export { EditResult } from "./editing/contracts";
+export type { Position, Positions, Fragment, Operation, EditResult } from "./editing/contracts";
 export { EditError } from "./editing/contracts";
 export { compact } from "./editing/document";
 export { idFromLabel } from "./editing/identifiers";
 export { uniqueId } from "./editing/identifiers";
 export { fragmentOf } from "./editing/clipboard";
 
-import { EditResult, Operation } from "./editing/contracts";
+import type { EditResult, Operation } from "./editing/contracts";
 import { Doc } from "./editing/document";
 import { run } from "./editing/operations";
 

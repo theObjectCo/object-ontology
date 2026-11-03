@@ -1,6 +1,6 @@
 import { Background, BackgroundVariant, ConnectionLineType, ConnectionMode, ReactFlow, SelectionMode, ViewportPortal } from "@xyflow/react";
 import { CSSProperties } from "react";
-import { StudioNotice } from "../../vendor/object-kit/components/studio/StudioNotice";
+import { StudioNotice } from "@object/kit/components/studio/StudioNotice";
 import { METHODS } from "../core/methods/common";
 import { format } from "../shared/i18n";
 import { DRAWER_WIDTH, LARGE_VIEW, NONE, OPL_COLLAPSED, OPL_HEIGHT } from "./app/constants";

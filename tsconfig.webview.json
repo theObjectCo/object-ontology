@@ -10,7 +10,10 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": []
+    "types": [],
+    "paths": {
+      "@object/kit/*": ["./vendor/object-kit/*"]
+    }
   },
   "include": ["src/webview", "src/webapp", "test/harness"]
 }

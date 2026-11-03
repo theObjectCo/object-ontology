@@ -1,5 +1,5 @@
 import { idFromLabel } from "../../core/edit";
-import { StudioPanel } from "../../../vendor/object-kit/components/studio/StudioPanel";
+import { StudioPanel } from "@object/kit/components/studio/StudioPanel";
 import { objects, processes } from "../../core/model";
 import type { MakigamiEditor } from "./useMakigamiEditor";
 

@@ -1,5 +1,5 @@
 import { MakigamiDoneCriteria } from "./makigami/MakigamiDoneCriteria";
-import { StudioPanel } from "../../vendor/object-kit/components/studio/StudioPanel";
+import { StudioPanel } from "@object/kit/components/studio/StudioPanel";
 import { MakigamiActions } from "./makigami/MakigamiActions";
 import { MakigamiTitle } from "./makigami/MakigamiTitle";
 import { MakigamiGrid } from "./makigami/MakigamiGrid";
