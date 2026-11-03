@@ -57,7 +57,7 @@ export function useDiagramKeyboard({
     else if (k === "F2" && selection.length === 1) {
       e.preventDefault();
       setDrawer(true);
-      window.setTimeout(() => (document.getElementById("opm-id-field") as HTMLInputElement | null)?.select(), 60);
+      requestAnimationFrame(() => (document.getElementById("opm-id-field") as HTMLInputElement | null)?.select());
     } else if (k === "Enter" && selection.length === 1 && model && processes(model)[selection[0]] && selection[0] !== zoomProcess) {
       e.preventDefault(); void openZoom(selection[0]);
     } else if (k === "o" || k === "O") { e.preventDefault(); void addElement("object"); }

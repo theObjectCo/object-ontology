@@ -1,14 +1,44 @@
 @import '../../../vendor/object-kit/styles/studio/studio.css';
 
-/* The shared widgets inherit the host theme, including native VS Code themes. */
+/* The shared widgets inherit the Studio Petrol host theme (and native VS Code themes). */
 .opm-app {
   --bg-panel: var(--vscode-editorWidget-background);
   --border-light: var(--vscode-editorWidget-border, var(--vscode-panel-border));
+  --border-focus: var(--vscode-focusBorder);
   --text-main: var(--vscode-editor-foreground);
   --text-muted: var(--vscode-descriptionForeground);
   --color-primary: var(--vscode-textLink-foreground);
+  --color-primary-light: var(--vscode-editor-selectionBackground);
   --color-warn: var(--vscode-inputValidation-errorBorder, var(--vscode-editorError-foreground));
   --font-mono: var(--vscode-editor-font-family);
+}
+
+/* Studio 0px sharp corners and 1px frames across the OPM diagram workbench */
+.opm-toolbar,
+.opm-zoom,
+.opm-linkmenu,
+.opm-menu,
+.opm-confirm,
+.opm-banner,
+.opm-button,
+.opm-input,
+.opm-seg,
+.opm-node-hud,
+.opm-node-hud button,
+.opm-toolbar button,
+.opm-zoom button,
+.opm-menu button,
+.opm-linkmenu button,
+.opm-mk-card,
+.opm-mk-bar,
+.opm-mk-editor,
+.opm-story-issues {
+  border-radius: 0 !important;
+}
+
+.opm-canvas > .opm-toolbar {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .opm-inspector-frame { height: 100%; min-height: 0; }
@@ -18,7 +48,12 @@
   border-width: 0 0 0 1px;
   overflow: hidden;
 }
-.opm-drawer > .v2-panel-header { padding: 12px 14px; }
+.opm-drawer > .v2-panel-header {
+  padding: 8px 12px;
+  min-height: 32px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-light);
+}
 .opm-drawer > .v2-panel-body { padding: 0 14px 14px; }
 .opm-drawer .v2-panel-title { overflow-wrap: anywhere; }
 .opm-drawer .v2-panel-body > .opm-actions {

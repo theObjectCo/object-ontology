@@ -131,7 +131,15 @@ try {
   assert.equal(await page.$eval('#opm-webapp-btn-lang', el => el.textContent), savedSession.lang.toUpperCase());
   assert.equal(await page.$eval('html', el => el.dataset.theme), savedSession.theme === 'vscode-light' ? 'light' : 'dark');
   assert(await page.$eval('.opm-studio-header', el => getComputedStyle(el).getPropertyValue('--paper').trim().length > 0));
+  assert(await page.$eval('.opm-studio-header', el => getComputedStyle(el).getPropertyValue('--paper-cue').trim().length > 0));
+  assert.equal(await page.$$eval('nav.v2-icon-rail .v2-rail-btn', btns => btns.length), 5, 'StudioIconRail must render 5 compact rail buttons');
   assert.equal(await page.$eval('#opm-webapp-btn-json', el => el.getAttribute('aria-pressed')), 'true');
+  await page.click('#opm-webapp-json-flip');
+  assert.equal(await page.$eval('#opm-webapp-json-flip', el => el.getAttribute('aria-pressed')), 'true');
+  await page.click('#opm-webapp-json-split');
+  assert(await page.$eval('#opm-webapp-stage', el => el.classList.contains('split-vertical')));
+  await page.click('#opm-webapp-json-split');
+  await page.click('#opm-webapp-json-flip');
   await page.click('#opm-webapp-json-close');
   assert.equal(await page.$eval('#opm-webapp-btn-json', el => el.getAttribute('aria-pressed')), 'false');
 

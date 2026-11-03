@@ -1,5 +1,6 @@
 import { Background, BackgroundVariant, ConnectionLineType, ConnectionMode, ReactFlow, SelectionMode, ViewportPortal } from "@xyflow/react";
 import { CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { StudioNotice } from "@object/kit/components/studio/StudioNotice";
 import { METHODS } from "../core/methods/common";
 import { format } from "../shared/i18n";
@@ -213,20 +214,25 @@ export function App() {
           />
         )}
       </div>
-      {drawer && hasSelection && inspectorProps && !story && (
-        <>
-          <Splitter
-            axis="x"
-            onReset={() => setDrawerWidth(DRAWER_WIDTH)}
-            onDrag={(d, end) => {
-              if (!dragBase.current) dragBase.current = drawerWidth;
-              setDrawerWidth(Math.round(Math.max(220, Math.min(window.innerWidth * 0.6, dragBase.current - d))));
-              if (end) dragBase.current = 0;
-            }}
-          />
-          <div className="opm-drawer-pane" style={{ width: drawerWidth }}><Inspector {...inspectorProps} /></div>
-        </>
-      )}
+      {(() => {
+        if (!(drawer && hasSelection && inspectorProps && !story)) return null;
+        const drawerNode = (
+          <>
+            <Splitter
+              axis="x"
+              onReset={() => setDrawerWidth(DRAWER_WIDTH)}
+              onDrag={(d, end) => {
+                if (!dragBase.current) dragBase.current = drawerWidth;
+                setDrawerWidth(Math.round(Math.max(220, Math.min(window.innerWidth * 0.6, dragBase.current - d))));
+                if (end) dragBase.current = 0;
+              }}
+            />
+            <div className="opm-drawer-pane" style={{ width: drawerWidth }}><Inspector {...inspectorProps} /></div>
+          </>
+        );
+        const panelRoot = typeof document !== "undefined" ? document.getElementById("opm-webapp-panel-root") : null;
+        return panelRoot ? createPortal(drawerNode, panelRoot) : drawerNode;
+      })()}
     </div>
   );
 }

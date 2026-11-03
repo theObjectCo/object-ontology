@@ -19,7 +19,11 @@ export function WebAppHeader() {
   const cloudLabel = cloud ? `☁ ${provider}: /${cloud.folderName}` : pl ? "☁ Chmura" : "☁ Cloud";
   return <StudioHeader
     className="opm-studio-header"
-    logo={<strong>OPM / Makigami Studio</strong>}
+    logo={<span className="opm-brand-lockup" title="OPM / Makigami Studio">
+      <span className="opm-logo-badge">OPM</span>
+      <span className="opm-logo-sep" aria-hidden="true">/</span>
+      <strong className="opm-logo-title">Makigami Studio</strong>
+    </span>}
     breadcrumb={<div className="opm-wa-model">
       <select id="opm-webapp-preset" className="opm-wa-select" title="Model / Template"
         value={PRESETS.some(p => p.id === session.presetId) ? session.presetId : "custom"}

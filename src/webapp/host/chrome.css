@@ -2,61 +2,551 @@
 @import '../../../vendor/object-kit/styles/base/theme.css';
 @import '../../../vendor/object-kit/styles/studio/studio.css';
 
-/* Shared Studio header, in document flow above a 2D editor rather than floating
-   over a viewport. Host-specific sizing leaves the diagram webview independent. */
+/* Studio Petrol Role Bindings for OPM / Makigami Studio (matching PHL Studio) */
+:root,
+[data-theme="light"],
+body.vscode-light {
+  --neutral-50: #f0f0f0;
+  --neutral-100: #e5e5e5;
+  --neutral-200: #d2d2d2;
+  --neutral-300: #bfbfbf;
+  --neutral-400: #adadad;
+  --neutral-500: #999999;
+  --neutral-600: #818181;
+  --neutral-700: #666666;
+  --neutral-800: #505050;
+  --neutral-900: #383838;
+  --neutral-950: #282828;
+  --neutral-975: #1e1e1e;
+
+  --petrol-50: #eff9fc;
+  --petrol-100: #d4f1fa;
+  --petrol-200: #a7e2f6;
+  --petrol-300: #75d4f0;
+  --petrol-400: #43c2e5;
+  --petrol-500: #04b0d5;
+  --petrol-600: #0092b1;
+  --petrol-700: #017892;
+  --petrol-800: #12657a;
+  --petrol-900: #013f4e;
+  --petrol-950: #022c37;
+
+  --paper: var(--neutral-50);
+  --paper-card: var(--neutral-100);
+  --paper-card-hover: var(--neutral-200);
+  --paper-line: var(--neutral-300);
+  --paper-line-focus: var(--petrol-700);
+  --text-dark: var(--neutral-975);
+  --paper-text-muted: var(--neutral-800);
+  --paper-fill-hover: var(--neutral-100);
+  --paper-fill-selected: var(--neutral-200);
+  --paper-disabled-ink: var(--neutral-600);
+  --paper-cue: var(--petrol-700);
+  --paper-teal: var(--petrol-700);
+  --paper-primary-tint: var(--petrol-100);
+  --paper-primary-tint-hover: var(--petrol-50);
+
+  --color-primary: var(--petrol-700);
+  --color-primary-hover: var(--petrol-800);
+  --color-primary-light: var(--petrol-100);
+  --color-on-primary: #ffffff;
+  --color-accent: var(--petrol-700);
+  --color-accent-hover: var(--petrol-600);
+  --color-accent-light: var(--petrol-600);
+  --color-accent-active: var(--petrol-800);
+  --color-on-accent: #ffffff;
+
+  --bg-base: var(--paper);
+  --bg-panel: var(--paper-card);
+  --bg-surface: var(--paper);
+  --text-main: var(--text-dark);
+  --text-muted: var(--paper-text-muted);
+  --border-light: var(--paper-line);
+  --border-focus: var(--petrol-700);
+}
+
+[data-theme="dark"],
+body.vscode-dark {
+  --paper: var(--neutral-975);
+  --paper-card: var(--neutral-950);
+  --paper-card-hover: var(--neutral-900);
+  --paper-line: var(--neutral-800);
+  --paper-line-focus: var(--petrol-400);
+  --text-dark: var(--neutral-50);
+  --paper-text-muted: var(--neutral-400);
+  --paper-fill-hover: var(--neutral-950);
+  --paper-fill-selected: var(--neutral-900);
+  --paper-disabled-ink: var(--neutral-400);
+  --paper-cue: var(--petrol-400);
+  --paper-teal: var(--petrol-400);
+  --paper-primary-tint: var(--petrol-900);
+  --paper-primary-tint-hover: var(--petrol-950);
+
+  --color-primary: var(--petrol-400);
+  --color-primary-hover: var(--petrol-300);
+  --color-primary-light: var(--petrol-900);
+  --color-on-primary: var(--neutral-975);
+  --color-accent: var(--petrol-400);
+  --color-accent-hover: var(--petrol-300);
+  --color-accent-light: var(--petrol-300);
+  --color-accent-active: var(--petrol-500);
+  --color-on-accent: var(--neutral-975);
+
+  --bg-base: var(--paper);
+  --bg-panel: var(--paper-card);
+  --bg-surface: var(--paper);
+  --text-main: var(--text-dark);
+  --text-muted: var(--paper-text-muted);
+  --border-light: var(--paper-line);
+  --border-focus: var(--petrol-400);
+}
+
+/* Studio Header (.v2-header.opm-studio-header) */
 #opm-webapp-bar {
   height: auto;
-  min-height: 38px;
+  min-height: 40px;
   padding: 0;
   border: 0;
+  flex-shrink: 0;
+  z-index: 40;
 }
 .v2-header.opm-studio-header {
   position: relative;
   inset: auto;
   width: 100%;
-  min-height: 38px;
+  min-height: 40px;
   height: auto;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 6px 12px;
   padding: 6px 12px;
   box-sizing: border-box;
   box-shadow: none;
-  background: var(--paper);
-  color: var(--text-dark);
+  background: var(--bg-panel);
+  color: var(--text-main);
   border: 0;
-  border-bottom: 1px solid var(--paper-line);
-  font-family: var(--font-sans);
+  border-bottom: 1px solid var(--border-light);
+  font-family: var(--font-sans, 'IBM Plex Sans', sans-serif);
 }
-.opm-studio-header .v2-header-left { flex-shrink: 0; }
+.opm-studio-header .v2-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: 0;
+}
 .opm-studio-header .v2-header-right {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 4px;
   margin-left: auto;
 }
-.opm-wa-model { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.opm-studio-header .opm-wa-filename { color: var(--paper-text-muted); }
-.opm-studio-header .opm-wa-select,
-.opm-studio-header .opm-wa-btn {
-  background: var(--paper-card);
-  color: var(--text-dark);
-  border-color: var(--paper-line);
-  border-radius: 0;
+.opm-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
-.opm-studio-header .opm-wa-btn:hover { background: var(--paper-card-hover); }
+.opm-logo-badge {
+  font: 400 15px 'Major Mono Display', var(--font-mono, monospace);
+  letter-spacing: 0.04em;
+  color: var(--paper-cue);
+  padding: 2px 6px;
+  border: 1px solid var(--paper-cue);
+  background: var(--paper-primary-tint);
+  line-height: 1.2;
+}
+.opm-logo-sep {
+  color: var(--text-muted);
+  font: 12px var(--font-mono, monospace);
+}
+.opm-logo-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.opm-wa-model {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.opm-studio-header .opm-wa-select {
+  background: var(--bg-base);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  border-radius: 0;
+  padding: 3px 8px;
+  font: inherit;
+  font-size: 12px;
+  max-width: 310px;
+}
+.opm-studio-header .opm-wa-filename {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--paper-cue);
+  padding: 2px 6px;
+  border: 1px solid var(--border-light);
+  border-radius: 0;
+  background: var(--bg-base);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.opm-studio-header .opm-wa-btn {
+  background: var(--bg-base);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  border-radius: 0;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.opm-studio-header .opm-wa-btn:hover:not(:disabled) {
+  background: var(--paper-fill-selected);
+  border-color: var(--paper-cue);
+}
+.opm-studio-header .opm-wa-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 .opm-studio-header .opm-wa-btn-primary,
 .opm-studio-header .opm-wa-btn.active {
-  color: var(--paper-teal);
-  border-color: var(--paper-line-focus);
+  background: var(--paper-primary-tint);
+  color: var(--paper-cue);
+  border-color: var(--paper-cue);
+  font-weight: 500;
 }
-#opm-webapp-json-mount { display: contents; }
-#opm-webapp-workspace { min-height: 0; flex: 1; }
-#opm-webapp-workspace #root { min-height: 0; height: 100%; }
-#opm-webapp-workspace .opm-app { height: 100%; }
+.opm-wa-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-light);
+  margin: 0 2px;
+}
+
+/* Workspace, Compact StudioIconRail & Explorer Pane (matching PHL Studio) */
+#opm-webapp-workspace {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  position: relative;
+  background: var(--bg-base);
+}
+#opm-webapp-rail-mount,
+#opm-webapp-json-mount {
+  display: contents;
+}
+
+nav.v2-icon-rail.opm-icon-rail {
+  flex: none;
+  width: var(--rail-width, 44px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-light);
+  z-index: 30;
+  position: relative;
+  inset: auto;
+  box-shadow: none;
+}
+.opm-icon-rail .v2-rail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  width: 100%;
+}
+.opm-icon-rail button.v2-rail-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s ease;
+}
+.opm-icon-rail button.v2-rail-btn:hover {
+  background: var(--paper-fill-hover);
+  color: var(--text-main);
+}
+.opm-icon-rail button.v2-rail-btn.active {
+  background: var(--paper-fill-selected);
+  color: var(--paper-cue);
+  border-color: var(--paper-cue);
+}
+.opm-icon-rail button.v2-rail-btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+/* Explorer & Source panes (.pane, .band, .row, .splitter) matching PHL Studio */
+.pane {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-base);
+}
+.pane[hidden],
+.splitter[hidden] {
+  display: none !important;
+}
+.band {
+  flex: none;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 12px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-light);
+  font: 500 11px var(--font-mono, monospace);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.band .cap {
+  flex: none;
+  font-weight: 600;
+  color: var(--text-main);
+}
+.band .detail {
+  text-transform: none;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--paper-cue);
+}
+.band .actions {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+}
+.band .actions button {
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+}
+.band .actions button:hover {
+  background: var(--paper-fill-hover);
+  border-color: var(--border-light);
+  color: var(--text-main);
+}
+.band .actions button.active {
+  background: var(--paper-fill-selected);
+  color: var(--paper-cue);
+  border-color: var(--paper-cue);
+}
+.band .actions svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+
+#opm-webapp-explorer {
+  width: 230px;
+  background: var(--bg-base);
+}
+.opm-tree {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 0 8px;
+}
+.opm-tree .row {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--text-main);
+  border-left: 2px solid transparent;
+  font-size: 12px;
+}
+.opm-tree .row:hover {
+  background: var(--paper-fill-hover);
+}
+.opm-tree .row.current {
+  background: var(--paper-primary-tint);
+  border-left-color: var(--paper-cue);
+  color: var(--text-main);
+  font-weight: 500;
+}
+.opm-tree .row.opm-tree-group {
+  margin-top: 4px;
+  font-weight: 600;
+  cursor: default;
+}
+.opm-tree .row .chevron {
+  width: 16px;
+  flex: none;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.opm-tree .row .ext {
+  flex: none;
+  width: 26px;
+  margin-right: 4px;
+  font: 500 9px var(--font-mono, monospace);
+  text-align: left;
+  color: var(--paper-cue);
+}
+.opm-tree .row .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.splitter {
+  flex: none;
+  width: 1px;
+  background: var(--border-light);
+  cursor: col-resize;
+  position: relative;
+  z-index: 6;
+}
+.splitter:hover {
+  background: var(--paper-cue);
+}
+
+/* Stage Split (Source + Diagram, horizontal or vertical, flip-capable like PHL Studio) */
+#opm-webapp-stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+#opm-webapp-stage.split-horizontal.split-flipped {
+  flex-direction: column-reverse;
+}
+#opm-webapp-stage.split-vertical {
+  flex-direction: row;
+}
+#opm-webapp-stage.split-vertical.split-flipped {
+  flex-direction: row-reverse;
+}
+#opm-webapp-stage.split-horizontal #opm-webapp-json-pane {
+  width: 100%;
+  max-width: 100%;
+  height: 240px;
+}
+#opm-webapp-panel-root {
+  flex: none;
+  display: flex;
+  min-height: 0;
+  height: 100%;
+}
+#opm-webapp-panel-root:empty {
+  display: none;
+}
+#opm-webapp-stage.split-vertical #opm-webapp-json-pane {
+  width: 420px;
+  max-width: 45vw;
+  height: 100%;
+}
+#opm-webapp-stage.split-horizontal #opm-stage-splitter {
+  width: 100%;
+  height: 1px;
+  cursor: row-resize;
+}
+#opm-webapp-stage.split-vertical #opm-stage-splitter {
+  width: 1px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+#opm-webapp-json-pane {
+  display: none;
+  flex-direction: column;
+  background: var(--bg-base);
+}
+#opm-webapp-json-editor {
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 10px 12px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 18px;
+  background: var(--bg-base);
+  color: var(--text-main);
+}
+
+#opm-webapp-workspace #root {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+#opm-webapp-workspace .opm-app {
+  height: 100%;
+}
+
+@media (max-width: 1024px) {
+  #opm-webapp-explorer,
+  #opm-webapp-explorer-splitter {
+    display: none !important;
+  }
+}
+
 @media (max-width: 600px) {
-  .opm-wa-model { width: 100%; }
-  .opm-studio-header .opm-wa-select { min-width: 0; max-width: 60%; }
-  .opm-studio-header .v2-header-right { justify-content: flex-start; }
-  #opm-webapp-json-pane { width: 55vw; max-width: 55vw; }
+  .opm-logo-title,
+  .opm-logo-sep {
+    display: none;
+  }
+  .opm-wa-model {
+    width: 100%;
+  }
+  .opm-studio-header .opm-wa-select {
+    min-width: 0;
+    max-width: 60%;
+  }
+  .opm-studio-header .v2-header-right {
+    justify-content: flex-start;
+  }
+  nav.v2-icon-rail.opm-icon-rail {
+    display: none;
+  }
+  #opm-webapp-stage.split-vertical #opm-webapp-json-pane {
+    width: 55vw;
+    max-width: 55vw;
+  }
 }
